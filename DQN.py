@@ -1,12 +1,9 @@
-import gymnasium
 import torch
 from torch import nn
-import torch.nn.functional as F
 from collections import deque
 from typing import Any, Iterable, Callable
 import random
 import gymnasium as gym
-import copy
 import numpy as np
 
 
@@ -41,28 +38,16 @@ class ReplayBuffer:
     def sample(self, batch_size: int) -> list[Any]:
         return random.sample(self.buffer, batch_size)
 
-
-class MultiLayerPerceptron(nn.Module):
-    def __init__(self, state_size: int, hidden_size: int, action_size: int, activation_func: Callable):
-        super().__init__()
-        self.fc1 = nn.Linear(state_size, hidden_size)
-        self.fc2 = nn.Linear(hidden_size, action_size)
-        self.activation_func = activation_func
-
-    def forward(self, x):
-        x = self.activation_func(self.fc1(x))
-        x = self.fc2(x)
-        return x
-
-
 if __name__ == '__main__':
     # initialization
     env = gym.make("CartPole-v1")
+    observation_size = env.observation_space.shape[0]
+    hidden_size = 32
+    action_size = env.action_space.n
 
-    behavior_policy = MultiLayerPerceptron(state_size=env.observation_space.shape[0], hidden_size=32,
-                                           action_size=env.action_space.n, activation_func=nn.ReLU())
-    target_policy = MultiLayerPerceptron(state_size=env.observation_space.shape[0], hidden_size=32,
-                                         action_size=env.action_space.n, activation_func=nn.ReLU())
+    behavior_policy = nn.Sequential(nn.Linear(observation_size, hidden_size), nn.ReLU(), nn.Linear(hidden_size, action_size))
+    target_policy = nn.Sequential(nn.Linear(observation_size, hidden_size), nn.ReLU(), nn.Linear(hidden_size, action_size))
+
     target_policy.load_state_dict(behavior_policy.state_dict())
 
     optimizer = torch.optim.Adam(behavior_policy.parameters())
