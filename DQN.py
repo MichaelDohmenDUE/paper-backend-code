@@ -1,10 +1,9 @@
 import torch
 from torch import nn
-from collections import deque
-from typing import Any, Iterable, Callable
 import random
 import gymnasium as gym
 import numpy as np
+from utils import ReplayBuffer
 
 
 def epsilon_greedy(q_values: torch.tensor, epsilon: float) -> torch.tensor:
@@ -19,25 +18,6 @@ def epsilon_greedy(q_values: torch.tensor, epsilon: float) -> torch.tensor:
     return random.choice(actions) if random.random() < epsilon else greedy_action
 
 
-class ReplayBuffer:
-    def __init__(self, buffer_size: int = 10_000):
-        self.buffer: deque[Any] = deque(maxlen=buffer_size)
-
-    def __len__(self) -> int:
-        return len(self.buffer)
-
-    def __str__(self) -> str:
-        return f"{list(self.buffer)}"
-
-    def append(self, x: Any) -> None:
-        self.buffer.append(x)
-
-    def extend(self, iterable: Iterable[Any]) -> None:
-        self.buffer.extend(iterable)
-
-    def sample(self, batch_size: int) -> list[Any]:
-        return random.sample(self.buffer, batch_size)
-
 if __name__ == '__main__':
     # initialization
     env = gym.make("CartPole-v1")
@@ -45,8 +25,10 @@ if __name__ == '__main__':
     hidden_size = 32
     action_size = env.action_space.n
 
-    behavior_policy = nn.Sequential(nn.Linear(observation_size, hidden_size), nn.ReLU(), nn.Linear(hidden_size, action_size))
-    target_policy = nn.Sequential(nn.Linear(observation_size, hidden_size), nn.ReLU(), nn.Linear(hidden_size, action_size))
+    behavior_policy = nn.Sequential(nn.Linear(observation_size, hidden_size), nn.ReLU(),
+                                    nn.Linear(hidden_size, action_size))
+    target_policy = nn.Sequential(nn.Linear(observation_size, hidden_size), nn.ReLU(),
+                                  nn.Linear(hidden_size, action_size))
 
     target_policy.load_state_dict(behavior_policy.state_dict())
 
@@ -92,7 +74,7 @@ if __name__ == '__main__':
                 qsa_behavior = behavior_policy(states_tensor).gather(1, actions_tensor)  # ^y
                 qs_target = target_policy(next_states_tensor)  # batch_size x action_dim
                 qsa_target = torch.max(qs_target, dim=1).values.unsqueeze(-1).detach()
-                target = rewards_tensor + gamma * qsa_target * (1.0 - dones_tensor) # [~dones_tensor]  # y
+                target = rewards_tensor + gamma * qsa_target * (1.0 - dones_tensor)  # [~dones_tensor]  # y
                 optimizer.zero_grad()
                 loss = criterion(qsa_behavior, target)
                 loss.backward()
@@ -105,4 +87,3 @@ if __name__ == '__main__':
                 target_policy.load_state_dict(behavior_policy.state_dict())
         if episode % 10 == 0:
             print(f"Episode [{episode}] {episode_rewards}")
-
