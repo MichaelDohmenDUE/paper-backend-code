@@ -102,7 +102,6 @@ if __name__ == '__main__':
             rewards_tensor = torch.tensor(np.array(rewards), dtype=torch.float32)
             dones_tensor = torch.tensor(np.array(dones), dtype=torch.float32)
 
-
             with torch.no_grad():
                 state_values = critic(states_tensor)
                 next_state_values = critic(next_states_tensor)
@@ -115,7 +114,6 @@ if __name__ == '__main__':
                 dones=dones_tensor
             ).detach().numpy()
 
-
             rollout_advantages = gae(
                 gamma=GAMMA,
                 lambda_=LAMBD,
@@ -123,20 +121,19 @@ if __name__ == '__main__':
                 dones=dones
             )
 
-
-            advantages.extend(rollout_advantages)
             rollout_buffer.extend(rollout)
+            advantages.extend(rollout_advantages)
             old_action_probs.extend(rollout_old_action_probs)
 
         # Training process
 
         old_action_probs = torch.tensor(np.array(old_action_probs), dtype=torch.float32).squeeze()
-        advantages = torch.tensor(np.array(advantages), dtype=torch.float32).squeeze()
+        advantages = torch.tensor(np.array(advantages), dtype=torch.float32)
 
         for _ in range(num_epochs):
             idx = np.random.choice(range(len(rollout_buffer) - 1), batch_size)
             batch = rollout_buffer.choice(idx)
-            batch_advantages = torch.tensor(advantages[idx], dtype=torch.float32)
+            batch_advantages = advantages[idx]
 
             states, actions, rewards, next_states, dones = zip(*batch)
 
