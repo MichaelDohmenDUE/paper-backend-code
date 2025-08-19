@@ -25,12 +25,14 @@ def discounted_cumulative_reward(gamma: float, rewards: NDArray[np.float64], don
     return total_rewards
 
 
-def temporal_difference_residuals(gamma: float, rewards: Tensor,
-                                  state_values: Tensor, next_state_values: Tensor, dones: Tensor) -> Tensor:
+def temporal_difference_residuals(gamma: float, rewards: NDArray[np.float64],
+                                  state_values: NDArray[np.float64],
+                                  next_state_values: NDArray[np.float64],
+                                  dones: NDArray[np.bool_]) -> NDArray[np.float64]:
 
-    masked_next_state_values = next_state_values * (1. - dones.unsqueeze(-1))
+    masked_next_state_values = next_state_values * (1. - dones.reshape(-1,1))
 
-    td_residuals = rewards.unsqueeze(-1) + gamma * masked_next_state_values - state_values
+    td_residuals = rewards.reshape(-1,1) + gamma * masked_next_state_values - state_values
     return td_residuals
 
 class ReplayBuffer:

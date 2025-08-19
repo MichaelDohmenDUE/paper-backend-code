@@ -99,20 +99,21 @@ if __name__ == '__main__':
 
             states_tensor = torch.tensor(np.array(states), dtype=torch.float32)
             next_states_tensor = torch.tensor(np.array(next_states), dtype=torch.float32)
-            rewards_tensor = torch.tensor(np.array(rewards), dtype=torch.float32)
-            dones_tensor = torch.tensor(np.array(dones), dtype=torch.float32)
+            #rewards_tensor = torch.tensor(np.array(rewards), dtype=torch.float32)
+
+            #dones_tensor = torch.tensor(np.array(dones), dtype=torch.float32)
 
             with torch.no_grad():
-                state_values = critic(states_tensor)
-                next_state_values = critic(next_states_tensor)
+                state_values = critic(states_tensor).numpy()
+                next_state_values = critic(next_states_tensor).numpy()
 
             deltas = temporal_difference_residuals(
                 gamma=GAMMA,
-                rewards=rewards_tensor,
+                rewards=np.array(rewards),
                 state_values=state_values,
                 next_state_values=next_state_values,
-                dones=dones_tensor
-            ).detach().numpy()
+                dones=np.array(dones)
+            )
 
             rollout_advantages = gae(
                 gamma=GAMMA,
@@ -132,17 +133,18 @@ if __name__ == '__main__':
 
         for _ in range(num_epochs):
             idx = np.random.choice(range(len(rollout_buffer) - 1), batch_size)
+
             batch = rollout_buffer.choice(idx)
             batch_advantages = advantages[idx]
+            batch_old_action_probs = old_action_probs[idx]
 
             states, actions, rewards, next_states, dones = zip(*batch)
 
             states_tensor = torch.tensor(np.array(states), dtype=torch.float32)
             actions_tensor = torch.tensor(np.array(actions), dtype=torch.int64).squeeze(-1)
 
-            new_action_probs = actor(states_tensor)
 
-            batch_old_action_probs = old_action_probs[idx]
+            new_action_probs = actor(states_tensor)
 
             ratio = (new_action_probs.gather(dim=1, index=actions_tensor)
                      / batch_old_action_probs.gather(dim=1,
@@ -160,6 +162,7 @@ if __name__ == '__main__':
                 rewards=rewards,
                 dones=dones
             ), dtype=torch.float32).unsqueeze(-1)
+
             state_values = critic(states_tensor)
 
             critic_optimizer.zero_grad()
