@@ -61,7 +61,9 @@ if __name__ == '__main__':
         old_action_probs = []
         total_reward = 0
         for actor in actors:
-            # Rollout each actor
+            ###################
+            # Data Collection #
+            ###################
             rollout = []
             rollout_old_action_probs = []
             for _ in range(T):
@@ -92,16 +94,13 @@ if __name__ == '__main__':
                         print(f"Episode {episode}: {episode_reward}")
                     episode_reward = 0
                     episode += 1
-
-            # Advantage estimation
-
+            ########################
+            # Advantage estimation #
+            ########################
             states, actions, rewards, next_states, dones = zip(*rollout)
 
             states_tensor = torch.tensor(np.array(states), dtype=torch.float32)
             next_states_tensor = torch.tensor(np.array(next_states), dtype=torch.float32)
-            #rewards_tensor = torch.tensor(np.array(rewards), dtype=torch.float32)
-
-            #dones_tensor = torch.tensor(np.array(dones), dtype=torch.float32)
 
             with torch.no_grad():
                 state_values = critic(states_tensor).numpy()
@@ -122,12 +121,16 @@ if __name__ == '__main__':
                 dones=dones
             )
 
+            ##################
+            # Data Buffering #
+            ##################
             rollout_buffer.extend(rollout)
             advantages.extend(rollout_advantages)
             old_action_probs.extend(rollout_old_action_probs)
 
-        # Training process
-
+        ####################
+        # Training process #
+        ####################
         old_action_probs = torch.tensor(np.array(old_action_probs), dtype=torch.float32).squeeze()
         advantages = torch.tensor(np.array(advantages), dtype=torch.float32)
 
