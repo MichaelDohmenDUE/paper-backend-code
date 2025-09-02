@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.typing import NDArray
-from torch import Tensor
+import torch
 from torch import nn
 from typing import Iterable, Any
 import random
@@ -34,6 +34,36 @@ def temporal_difference_residuals(gamma: float, rewards: NDArray[np.float64],
 
     td_residuals = rewards.reshape(-1,1) + gamma * masked_next_state_values - state_values
     return td_residuals
+
+
+def synchronize(from_network: nn.Module, to_network: nn.Module, tau: float) -> None:
+    """
+    Synchronize parameters from one network to another using soft or hard updates.
+
+    Args:
+        from_network (nn.Module): The source network (e.g., behavior network).
+        to_network (nn.Module): The target network to be updated.
+        tau (float): Interpolation factor for the update.
+            - tau = 1.0 → hard update.
+            - 0 < tau < 1.0 → soft update.
+            - tau = 0.0 → no update.
+
+    Returns:
+        None
+
+    Raises:
+        AssertionError: If `tau` is not within [0.0, 1.0]
+    """
+
+    assert 0.0 <= tau <= 1.0, f"tau must be in [0, 1], got {tau}"
+
+    with torch.no_grad():
+        if tau == 1.0:
+            to_network.load_state_dict(from_network.state_dict())
+        else:
+            for from_param, to_param in zip(from_network.parameters(), to_network.parameters()):
+                to_param.copy_(tau * from_param + (1.0 - tau) * to_param)
+
 
 class ReplayBuffer:
     def __init__(self, buffer_size: int = 10_000):

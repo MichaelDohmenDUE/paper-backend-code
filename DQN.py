@@ -3,7 +3,8 @@ from torch import nn
 import random
 import gymnasium as gym
 import numpy as np
-from utils import ReplayBuffer
+from utils import ReplayBuffer, synchronize
+import torch.nn.functional as F
 
 
 def epsilon_greedy(q_values: torch.tensor, epsilon: float) -> torch.tensor:
@@ -37,7 +38,7 @@ if __name__ == '__main__':
     buffer = ReplayBuffer()
 
     gamma = 0.99
-    num_episodes = 400
+    num_episodes = 600
     update_freq = 40
 
     # Outer training loop
@@ -75,8 +76,9 @@ if __name__ == '__main__':
                 qs_target = target_policy(next_states_tensor)  # batch_size x action_dim
                 qsa_target = torch.max(qs_target, dim=1).values.unsqueeze(-1).detach()
                 target = rewards_tensor + gamma * qsa_target * (1.0 - dones_tensor)  # [~dones_tensor]  # y
+
                 optimizer.zero_grad()
-                loss = criterion(qsa_behavior, target)
+                loss = F.mse_loss(qsa_behavior, target)
                 loss.backward()
                 optimizer.step()
 
@@ -84,6 +86,6 @@ if __name__ == '__main__':
             episode_rewards += reward
             # synchronization
             if total_steps % update_freq == 0:
-                target_policy.load_state_dict(behavior_policy.state_dict())
+                synchronize(behavior_policy, target_policy, tau=1.0)
         if episode % 10 == 0:
             print(f"Episode [{episode}] {episode_rewards}")

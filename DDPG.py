@@ -3,10 +3,11 @@ from argparse import ArgumentError
 import torch
 from torch import nn
 from torch.nn import functional as F
+from torchsummary import summary
 import numpy as np
 import gymnasium as gym
 from typing import Any
-from utils import ReplayBuffer
+from utils import ReplayBuffer, synchronize
 
 
 class Actor(nn.Module):
@@ -20,6 +21,7 @@ class Actor(nn.Module):
         x = F.relu(self.fc1(x))
         x = F.tanh(self.fc2(x)) * self.action_scale
         return x
+
 
 
 class Critic(nn.Module):
@@ -37,33 +39,7 @@ class Critic(nn.Module):
         return x
 
 
-def synchronize(from_network: nn.Module, to_network: nn.Module, tau: float) -> None:
-    """
-    Synchronize parameters from one network to another using soft or hard updates.
 
-    Args:
-        from_network (nn.Module): The source network (e.g., behavior network).
-        to_network (nn.Module): The target network to be updated.
-        tau (float): Interpolation factor for the update.
-            - tau = 1.0 → hard update.
-            - 0 < tau < 1.0 → soft update.
-            - tau = 0.0 → no update.
-
-    Returns:
-        None
-
-    Raises:
-        AssertionError: If `tau` is not within [0.0, 1.0]
-    """
-
-    assert 0.0 <= tau <= 1.0, f"tau must be in [0, 1], got {tau}"
-
-    with torch.no_grad():
-        if tau == 1.0:
-            to_network.load_state_dict(from_network.state_dict())
-        else:
-            for from_param, to_param in zip(from_network.parameters(), to_network.parameters()):
-                to_param.copy_(tau * from_param + (1.0 - tau) * to_param)
 
 
 if __name__ == '__main__':
@@ -89,6 +65,8 @@ if __name__ == '__main__':
     critic = Critic(observation_size, hidden_size, action_size, output_size)
     critic_target = Critic(observation_size, hidden_size, action_size, output_size)
     critic_optimizer = torch.optim.Adam(critic.parameters(), lr=lr)
+    print(critic)
+    exit(0)
 
     synchronize(actor, actor_target, 1.0)
     synchronize(critic, critic_target, 1.0)
@@ -103,6 +81,7 @@ if __name__ == '__main__':
         actor_loss, critic_loss = None, None
 
         while not done:
+            # Data Collection
             state_tensor = torch.tensor(state, dtype=torch.float32)
             action = actor(state_tensor)
             action += torch.normal(0, 0.1, size=action.shape)
@@ -114,6 +93,8 @@ if __name__ == '__main__':
 
             state = next_state
             episode_reward += reward
+
+             # Learning
             if len(buffer) > batch_size:
                 batch = buffer.sample(batch_size)
                 states, actions, rewards, next_states, dones = zip(*batch)
@@ -137,6 +118,7 @@ if __name__ == '__main__':
                 actor_loss.backward()
                 actor_optimizer.step()
 
+                # Synchronization
                 synchronize(actor, actor_target, 0.005)
                 synchronize(critic, critic_target, 0.005)
 
