@@ -171,7 +171,7 @@ if __name__ == '__main__':
 
             new_actions, new_action_probs = actor(states_tensor)
 
-            log_ratio = (new_action_probs -  batch_old_action_probs)
+            log_ratio = (new_action_probs - batch_old_action_probs)
             ratio = torch.exp(log_ratio)
 
             clipped_ratio = torch.clamp(ratio, 1 - EPSILON, 1 + EPSILON)
