@@ -14,7 +14,7 @@ json_module = {
         {"name": "softmax", "type": "Softmax"},
         {"name": "tanh", "type": "Tanh"}
     ],
-    "inputs": "fc1",
+    "input": "fc1",
     "connections": [
         {"from": "fc1", "to": "relu"},
         {"from": "relu", "to": "fc2"},
@@ -45,6 +45,20 @@ def dfs(node, graph, path, streams):
             dfs(node, graph, path, streams)
     path.pop()
 
+def forward(x, node, graph, outputs, net):
+    torch_node = net.__getattr__(node)
+    print(net.__getattr__(node))
+    next_nodes = graph[node]
+    x = torch_node(x)
+    if not next_nodes:
+        outputs.append(x)
+
+    for next_node in next_nodes:
+        forward(x, next_node, graph, outputs, net)
+
+
+
+
 
 class JSONModule(nn.Module):
     def __init__(self, data):
@@ -74,23 +88,14 @@ class JSONModule(nn.Module):
         for conn in connections:
             graph[conn["from"]].append(conn["to"])
 
-        # maybe i dont even need seperate sequences, since that would duplicate the nodes
-        input_layer = json_module["inputs"]
-        path = []
-        streams = []
-        dfs(input_layer, graph, path, streams)
-
-
-        forward_streams = []
-        for stream in streams:
-            forward_stream = []
-            for node in stream:
-                forward_stream.append(self.__getattr__(node))
-            forward_streams.append(forward_stream)
-        print(forward_streams)
-
+        print(graph)
+        input_layer = data["input"]
+        outputs = []
+        forward(torch.randn((1,10)), input_layer, graph, outputs, self)
+        print(outputs)
 
 
 if __name__ == '__main__':
     net = JSONModule(json_module)
-    print(net)
+
+
