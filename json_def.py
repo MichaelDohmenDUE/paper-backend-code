@@ -130,7 +130,7 @@ DQN_EXAMPLE = {
     },
     
     "networks": {
-        "behavior_policy": {
+        "q_network": {
             "nodes": [
                 {"name": "fc1", "type": "Linear", "input_features": 4, "output_features": 64},
                 {"name": "relu", "type": "ReLU"},
@@ -142,10 +142,10 @@ DQN_EXAMPLE = {
                 {"from": "relu", "to": "fc2"}
             ]
         },
-        
-        "target_policy": {
+
+        "q_network_target": {
             "type": "clone",
-            "clone_from": "behavior_policy"
+            "clone_from": "q_network"
         }
     },
     
@@ -153,14 +153,14 @@ DQN_EXAMPLE = {
         "data_collection": {
             "nodes": [
                 {"name": "state", "type": "StateSource"},
-                {"name": "behavior", "type": "NetworkRef", "ref": "behavior_policy"},
+                {"name": "q_net", "type": "NetworkRef", "ref": "q_network"},
                 {"name": "epsilon_greedy", "type": "EpsilonGreedy", "epsilon": 0.1},
                 {"name": "environment", "type": "Environment"}
             ],
             "input": "state",
             "connections": [
-                {"from": "state", "to": "behavior"},
-                {"from": "behavior", "to": "epsilon_greedy"},
+                {"from": "state", "to": "q_net"},
+                {"from": "q_net", "to": "epsilon_greedy"},
                 {"from": "epsilon_greedy", "to": "environment"}
             ]
         },
@@ -175,22 +175,22 @@ DQN_EXAMPLE = {
             "nodes": [
                 {"name": "batch", "type": "BatchSource"},
                 {"name": "batch_split", "type": "BatchSplitter"},
-                {"name": "behavior", "type": "NetworkRef", "ref": "behavior_policy"},
-                {"name": "target", "type": "NetworkRef", "ref": "target_policy"},
+                {"name": "q_net", "type": "NetworkRef", "ref": "q_network"},
+                {"name": "q_target", "type": "NetworkRef", "ref": "q_network_target"},
                 {"name": "gather", "type": "Gather"},
                 {"name": "qmax", "type": "QMax"},
                 {"name": "target_comp", "type": "TargetComputation", "gamma": 0.99},
                 {"name": "loss", "type": "MSELoss"},
-                {"name": "optimizer", "type": "Adam", "lr": 0.001, "optimizes": "behavior_policy"}
+                {"name": "optimizer", "type": "Adam", "lr": 0.001, "optimizes": "q_network"}
             ],
             "input": "batch",
             "connections": [
                 {"from": "batch", "to": "batch_split"},
-                {"from": "batch_split", "to": "behavior", "port": "states"},
-                {"from": "batch_split", "to": "target", "port": "next_states"},
-                {"from": "behavior", "to": "gather"},
+                {"from": "batch_split", "to": "q_net", "port": "states"},
+                {"from": "batch_split", "to": "q_target", "port": "next_states"},
+                {"from": "q_net", "to": "gather"},
                 {"from": "batch_split", "to": "gather", "port": "actions"},
-                {"from": "target", "to": "qmax"},
+                {"from": "q_target", "to": "qmax"},
                 {"from": "qmax", "to": "target_comp"},
                 {"from": "batch_split", "to": "target_comp", "port": "rewards"},
                 {"from": "batch_split", "to": "target_comp", "port": "dones"},
@@ -198,12 +198,18 @@ DQN_EXAMPLE = {
                 {"from": "target_comp", "to": "loss"}
             ]
         },
-        
+
         "synchronization": {
-            "source": "behavior_policy",
-            "target": "target_policy",
-            "update_frequency": 100,
-            "tau": 1.0
+            "pairs": [
+                {
+                    "source": "q_network",
+                    "target": "q_network_target",
+                    "mode": "hard",
+                    "update_frequency": 100,
+                    "tau": 1.0
+                }
+            ],
+            "warmup_steps": 0
         }
     }
 }
@@ -316,11 +322,22 @@ DDPG_EXAMPLE = {
         
         "synchronization": {
             "pairs": [
-                {"source": "actor", "target": "actor_target"},
-                {"source": "critic", "target": "critic_target"}
+                {
+                    "source": "actor",
+                    "target": "actor_target",
+                    "mode": "soft",
+                    "tau": 0.005,
+                    "update_frequency": 1
+                },
+                {
+                    "source": "critic",
+                    "target": "critic_target",
+                    "mode": "soft",
+                    "tau": 0.005,
+                    "update_frequency": 1
+                }
             ],
-            "update_frequency": 1,
-            "tau": 0.005 # pro paar in pairs die werte 
+            "warmup_steps": 0
         }
     }
 }
@@ -434,6 +451,128 @@ PPO_EXAMPLE = {
 }
 
 # ============================================================================
+# SYNCHRONIZATION SCHEMA DEFINITION
+# ============================================================================
+
+SYNCHRONIZATION_SCHEMA = {
+    "type": "object",
+    "required": ["pairs"],
+    "properties": {
+        "pairs": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["source", "target", "mode"],
+                "properties": {
+                    "source": {
+                        "type": "string",
+                        "description": "Source network name to copy FROM"
+                    },
+                    "target": {
+                        "type": "string",
+                        "description": "Target network name to copy TO"
+                    },
+                    "mode": {
+                        "type": "string",
+                        "enum": ["hard", "soft"],
+                        "description": "Update type: hard=copy, soft=interpolate"
+                    },
+                    "tau": {
+                        "type": "number",
+                        "minimum": 0.0,
+                        "maximum": 1.0,
+                        "description": "Soft update interpolation factor. Required for mode='soft'"
+                    },
+                    "update_frequency": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Update every N optimizer steps",
+                        "default": 1
+                    },
+                    "start_after_step": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "Start updates after N steps",
+                        "default": 0
+                    }
+                },
+                "allOf": [
+                    {
+                        "if": {"properties": {"mode": {"const": "soft"}}},
+                        "then": {"required": ["tau"]}
+                    }
+                ]
+            }
+        },
+        "warmup_steps": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Global warmup before any synchronization",
+            "default": 0
+        }
+    }
+}
+
+# ============================================================================
+# SYNCHRONIZATION EXAMPLES
+# ============================================================================
+
+SYNC_EXAMPLES = {
+    "dqn_hard": {
+        "pairs": [
+            {
+                "source": "q_network",
+                "target": "q_network_target",
+                "mode": "hard",
+                "update_frequency": 100,
+                "tau": 1.0  # Optional for hard mode, but can be explicit
+            }
+        ],
+        "warmup_steps": 1000
+    },
+
+    "ddpg_soft": {
+        "pairs": [
+            {
+                "source": "actor",
+                "target": "actor_target",
+                "mode": "soft",
+                "tau": 0.005,
+                "update_frequency": 1
+            },
+            {
+                "source": "critic",
+                "target": "critic_target",
+                "mode": "soft",
+                "tau": 0.005,
+                "update_frequency": 1
+            }
+        ],
+        "warmup_steps": 0
+    },
+
+    "mixed_strategy": {
+        "pairs": [
+            {
+                "source": "q_network",
+                "target": "q_network_target",
+                "mode": "hard",
+                "update_frequency": 1000,
+                "start_after_step": 5000
+            },
+            {
+                "source": "actor",
+                "target": "actor_target",
+                "mode": "soft",
+                "tau": 0.01,
+                "update_frequency": 10
+            }
+        ],
+        "warmup_steps": 1000
+    }
+}
+
+# ============================================================================
 # BACKEND INFERENCE RULES
 # ============================================================================
 
@@ -452,5 +591,10 @@ MODULE_CONTRACTS = {
     },
     "learning": {
         "consumes": ["batches", "rollout_data", "advantages"]
+    },
+    "synchronization": {
+        "consumes": ["network_parameters"],
+        "produces": ["synchronized_networks"],
+        "trigger": "optimizer_step"
     }
 }
