@@ -1,13 +1,10 @@
 import torch
-from torch import nn, Tensor
+from torch import nn
 from torch.nn import functional as F
-from collections import deque
-from typing import Any, Iterable, Callable
-import random
 import gymnasium as gym
 import numpy as np
-from utils import ReplayBuffer, gae, discounted_cumulative_reward, temporal_difference_residuals
-
+from backend.Utils.src.utils import gae, discounted_cumulative_reward, temporal_difference_residuals
+from backend.Utils.src.ReplayBuffer import ReplayBuffer
 """ 
 PPO is based on the policy gradient theorem and can handle both
 discrete and continuous action spaces. It can be applied to low and high dimensional observation spaces. 

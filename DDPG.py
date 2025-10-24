@@ -1,5 +1,3 @@
-from argparse import ArgumentError
-
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -7,8 +5,8 @@ from torchsummary import summary
 import numpy as np
 import gymnasium as gym
 from typing import Any
-from utils import ReplayBuffer, synchronize
-
+from backend.Utils.src.utils import  synchronize
+from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 class Actor(nn.Module):
     def __init__(self, observation_size: int, hidden_size: int, action_size: int, action_scale: float = 1.0):

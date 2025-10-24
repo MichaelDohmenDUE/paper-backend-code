@@ -3,9 +3,9 @@ from torch import nn
 import random
 import gymnasium as gym
 import numpy as np
-from utils import ReplayBuffer, synchronize
+from backend.Utils.src.utils import  synchronize
 import torch.nn.functional as F
-
+from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 def epsilon_greedy(q_values: torch.tensor, epsilon: float) -> torch.tensor:
     """ Epsilon-greedy policy, returns random action if random number is < epsilon, else greedy action

@@ -3,7 +3,7 @@ import torch
 import gymnasium as gym
 
 from backend.T3D.src.TD3_Trainer import TD3_Trainer
-from backend.utils import ReplayBuffer
+from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 def eval_trainer(trainer, env, eval_episodes=5):
     avg_reward = 0

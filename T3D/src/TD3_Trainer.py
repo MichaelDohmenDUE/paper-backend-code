@@ -5,7 +5,8 @@ from torch import optim
 import copy
 from backend.T3D.src.Actor import Actor
 from backend.T3D.src.Critic import Critic
-from backend.utils import ReplayBuffer
+from backend.Utils.src.ReplayBuffer import ReplayBuffer
+from backend.Utils.src.utils import synchronize
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -86,11 +87,6 @@ class TD3_Trainer(object):
             actor_loss.backward()
             self.optimizer_actor.step()
 
-            for param, target_param in zip(self.critic_1.parameters(), self.critic_target_1.parameters()):
-                target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
-
-            for param, target_param in zip(self.critic_2.parameters(), self.critic_target_2.parameters()):
-                target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
-
-            for param, target_param in zip(self.actor.parameters(), self.actor_target.parameters()):
-                target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+            synchronize(self.critic_1, self.critic_target_1, self.tau)
+            synchronize(self.critic_2, self.critic_target_2, self.tau)
+            synchronize(self.actor, self.actor_target, self.tau)
