@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from collections import defaultdict
 
+# TODO: Throw this into utils for now, think about file structure later
 json_module = {
     "name": "Actor",
     "nodes": [

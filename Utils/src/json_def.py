@@ -120,7 +120,7 @@ JSON_SCHEMA = {
 # ============================================================================
 # DQN EXAMPLE
 # ============================================================================
-
+# TODO: Throw this into utils for now, think about file structure later
 DQN_EXAMPLE = {
     "environment": {
         "name": "CartPole-v1",
