@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-import gym
+import gymnasium as gym
 
 from backend.T3D.src.TD3_Trainer import TD3_Trainer
 from backend.utils import ReplayBuffer
@@ -8,42 +8,58 @@ from backend.utils import ReplayBuffer
 def eval_trainer(trainer, env, eval_episodes=5):
     avg_reward = 0
     for _ in range(eval_episodes):
-        state, done = env.reset(), False
+        state, _ = env.reset()
+        done = False
         while not done:
-            action = trainer.select_action(np.array(state))
-            state, reward, done, _ = env.step(action)
+            action = trainer.select_action(state)
+            next_state, reward, terminated, truncated, info = env.step(action)
+            done = terminated or truncated
             avg_reward += reward
+            state = next_state
     avg_reward /= eval_episodes
     print(f"Average Reward over {eval_episodes} episodes: {avg_reward:.3f}")
     return avg_reward
 
 def main():
-    env_name = "HalfCheetah-v2"
+    env_name = "HalfCheetah-v5"
     seed = 0
-    max_timesteps = int(1e4)
-    start_timesteps = int(1e3)
-    eval_freq = int(2e3)
-    expl_noise = 0.1
+    max_timesteps = 1000000
+    start_timesteps = 10000
+    eval_freq = 2000
+    eval_episodes =10
+    expl_noise = 0.2
     batch_size = 256
 
 
-    #Seeding  TODO: Encapsulate this
     env = gym.make(env_name)
-    env.seed(seed)
+    state, _ = env.reset()
+    done = False
     env.action_space.seed(seed)
     torch.manual_seed(seed)
     np.random.seed(seed)
 
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.shape[0]
-    max_action = 1# env.observation_space # TODO: clean this up where do I get the maximum of the acionspace.box
-                    # Minima and Maxima are not where they were with gym 0.26.2
-    trainer = TD3_Trainer(state_dim, action_dim, max_action, max_timesteps, batch_size, eval_freq, expl_noise)
+    max_action = float(env.action_space.high[0])
 
-    replay_buffer = ReplayBuffer(buffer_size=100000)
+
+
+    trainer = TD3_Trainer(
+                    state_size=state_dim,
+                    action_size=action_dim,
+                    hidden_size=256,
+                    max_action=max_action,
+                    learning_rate=3e-4,
+                    tau=0.005,
+                    noise_clip=0.5,
+                    policy_noise=0.2
+                )
+
+    replay_buffer = ReplayBuffer(buffer_size=int(1e6))
     evaluations = [eval_trainer(trainer, env)]
 
-    state, done = env.reset(), False
+    state, _ = env.reset()
+    done = False
     episode_reward = 0
     episode_timesteps = 0
     episode_num = 0
@@ -58,10 +74,11 @@ def main():
             action = (trainer.select_action(np.array(state))+ noise)
             action = action.clip(-max_action, max_action)
 
-        next_state, reward, done, terminated ,info = env.step(action)
-        done_bool = float(done) if episode_timesteps < env.spec.max_episode_steps else 0
+        next_state, reward, terminated, truncated, info = env.step(action)
+        done = terminated or truncated
+        not_done = float(not done) if episode_timesteps < env.spec.max_episode_steps else 0
 
-        replay_buffer.append((state, action, next_state, reward, done_bool))
+        replay_buffer.append((state, action, next_state, reward, not_done))
         state = next_state
         episode_reward += reward
 
@@ -70,13 +87,14 @@ def main():
 
         if done:
             print(f"Episode {episode_num+1} — Timestep {t+1} — Reward: {episode_reward:.2f}")
-            state, done = env.reset(), False
+            state, _ = env.reset()
+            done = False
             episode_reward = 0
             episode_timesteps = 0
             episode_num += 1
 
         if (t + 1) % eval_freq == 0:
-            evaluations.append(eval_trainer(trainer, env))
+            evaluations.append(eval_trainer(trainer, env, eval_episodes))
 
 if __name__ == "__main__":
     main()
