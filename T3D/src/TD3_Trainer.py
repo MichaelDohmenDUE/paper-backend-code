@@ -3,8 +3,8 @@ import torch
 import torch.nn.functional as F
 from torch import optim
 import copy
-from backend.T3D.src.Actor import Actor
-from backend.T3D.src.Critic import Critic
+from backend.CommonModels.src.Actor import Actor
+from backend.CommonModels.src.Critic import Critic
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.utils import synchronize
 

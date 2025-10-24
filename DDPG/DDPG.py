@@ -1,43 +1,13 @@
 import torch
-from torch import nn
 from torch.nn import functional as F
 from torchsummary import summary
 import numpy as np
 import gymnasium as gym
-from typing import Any
+
+from backend.CommonModels.src.Actor import Actor
+from backend.CommonModels.src.Critic import Critic
 from backend.Utils.src.utils import  synchronize
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
-
-class Actor(nn.Module):
-    def __init__(self, observation_size: int, hidden_size: int, action_size: int, action_scale: float = 1.0):
-        super().__init__()
-        self.fc1 = nn.Linear(observation_size, hidden_size)
-        self.fc2 = nn.Linear(hidden_size, action_size)
-        self.action_scale = torch.tensor(action_scale, dtype=torch.float32)
-
-    def forward(self, x) -> torch.Tensor:
-        x = F.relu(self.fc1(x))
-        x = F.tanh(self.fc2(x)) * self.action_scale
-        return x
-
-
-
-class Critic(nn.Module):
-    def __init__(self, observation_size: int, hidden_size: int, action_size: int, output_size: int):
-        super().__init__()
-        self.fc1 = nn.Linear(observation_size, hidden_size)
-        self.fc2 = nn.Linear(hidden_size + action_size, hidden_size)
-        self.fc3 = nn.Linear(hidden_size, output_size)
-
-    def forward(self, x, action):
-        x = F.relu(self.fc1(x))
-        x = torch.cat((x, action), dim=-1)
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
-
-
-
 
 
 if __name__ == '__main__':
@@ -56,12 +26,12 @@ if __name__ == '__main__':
     lr=5e-3
 
     # Initialize and synchronize behavior and target networks
-    actor = Actor(observation_size, hidden_size, action_size, action_scale)
-    actor_target = Actor(observation_size, hidden_size, action_size, action_scale)
+    actor = Actor(observation_size, action_size, action_scale, hidden_size)
+    actor_target = Actor(observation_size, action_size, action_scale, hidden_size)
     actor_optimizer = torch.optim.Adam(actor.parameters(), lr=lr)
 
-    critic = Critic(observation_size, hidden_size, action_size, output_size)
-    critic_target = Critic(observation_size, hidden_size, action_size, output_size)
+    critic = Critic(observation_size, action_size, hidden_size)
+    critic_target = Critic(observation_size, action_size, hidden_size)
     critic_optimizer = torch.optim.Adam(critic.parameters(), lr=lr)
     print(critic)
     exit(0)

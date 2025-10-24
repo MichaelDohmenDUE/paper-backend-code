@@ -1,7 +1,7 @@
 import unittest
 import torch
 
-from backend.T3D.src.Actor import Actor
+from backend.CommonModels.src.Actor import Actor
 
 
 class TestActor(unittest.TestCase):

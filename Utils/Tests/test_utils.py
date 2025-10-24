@@ -6,15 +6,15 @@ from copy import deepcopy
 from backend.Utils.src.utils import synchronize
 
 
-class TestNet(nn.Module):
+class DummyNet(nn.Module):
     def __init__(self):
         super().__init__()
         self.linear = nn.Linear(6, 7)
 
 class TestSynchronize(unittest.TestCase):
     def setUp(self):
-        self.source = TestNet()
-        self.target = TestNet()
+        self.source = DummyNet()
+        self.target = DummyNet()
 
 
 

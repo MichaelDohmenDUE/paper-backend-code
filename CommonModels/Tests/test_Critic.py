@@ -1,6 +1,6 @@
 import unittest
 import torch
-from backend.T3D.src.Critic import Critic
+from backend.CommonModels.src.Critic import Critic
 
 
 class TestCritic(unittest.TestCase):
