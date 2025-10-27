@@ -35,7 +35,7 @@ def main():
     policy_noise = 0.2
     hidden_dim= 256
 
-    env = gym.make(env_name)
+    env = gym.make(env_name) #TODO: Make this into its own module, this will become hell later
     state, _ = env.reset()
     done = False
     env.action_space.seed(seed)
