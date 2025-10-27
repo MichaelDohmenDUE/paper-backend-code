@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class Actor(nn.Module): # TODO: Refactor this with Fatih's implementation
+class Actor(nn.Module):
     def __init__(self, state_size:int , action_size: int, max_action: float, hidden_size:int):
         super(Actor, self).__init__()
 

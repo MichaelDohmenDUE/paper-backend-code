@@ -15,7 +15,7 @@ class TD3_Trainer(object):
     Twin Delayed Deep Deterministic Policy Gradient (TD3)
     Paper: https://arxiv.org/abs/1802.09477
     """
-    def __init__(self, state_size: int, action_size: int, hidden_size: int, max_action: float, learning_rate: float, tau: float, noise_clip: float, policy_noise):
+    def __init__(self, state_size: int, action_size: int, hidden_size: int, max_action: float, learning_rate: float, tau: float, noise_clip: float, policy_noise,synchro_frequency: int = 2, discount_factor : int = 0.99):
         self.state_size = state_size
         self.action_size = action_size
         self.hidden_size = hidden_size
@@ -24,9 +24,9 @@ class TD3_Trainer(object):
         self.tau = tau
         self.noise_clip = noise_clip
         self.policy_noise = policy_noise
-        self.syncro_frequency = 2
+        self.syncro_frequency = synchro_frequency
+        self.discount_factor = discount_factor
         self.iteration = 0
-        self.discount_factor = 0.99
 
         self.actor = Actor(state_size, action_size, max_action, hidden_size).to(device)
         self.actor_target = copy.deepcopy(self.actor)
@@ -42,7 +42,9 @@ class TD3_Trainer(object):
 
     def select_action(self, state):
         state = torch.FloatTensor(state.reshape(1, -1)).to(device)
-        return self.actor(state).cpu().data.numpy().flatten()
+        with torch.no_grad():
+            action = self.actor(state)
+        return action.cpu().data.numpy().flatten()
 
     def train(self, replay_buffer: ReplayBuffer, batch_size: int):
         self.iteration += 1

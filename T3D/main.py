@@ -22,14 +22,18 @@ def eval_trainer(trainer, env, eval_episodes=5):
 
 def main():
     env_name = "HalfCheetah-v5"
-    seed = 0
+    seed = 100
     max_timesteps = 1000000
     start_timesteps = 10000
     eval_freq = 2000
     eval_episodes =10
     expl_noise = 0.2
-    batch_size = 256
-
+    batch_size = 100
+    learning_rate = 1e-3
+    tau = 0.005
+    noise_clip = 0.5
+    policy_noise = 0.2
+    hidden_dim= 256
 
     env = gym.make(env_name)
     state, _ = env.reset()
@@ -47,12 +51,12 @@ def main():
     trainer = TD3_Trainer(
                     state_size=state_dim,
                     action_size=action_dim,
-                    hidden_size=256,
+                    hidden_size=hidden_dim,
                     max_action=max_action,
-                    learning_rate=3e-4,
-                    tau=0.005,
-                    noise_clip=0.5,
-                    policy_noise=0.2
+                    learning_rate=learning_rate,
+                    tau=tau,
+                    noise_clip=noise_clip,
+                    policy_noise=policy_noise
                 )
 
     replay_buffer = ReplayBuffer(buffer_size=int(1e6))
@@ -76,9 +80,9 @@ def main():
 
         next_state, reward, terminated, truncated, info = env.step(action)
         done = terminated or truncated
-        not_done = float(not done) if episode_timesteps < env.spec.max_episode_steps else 0
+        done_bool = 0 if episode_timesteps + 1 == env.spec.max_episode_steps else float(done)
+        replay_buffer.append((state, action, next_state, reward, 1 - done_bool))
 
-        replay_buffer.append((state, action, next_state, reward, not_done))
         state = next_state
         episode_reward += reward
 
