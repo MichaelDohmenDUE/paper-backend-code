@@ -33,6 +33,7 @@ def main():
     noise_clip = 0.5
     policy_noise = 0.2
     hidden_dim = 256
+    buffer_size = int(1e6)
 
     env_handler = EnvironmentHandler(env_name, seed)
 
@@ -47,7 +48,7 @@ def main():
         policy_noise=policy_noise * env_handler.max_action
     )
 
-    replay_buffer = ReplayBuffer(buffer_size=int(1e6))
+    replay_buffer = ReplayBuffer(buffer_size=buffer_size)
     evaluations = [eval_trainer(trainer, env_handler)]
 
     state = env_handler.reset()
