@@ -12,7 +12,7 @@ from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 if __name__ == '__main__':
     env = gym.make("InvertedPendulum-v5")
-    action_scale = env.action_space.high
+    action_scale  = float(env.action_space.high[0])
     #env = gym.make("Pendulum-v1")
     observation_size = env.observation_space.shape[0]
     hidden_size = 32
@@ -33,8 +33,7 @@ if __name__ == '__main__':
     critic = Critic(observation_size, action_size, hidden_size)
     critic_target = Critic(observation_size, action_size, hidden_size)
     critic_optimizer = torch.optim.Adam(critic.parameters(), lr=lr)
-    print(critic)
-    exit(0)
+
 
     synchronize(actor, actor_target, 1.0)
     synchronize(critic, critic_target, 1.0)
