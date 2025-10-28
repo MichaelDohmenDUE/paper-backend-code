@@ -7,7 +7,7 @@ from backend.Utils.src.utils import  synchronize
 import torch.nn.functional as F
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
-def epsilon_greedy(q_values: torch.tensor, epsilon: float) -> torch.tensor:
+def epsilon_greedy(q_values: torch.Tensor, epsilon: float) -> torch.Tensor:
     """ Epsilon-greedy policy, returns random action if random number is < epsilon, else greedy action
         Randomly samples from max actions if there is a tie.
      """

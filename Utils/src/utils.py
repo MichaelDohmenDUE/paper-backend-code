@@ -2,9 +2,6 @@ import numpy as np
 from numpy.typing import NDArray
 import torch
 from torch import nn
-from typing import Iterable, Any
-import random
-from collections import deque
 
 def gae(gamma: float, lambda_: float, deltas: NDArray[np.float64], dones: NDArray[np.bool_]) -> NDArray[np.float64]:
     advantages = np.empty_like(deltas)

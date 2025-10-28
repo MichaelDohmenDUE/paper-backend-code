@@ -1,6 +1,5 @@
 import torch
 from torch.nn import functional as F
-from torchsummary import summary
 import numpy as np
 import gymnasium as gym
 

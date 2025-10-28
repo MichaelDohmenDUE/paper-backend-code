@@ -1,6 +1,4 @@
 import unittest
-from typing import Any
-from collections import deque
 
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
