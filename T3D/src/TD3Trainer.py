@@ -10,7 +10,7 @@ from backend.Utils.src.utils import synchronize
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-class TD3_Trainer(object):
+class TD3Trainer(object):
     """
     Twin Delayed Deep Deterministic Policy Gradient (TD3)
     Paper: https://arxiv.org/abs/1802.09477

@@ -1,6 +1,6 @@
 import numpy as np
 
-from backend.T3D.src.TD3_Trainer import TD3_Trainer
+from backend.T3D.src.TD3Trainer import TD3Trainer
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
@@ -37,7 +37,7 @@ def main():
 
     env_handler = EnvironmentHandler(env_name, seed)
 
-    trainer = TD3_Trainer(
+    trainer = TD3Trainer(
         state_size=env_handler.state_dim,
         action_size=env_handler.action_dim,
         hidden_size=hidden_dim,

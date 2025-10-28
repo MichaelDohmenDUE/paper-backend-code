@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 import torch
 import numpy as np
-from backend.T3D.src.TD3_Trainer import TD3_Trainer
+from backend.T3D.src.TD3Trainer import TD3Trainer
 
 class TestTD3Trainer(unittest.TestCase):
     def setUp(self):
@@ -16,7 +16,7 @@ class TestTD3Trainer(unittest.TestCase):
         self.policy_noise = 0.1
         self.batch_size = 32
 
-        self.trainer = TD3_Trainer(
+        self.trainer = TD3Trainer(
             state_size=self.state_size,
             action_size=self.action_size,
             hidden_size=self.hidden_size,
