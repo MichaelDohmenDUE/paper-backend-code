@@ -3,7 +3,7 @@ import numpy as np
 import gymnasium as gym
 
 class EnvironmentHandler:
-    def __init__(self, env_name, seed):
+    def __init__(self, env_name, seed: int):
         self.env = gym.make(env_name)
         self.env.action_space.seed(seed)
         torch.manual_seed(seed)
@@ -20,7 +20,7 @@ class EnvironmentHandler:
         state, _ = self.env.reset()
         return state
 
-    def step(self, action, episode_timesteps):
+    def step(self, action, episode_timesteps: int):
         next_state, reward, terminated, truncated, info = self.env.step(action)
         done = terminated or truncated
         done_bool = float(done) if episode_timesteps < self.episode_max_steps else 0.0
