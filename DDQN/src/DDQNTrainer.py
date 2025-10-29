@@ -32,44 +32,12 @@ class DDQNTrainer:
         self.device = device
         self.total_steps = 0
 
-    def epsilon_greedy(self, q_values: torch.Tensor) -> int:
-        """ Epsilon-greedy policy, returns random action if random number is < epsilon, else greedy action
-               Randomly samples from max actions if there is a tie.
-        """
-        actions = torch.arange(len(q_values), device=q_values.device)
-        max_q_value = torch.max(q_values)
-        max_idx = (q_values == max_q_value).to(torch.bool)
-        greedy_action = random.choice(actions[max_idx].tolist())
-        return random.choice(actions.tolist()) if random.random() < self.epsilon else greedy_action
-
-    def train(self, num_episodes):
-        for episode in range(num_episodes):
-            state = self.env_handler.reset()
-            done = False
-            episode_timesteps = 0
-            episode_rewards = 0
-
-            while not done:
-                state_tensor = torch.tensor(state, dtype=torch.float32).to(self.device)
-                q_values = self.behavior_policy(state_tensor)
-                action = self.epsilon_greedy(q_values)
-
-                next_state, reward, done, done_bool = self.env_handler.step(action, episode_timesteps)
-                self.buffer.append((state, action, reward, next_state, done))
-                state = next_state
-                episode_timesteps += 1
-                episode_rewards += reward
-
-                if len(self.buffer) > self.batch_size:
-                    self._optimize()
-
+    def train(self):
+            if len(self.buffer) > self.batch_size:
+                self._optimize()
                 self.total_steps += 1
-
                 if self.total_steps % self.update_freq == 0:
                     synchronize(self.behavior_policy, self.target_policy, tau=1.0)
-
-            if episode % 10 == 0:
-                print(f"Episode [{episode}] Reward: {episode_rewards}")
 
     def _optimize(self):
         transitions = self.buffer.sample(self.batch_size)
