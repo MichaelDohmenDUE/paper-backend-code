@@ -11,6 +11,7 @@ class TestDDQNTrainer(unittest.TestCase):
         self.action_dim = 2
         self.hidden_size = 32
         self.batch_size = 8
+        tau = 1.0
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.behavior_policy = Policy(self.state_dim, self.action_dim, self.hidden_size).to(self.device)
@@ -40,6 +41,7 @@ class TestDDQNTrainer(unittest.TestCase):
             gamma=0.99,
             batch_size=self.batch_size,
             update_freq=1,
+            tau = tau,
             device=self.device
         )
 
@@ -52,9 +54,10 @@ class TestDDQNTrainer(unittest.TestCase):
     @patch("backend.DDQN.src.DDQNTrainer.synchronize")
     def test_train_triggers_optimize_sync(self, mock_sync):
         self.trainer.total_steps = 0
+        tau = 1.0
         self.trainer.train()
         self.assertEqual(self.trainer.total_steps, 1)
-        mock_sync.assert_called_once_with(self.behavior_policy, self.target_policy, tau=1.0)
+        mock_sync.assert_called_once_with(self.behavior_policy, self.target_policy, tau=tau)
 
 if __name__ == "__main__":
     unittest.main()

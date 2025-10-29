@@ -18,6 +18,7 @@ class DDQNTrainer:
         batch_size=64,
         update_freq=40,
         epsilon=0.2,
+        tau = 1.0,
         device="cpu"
     ):
         self.env_handler = env_handler
@@ -29,6 +30,7 @@ class DDQNTrainer:
         self.batch_size = batch_size
         self.update_freq = update_freq
         self.epsilon = epsilon
+        self.tau = tau
         self.device = device
         self.total_steps = 0
 
@@ -37,7 +39,7 @@ class DDQNTrainer:
                 self._optimize()
                 self.total_steps += 1
                 if self.total_steps % self.update_freq == 0:
-                    synchronize(self.behavior_policy, self.target_policy, tau=1.0)
+                    synchronize(self.behavior_policy, self.target_policy, tau=self.tau)
 
     def _optimize(self):
         transitions = self.buffer.sample(self.batch_size)

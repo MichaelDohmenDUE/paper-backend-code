@@ -27,6 +27,7 @@ def main():
     hidden_size = 32
     gamma = 0.99
     epsilon = 0.2
+    tau = 1.0
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     env_handler = EnvironmentHandler(env_name, seed)
@@ -47,6 +48,8 @@ def main():
         gamma=gamma,
         batch_size=batch_size,
         update_freq=update_freq,
+        epsilon=epsilon,
+        tau=tau,
         device=device
     )
 
