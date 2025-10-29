@@ -25,5 +25,15 @@ class TestEnvironmentHandler(unittest.TestCase):
         self.assertIsInstance(done, bool)
         self.assertIsInstance(done_bool, float)
 
+    def test_discrete_env_init(self):
+        env = EnvironmentHandler(env_name="CartPole-v1", seed=0)
+        self.assertEqual(env.action_dim, env.env.action_space.n)
+        self.assertIsNone(env.max_action)
+
+    def test_continuous_env_init(self):
+        env = EnvironmentHandler(env_name="HalfCheetah-v5", seed=0)
+        self.assertEqual(env.action_dim, env.env.action_space.shape[0])
+        self.assertEqual(env.max_action, float(env.env.action_space.high[0]))
+
 if __name__ == "__main__":
     unittest.main()

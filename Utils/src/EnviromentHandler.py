@@ -3,7 +3,7 @@ import numpy as np
 import gymnasium as gym
 
 class EnvironmentHandler:
-    def __init__(self, env_name, seed: int):
+    def __init__(self, env_name: str, seed: int):
         self.env = gym.make(env_name)
         self.env.action_space.seed(seed)
         torch.manual_seed(seed)
@@ -12,8 +12,14 @@ class EnvironmentHandler:
         np.random.seed(seed)
 
         self.state_dim = self.env.observation_space.shape[0]
-        self.action_dim = self.env.action_space.shape[0]
-        self.max_action = float(self.env.action_space.high[0])
+
+        if isinstance(self.env.action_space, gym.spaces.Discrete):
+            self.action_dim = self.env.action_space.n
+            self.max_action = None
+        else:
+            self.action_dim = self.env.action_space.shape[0]
+            self.max_action = float(self.env.action_space.high[0])
+
         self.episode_max_steps = getattr(self.env, "_max_episode_steps", None) or getattr(self.env.spec, "max_episode_steps", None)
 
     def reset(self):
