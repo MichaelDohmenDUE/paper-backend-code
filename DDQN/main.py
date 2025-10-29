@@ -3,6 +3,7 @@ from torch import nn
 import random
 import numpy as np
 
+from backend.CommonModels.src.Policy import Policy
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.utils import  synchronize
 import torch.nn.functional as F
@@ -24,23 +25,15 @@ def epsilon_greedy(q_values: torch.Tensor, epsilon: float) -> torch.Tensor:
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    env_handler = EnvironmentHandler(env_name="CartPole-v1", seed=0)
+    env_handler = EnvironmentHandler(env_name="CartPole-v1", seed=0) #TODO: This is fine for now but the DDQN Paper uses Atari and not gymnasium
 
     observation_size = env_handler.state_dim
     action_size = env_handler.action_dim
     hidden_size = 32
 
-    behavior_policy = nn.Sequential(
-        nn.Linear(observation_size, hidden_size),
-        nn.ReLU(),
-        nn.Linear(hidden_size, action_size)
-    ).to(device)
+    behavior_policy = Policy(observation_size ,action_size, hidden_size).to(device)
 
-    target_policy = nn.Sequential(
-        nn.Linear(observation_size, hidden_size),
-        nn.ReLU(),
-        nn.Linear(hidden_size, action_size)
-    ).to(device)
+    target_policy =  Policy(observation_size ,action_size, hidden_size).to(device)
 
     target_policy.load_state_dict(behavior_policy.state_dict())
 
