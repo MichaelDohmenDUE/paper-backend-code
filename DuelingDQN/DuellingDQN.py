@@ -39,27 +39,26 @@ if __name__ == '__main__':
     observation_size = env.observation_space.shape[0]
     hidden_size = 32
     action_size = env.action_space.n
-    env = gym.make("CartPole-v1")
 
     behavior_policy = DuellingDQN(observation_size, hidden_size, action_size).to(device)
 
     target_policy = DuellingDQN(observation_size, hidden_size, action_size).to(device)
 
     target_policy.load_state_dict(behavior_policy.state_dict())
-    lr = 1e-3
+    lr = 5e-4
     optimizer = torch.optim.Adam(behavior_policy.parameters(), lr=lr)
 
 
-    buffer = ReplayBuffer()
+    buffer = ReplayBuffer(buffer_size=100000)
 
     gamma = 0.99
     num_episodes = 600
     batch_size = 64
-    replay_start_size = 1000
-    update_freq = 1000
+    replay_start_size = 2000
+    update_freq = 250
     epsilon_start = 1.0
     epsilon_final = 0.05
-    epsilon_decay_frames = 50000.0
+    epsilon_decay_frames = 5000
     max_grad_norm = 10.0
     clipping = True
 
@@ -90,7 +89,7 @@ if __name__ == '__main__':
             state = next_state
 
 
-            if len(buffer) > max(batch_size, replay_start_size):
+            if len(buffer) >= max(batch_size, replay_start_size):
                 transitions = buffer.sample(batch_size)
                 states, actions, rewards, next_states, dones = zip(*transitions)
 
