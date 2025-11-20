@@ -102,7 +102,8 @@ if __name__ == '__main__':
                 qsa_behavior = behavior_policy(states_tensor).gather(1, actions_tensor)
 
                 with torch.no_grad():
-                    q_next = target_policy(next_states_tensor).max(dim=1, keepdim=True)[0]
+                    a_max = behavior_policy(next_states_tensor).argmax(dim=1, keepdim=True)
+                    q_next = target_policy(next_states_tensor).gather(1, a_max)
                     target = rewards_tensor + gamma * q_next * (1.0 - dones_tensor)
 
                 loss = F.smooth_l1_loss(qsa_behavior, target)
