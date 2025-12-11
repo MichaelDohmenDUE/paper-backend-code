@@ -1,4 +1,3 @@
-import numpy as np
 from backend.ACER.src.ACERTrainer import ACERTrainer
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
@@ -23,7 +22,6 @@ def main():
     env_name = "InvertedPendulum-v5"
     seed = 100
     max_timesteps = 1000000
-    start_timesteps = 25000
     eval_freq = 2000
     eval_episodes = 10
     batch_size = 256
@@ -56,7 +54,7 @@ def main():
         episode_timesteps += 1
 
 
-        action, mu_logp = trainer.select_action(np.array(state))
+        action, mu_logp = trainer.select_action(state)
 
         next_state, reward, done, done_bool = env_handler.step(action, episode_timesteps)
         replay_buffer.append((state, action, next_state, reward, 1.0 - done_bool, mu_logp.item()))

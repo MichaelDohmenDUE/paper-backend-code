@@ -21,3 +21,8 @@ class Actor(nn.Module):
         dist = torch.distributions.Normal(mean, std)
         action = dist.sample()
         return action.clamp(-1, 1), dist.log_prob(action).sum(dim=-1)
+
+    def log_prob(self, state, action):
+        mean, std = self.forward(state)
+        dist = torch.distributions.Normal(mean, std)
+        return dist.log_prob(action).sum(dim=-1)

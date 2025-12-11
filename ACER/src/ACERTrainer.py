@@ -1,10 +1,11 @@
+import copy
+
+import numpy as np
+import torch
 from torch import optim, nn
+
 from backend.CommonModels.src.Actor_ACER import Actor
 from backend.CommonModels.src.Critic import Critic
-import torch
-import copy
-import numpy as np
-
 from backend.Utils.src.utils import synchronize
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -39,7 +40,7 @@ class ACERTrainer:
         next_states = torch.FloatTensor(np.array(next_states)).to(device)
         rewards = torch.FloatTensor(np.array(rewards)).unsqueeze(1).to(device)
         not_dones = torch.FloatTensor(np.array(not_dones)).unsqueeze(1).to(device)
-
+        mu_logps = torch.FloatTensor(np.array(mu_logps)).to(device)
 
         with torch.no_grad():
             next_action, log_prob = self.actor.sample_action(next_states)
@@ -56,14 +57,27 @@ class ACERTrainer:
         self.critic_optimizer.step()
 
         # ACtor Update
-        action, _ = self.actor.sample_action(states)
-        q_val = self.critic(states, action)
-        actor_loss = -(q_val).mean()
+        policy_logp = self.actor.log_prob(states, actions)
+        rho = torch.exp(policy_logp - mu_logps)
+        rho_bar = torch.clamp(rho, max=self.truncation_constant)
 
-        # TODO: compute policy_logp = self.actor.log_prob(states, actions)
-        # compute rho = exp(policy_logp - mu_logp), rho_bar = clamp(rho, max=self.truncation_constant)
-        # use rho_bar * advantage for policy gradient term
-        # add bias correction term with actions sampled from policy
+        # Advantage
+        with torch.no_grad():
+            pi_action, _ = self.actor.sample_action(states)
+            v_val = self.critic(states, pi_action)
+        advantage = (q_val - v_val).detach()
+
+        # Policy gradient
+        pg_loss = -(rho_bar * advantage).mean()
+
+        # Bias correction
+        with torch.no_grad():
+            policy_action_bc, _ = self.actor.sample_action(states)
+            q_pi_bc = self.critic(states, policy_action_bc)
+            bias_adv = (q_pi_bc - v_val).detach()
+        bias_correction = -(torch.relu(rho - self.truncation_constant) * bias_adv).mean()
+
+        actor_loss = pg_loss + bias_correction
 
         # Trust region KL penalty
         policy_mean, policy_std = self.actor.forward(states)
@@ -73,7 +87,7 @@ class ACERTrainer:
         kl = kl.sum(dim=1).mean()
         kl_penalty = torch.relu(kl - self.delta)
 
-        actor_loss = actor_loss + kl_penalty
+        actor_loss +=  kl_penalty
 
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
