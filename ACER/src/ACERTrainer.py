@@ -37,7 +37,7 @@ class ACERTrainer:
 
     def train(self, replay_buffer, batch_size=256, on_policy=False):
         if on_policy:
-            batch = [replay_buffer[-self.seq_len:]]  # wrap in list for consistency
+            batch = [replay_buffer[-self.seq_len:]]
         else:
             batch = replay_buffer.sample_sequence(self.seq_len, batch_size)
 
@@ -79,12 +79,13 @@ class ACERTrainer:
 
         # Bootstrap V(s_T)
         with torch.no_grad():
-            pi_last, _ = self.actor.sample_action(next_states[:, -1, :])
-            v_last = self.critic(next_states[:, -1, :], pi_last)
+            mean_last, std_last = self.actor.forward(next_states[:, -1, :])
+            v_last = self.critic(next_states[:, -1, :], mean_last).squeeze(-1)
+            v_last = v_last * not_dones[:, -1]  # no bootstrap if terminal
 
         v_tp1 = torch.empty(B, T, device=device)
         v_tp1[:, :-1] = v_vals[:, 1:]
-        v_tp1[:, -1] = v_last.squeeze(-1)
+        v_tp1[:, -1] = v_last
 
         # Retrace recursion
         G = v_last.squeeze(-1).clone()
@@ -102,47 +103,53 @@ class ACERTrainer:
         critic_loss.backward()
         self.critic_optimizer.step()
 
-        # Actor update (last timestep)
-        s_last = states[:, -1, :]
-        a_last = actions[:, -1, :]
-        q_last = self.critic(s_last, a_last).squeeze(-1)
-        with torch.no_grad():
-            pi_action, _ = self.actor.sample_action(s_last)
-            v_val = self.critic(s_last, pi_action).squeeze(-1)
-        advantage = (q_last - v_val).detach()
+        # Actor update
+        actor_loss = 0.0
+        for t in range(T):
+            s_t = states[:, t, :]
+            a_t = actions[:, t, :]
+            q_t = self.critic(s_t, a_t).squeeze(-1)
 
-        policy_logp_last = self.actor.log_prob(s_last, a_last)
-        if on_policy:
-            pg_loss = -(advantage).mean()
-            bias_correction = torch.tensor(0.0, device=device)
-        else:
-            mu_logp_last = mu_logps[:, -1]
-            rho_last = torch.exp(policy_logp_last - mu_logp_last)
-            rho_bar_last = torch.clamp(rho_last, max=self.truncation_constant)
-            pg_loss = -(rho_bar_last * advantage).mean()
             with torch.no_grad():
-                policy_action_bc, _ = self.actor.sample_action(s_last)
-                q_pi_bc = self.critic(s_last, policy_action_bc).squeeze(-1)
-                bias_adv = (q_pi_bc - v_val).detach()
-            bias_correction = -(torch.relu(rho_last - self.truncation_constant) * bias_adv).mean()
+                pi_action_t, _ = self.actor.sample_action(s_t)
+                v_t = self.critic(s_t, pi_action_t).squeeze(-1)
 
-        actor_loss = pg_loss + bias_correction
+            advantage_t = (q_t - v_t).detach()
+            rho_t = rho[:, t]
+            rho_bar_t = torch.clamp(rho_t, max=self.truncation_constant)
+
+            logp_t = self.actor.log_prob(s_t, a_t).squeeze(-1)
+            pg_loss_t = -(rho_bar_t * logp_t * advantage_t).mean()
+
+            # Bias correction term
+            with torch.no_grad():
+                policy_action_bc_t, _ = self.actor.sample_action(s_t)
+                q_pi_bc_t = self.critic(s_t, policy_action_bc_t).squeeze(-1)
+                bias_adv_t = (q_pi_bc_t - v_t).detach()
+            bias_correction_t = -(torch.relu(rho_t - self.truncation_constant) * bias_adv_t).mean()
+
+            actor_loss = actor_loss + pg_loss_t + bias_correction_t
 
         # Trust region KL penalty
-        policy_mean, policy_std = self.actor.forward(s_last)
-        ref_mean, ref_std = self.trust_region_actor.forward(s_last)
-        kl = torch.log(ref_std / policy_std) + (policy_std ** 2 + (policy_mean - ref_mean) ** 2) / (
+        policy_mean, policy_std = self.actor.forward(states.view(-1, self.state_dim))
+        ref_mean, ref_std = self.trust_region_actor.forward(states.view(-1, self.state_dim))
+
+        kl_t = torch.log(ref_std / policy_std) + (policy_std ** 2 + (policy_mean - ref_mean) ** 2) / (
                     2.0 * ref_std ** 2) - 0.5
-        kl = kl.sum(dim=1).mean()
-        actor_loss += torch.relu(kl - self.delta)
+        kl_t = kl_t.sum(dim=-1).view(B, T)
+
+        kl_penalty = torch.relu((kl_t * not_dones).mean(dim=1) - self.delta).mean()
+        actor_loss += kl_penalty
 
         # Entropy regularization
         dist = torch.distributions.Normal(policy_mean, policy_std)
         entropy = dist.entropy().sum(dim=-1).mean()
         actor_loss += -self.beta * entropy
 
+        # apply actor update
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         self.actor_optimizer.step()
 
+        # update average policy (trust region reference)
         synchronize(self.actor, self.trust_region_actor, tau=self.tau)
