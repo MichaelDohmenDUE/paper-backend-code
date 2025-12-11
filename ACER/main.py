@@ -29,6 +29,7 @@ def main():
     hidden_dim = 256
     tau = 0.01
     buffer_size = int(1e6)
+    replay_count = 4
 
     env_handler = EnvironmentHandler(env_name, seed)
 
@@ -65,6 +66,7 @@ def main():
         episode_reward += reward
 
         if len(replay_buffer) >= batch_size:
+            for _ in range(replay_count):
                 trainer.train(replay_buffer, batch_size, on_policy=False)
 
         if done:

@@ -11,7 +11,7 @@ from backend.Utils.src.utils import synchronize
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class ACERTrainer:
-    def __init__(self, state_size, action_size, hidden_size, learning_rate=3e-4, gamma=0.99, tau=0.005, trust_region_delta=0.01):
+    def __init__(self, state_size, action_size, hidden_size, learning_rate=1e-4, gamma=0.99, tau=0.005, trust_region_delta=0.01):
         self.actor = Actor(state_size, action_size, hidden_size).to(device)
 
         # trust region reference policy
@@ -25,10 +25,10 @@ class ACERTrainer:
         self.gamma = gamma
         self.tau = tau
         self.delta = trust_region_delta
-        self.truncation_constant = 1.0
+        self.truncation_constant = 5.0 # TODO: Try out more with this
         self.retrace_lambda = 1.0
-        self.seq_len = 10
-        self.beta = 0.011
+        self.seq_len = 20
+        self.beta =  0.01
 
     def select_action(self, state):
         state = torch.FloatTensor(state).unsqueeze(0).to(device)
