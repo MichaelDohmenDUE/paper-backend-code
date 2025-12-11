@@ -19,7 +19,7 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
 
 
 def main():
-    env_name = "InvertedPendulum-v5"
+    env_name = "HalfCheetah-v5"
     seed = 100
     max_timesteps = 1000000
     eval_freq = 2000
@@ -27,7 +27,7 @@ def main():
     batch_size = 256
     learning_rate = 3e-4
     hidden_dim = 256
-    tau = 1.0
+    tau = 0.01
     buffer_size = int(1e6)
 
     env_handler = EnvironmentHandler(env_name, seed)
@@ -57,17 +57,21 @@ def main():
         action, mu_logp = trainer.select_action(state)
 
         next_state, reward, done, done_bool = env_handler.step(action, episode_timesteps)
-        replay_buffer.append((state, action, next_state, reward, 1.0 - done_bool, mu_logp.item()))
 
+        transition = (state, action, next_state, reward, 1.0 - done_bool, mu_logp.item())
+        replay_buffer.append(transition)
 
         state = next_state
         episode_reward += reward
 
         if len(replay_buffer) >= batch_size:
-            trainer.train(replay_buffer, batch_size)
+                trainer.train(replay_buffer, batch_size, on_policy=False)
 
         if done:
             print(f"Episode {episode_num+1} — Timestep {t+1} — Reward: {episode_reward:.2f}")
+            episode_length = episode_timesteps
+            episode_transitions = list(replay_buffer.buffer)[-episode_length:]
+            trainer.train(episode_transitions, on_policy=True)
             state = env_handler.reset()
             episode_reward = 0
             episode_timesteps = 0

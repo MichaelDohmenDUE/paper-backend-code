@@ -21,6 +21,17 @@ class ReplayBuffer:
     def sample(self, batch_size: int) -> list[Any]:
         return random.sample(self.buffer, batch_size)
 
+    def sample_sequence(self, seq_len: int, batch_size: int) -> list[list[Any]]:
+        length_buffer = len(self.buffer)
+        if seq_len > length_buffer:
+            raise BufferError(f"Buffer (Size {length_buffer}) is not long enough to allow a {seq_len}")
+        indices = [random.randint(0, length_buffer - seq_len) for _ in range(batch_size)]
+        sequences = []
+        for idx in indices:
+            sequence = [self.buffer[idx + t] for t in range(seq_len)]
+            sequences.append(sequence)
+        return sequences
+
     def choice(self, indices : list[Any]) -> list[Any]:
         indexed_list = [self.buffer[idx] for idx in indices]
         return indexed_list
