@@ -11,6 +11,29 @@ def gae(gamma: float, lambda_: float, deltas: NDArray[np.float64], dones: NDArra
         advantages[t] = advantage
     return advantages
 
+def compute_gae(buffer, gamma: float, lam: float, last_value:float):
+    states, actions, logps, rewards, dones, values = zip(*buffer.buffer)
+    states, actions = np.array(states), np.array(actions)
+    logps = np.array(logps, dtype=np.float32)
+    rewards = np.array(rewards, dtype=np.float32)
+    dones = np.array(dones, dtype=np.float32)
+    values = np.array(values, dtype=np.float32)
+
+    deltas = np.zeros_like(rewards)
+    for t in range(len(rewards)):
+        if t == len(rewards) - 1:
+            next_value = last_value
+            next_non_terminal = 1.0 - dones[t]
+        else:
+            next_value = values[t+1]
+            next_non_terminal = 1.0 - dones[t+1]
+        deltas[t] = rewards[t] + gamma * next_value * next_non_terminal - values[t]
+
+    advantages = gae(gamma, lam, deltas, dones)
+    returns = advantages + values
+
+    return states, actions, logps, advantages, returns
+
 
 def discounted_cumulative_reward(gamma: float, rewards: NDArray[np.float64], dones: NDArray[np.bool_]) -> NDArray[
     np.float64]:
