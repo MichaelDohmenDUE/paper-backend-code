@@ -1,22 +1,8 @@
 from backend.PPO.src.PPO_continuous import PPOTrainer
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
+from backend.Utils.src.EvaluationHelper import eval_trainer
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.utils import compute_gae
-
-
-def eval_trainer(trainer, env_handler, eval_episodes=5):
-    avg_reward = 0.0
-    for _ in range(eval_episodes):
-        state = env_handler.reset()
-        done = False
-        while not done:
-            action, _, _ = trainer.select_action(state)
-            next_state, reward, done, _ = env_handler.step(action, 0)
-            avg_reward += reward
-            state = next_state
-    avg_reward /= eval_episodes
-    print(f"Average Reward over {eval_episodes} episodes: {avg_reward:.3f}")
-    return avg_reward
 
 def collect_rollout(env_handler, trainer, replay_buffer, rollout_size, episode_timesteps):
     state = env_handler.reset()
