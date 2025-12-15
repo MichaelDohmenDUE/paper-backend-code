@@ -1,4 +1,4 @@
-from backend.PPO.PPO_continuous import PPOTrainer
+from backend.PPO.src.PPO_continuous import PPOTrainer
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.utils import compute_gae
