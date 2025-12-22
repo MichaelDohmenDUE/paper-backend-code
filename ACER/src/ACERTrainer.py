@@ -28,6 +28,7 @@ class ACERTrainer:
         self.truncation_constant = 1.0
         self.seq_len = 20
         self.beta =  0.1
+        self.retrace_lambda = 1.0
 
     def select_action(self, state, return_params=False):
         state_t = torch.FloatTensor(state).unsqueeze(0).to(device)
