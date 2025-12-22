@@ -86,9 +86,10 @@ class ACERTrainer:
         B, T = rewards.shape
         G = v_tp1[:, -1].clone()
         retrace_targets = []
-        for t in reversed(range(T)): delta_t = rewards[:, t] + not_dones[:, t] * self.gamma * v_tp1[:, t] - q_vals[:, t]
-        G = q_vals[:, t] + rho_bar[:, t] * delta_t  + not_dones[:, t] * self.gamma * self.retrace_lambda * rho_bar[:, t] * G
-        retrace_targets.insert(0, G)
+        for t in reversed(range(T)):
+            delta_t = rewards[:, t] + not_dones[:, t] * self.gamma * v_tp1[:, t] - q_vals[:, t]
+            G = q_vals[:, t] + rho_bar[:, t] * delta_t  + not_dones[:, t] * self.gamma * self.retrace_lambda * rho_bar[:, t] * G
+            retrace_targets.insert(0, G)
         return torch.stack(retrace_targets, dim=1)
 
     def _critic_loss_function(self, q_vals, target_q):
@@ -122,11 +123,11 @@ class ACERTrainer:
         dist = torch.distributions.Normal(policy_mean, policy_std)
         return dist.entropy().sum(dim=-1).mean()
 
-    def compute_kl(self, policy_mean, policy_std, ref_mean, ref_std):
+    def _compute_kl(self, policy_mean, policy_std, ref_mean, ref_std):
         kl = torch.log(ref_std / policy_std) + (policy_std ** 2 + (policy_mean - ref_mean) ** 2) / (2 * ref_std ** 2) - 0.5
         return kl.sum(dim=-1)
 
-    def trust_region_projection(self, kl_grad):
+    def _trust_region_projection(self, kl_grad):
         g = [p.grad for p in self.actor.parameters()]
         k_dot_g = sum((kg * gg).sum() for kg, gg in zip(kl_grad, g))
         k_norm_sq = sum((kg * kg).sum() for kg in kl_grad) + 1e-8
@@ -136,10 +137,10 @@ class ACERTrainer:
             if p.grad is not None:
                 p.grad -= alpha * kg
 
-    def update_actor(self, actor_loss, kl_grad):
+    def _update_actor(self, actor_loss, kl_grad):
         self.actor_optimizer.zero_grad()
         actor_loss.backward(retain_graph=True)
-        self.trust_region_projection(kl_grad)
+        self._trust_region_projection(kl_grad)
         self.actor_optimizer.step()
 
     def select_action(self, state, return_params=False):
@@ -188,16 +189,14 @@ class ACERTrainer:
 
 
         # Actor update
-        actor_loss = 0.0
+        actor_loss = torch.zeros((), device=device)
         for t in range(T):
             s_t = states[:, t, :]
             a_t = actions[:, t, :]
             rho_bar_t = rho_bar[:, t]
-            q_t = self.critic(s_t, a_t).squeeze(-1)
 
-            with torch.no_grad():
-                v_t = self._compute_v_values(s_t).squeeze(-1)
-
+            q_t = q_vals[:, t]
+            v_t = v_vals[:, t]
             advantage_t = (q_t - v_t).detach()
 
             pg_loss_t = self._policy_gradient(s_t, a_t, rho_bar_t, advantage_t)
@@ -206,18 +205,17 @@ class ACERTrainer:
 
             actor_loss = actor_loss + pg_loss_t + bias_correction_t
 
-        policy_mean, policy_std = self.actor.forward(flat_states)
+        # Entropy regularization
+        policy_mean, policy_std = self.actor(flat_states)
         entropy = self._entropy_correction(policy_mean, policy_std)
         actor_loss += -self.beta * entropy
 
-        # Trust region KL penalty
-        policy_mean, policy_std = self.actor.forward(states.view(-1, self.state_dim))
-        ref_mean, ref_std = self.trust_region_actor.forward(flat_states)
-        kl = self.compute_kl(policy_mean, policy_std, ref_mean, ref_std).view(B, T)
+        # Trust region KL
+        ref_mean, ref_std = self.trust_region_actor(flat_states)
+        kl = self._compute_kl(policy_mean, policy_std, ref_mean, ref_std).view(B, T)
         kl = (kl * not_dones).mean()
         kl_grad = torch.autograd.grad(kl, self.actor.parameters(), retain_graph=True)
 
-        self.update_actor(actor_loss, kl_grad)
+        self._update_actor(actor_loss, kl_grad)
 
-        # update average policy (trust region reference)
         synchronize(self.actor, self.trust_region_actor, tau=self.tau)
