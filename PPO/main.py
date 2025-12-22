@@ -28,7 +28,7 @@ def train_update(trainer, replay_buffer, last_value, batch_size, epochs):
     return stats
 
 def main():
-    env_name = "HalfCheetah-v5"
+    env_name = "InvertedPendulum-v5"
     seed = 100
     rollout_size = 2048
     batch_size = 64

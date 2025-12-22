@@ -9,7 +9,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class PPOTrainer:
     # TODO : Make PPO Trainer agnostic between continuous and discrete
-    def __init__(self, state_dim, action_dim, hidden_dim=64, lr=3e-4, clip_eps=0.2, vf_coef=0.5, ent_coef=0.01, max_grad_norm=0.5):
+    def __init__(self, state_dim, action_dim, hidden_dim=64, lr=3e-4, clip_eps=0.2, vf_coef=1.0, ent_coef=0.01, max_grad_norm=0.5):
         self.actor = ActorPPO(state_dim, action_dim, hidden_dim).to(device)
         self.critic = CriticPPO(state_dim, hidden_dim).to(device)
         self.optimizer = optim.Adam(list(self.actor.parameters()) + list(self.critic.parameters()), lr=lr)
@@ -26,12 +26,13 @@ class PPOTrainer:
         with torch.no_grad():
             dist = self.actor(state_t)
             action = dist.sample()
+            #print(action)
             logp = dist.log_prob(action).sum(-1)
             value = self.critic(state_t).squeeze(-1)
         return action.cpu().numpy().squeeze(0), float(logp.cpu().numpy()), float(value.cpu().numpy())
 
     def train(self, states, actions, old_logps, advantages, returns,batch_size=64, epochs=10):
-        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+        #advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
         # Convert to tensors
         states = torch.as_tensor(states, dtype=torch.float32, device=self.device)
@@ -41,12 +42,12 @@ class PPOTrainer:
         returns = torch.as_tensor(returns, dtype=torch.float32, device=self.device)
 
         # Replaybuffer Rollout
-        dataset = list(zip(states, actions, old_logps, advantages, returns))
+        replaybuffer_rollout = list(zip(states, actions, old_logps, advantages, returns))
 
         for _ in range(epochs):
-            np.random.shuffle(dataset)
-            for start in range(0, len(dataset), batch_size):
-                batch = dataset[start:start + batch_size]
+            np.random.shuffle(replaybuffer_rollout)
+            for start in range(0, len(replaybuffer_rollout), batch_size):
+                batch = replaybuffer_rollout[start:start + batch_size]
                 b_states, b_actions, b_old_logps, b_adv, b_ret = zip(*batch)
                 b_states = torch.stack(b_states)
                 b_actions = torch.stack(b_actions)
@@ -56,6 +57,7 @@ class PPOTrainer:
 
                 dist = self.actor(b_states)
                 new_logp = dist.log_prob(b_actions).sum(-1)
+                print(new_logp)
                 entropy = dist.entropy().sum(-1).mean()
                 value_pred = self.critic(b_states).squeeze(-1)
 
@@ -74,5 +76,5 @@ class PPOTrainer:
                 # Backprop
                 self.optimizer.zero_grad()
                 loss.backward()
-                nn.utils.clip_grad_norm_(list(self.actor.parameters()) + list(self.critic.parameters()),self.max_grad_norm)
+                #nn.utils.clip_grad_norm_(list(self.actor.parameters()) + list(self.critic.parameters()),self.max_grad_norm)
                 self.optimizer.step()
