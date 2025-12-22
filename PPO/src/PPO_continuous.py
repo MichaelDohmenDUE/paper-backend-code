@@ -57,7 +57,7 @@ class PPOTrainer:
 
                 dist = self.actor(b_states)
                 new_logp = dist.log_prob(b_actions).sum(-1)
-                print(new_logp)
+                #print(new_logp)
                 entropy = dist.entropy().sum(-1).mean()
                 value_pred = self.critic(b_states).squeeze(-1)
 
