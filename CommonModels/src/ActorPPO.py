@@ -9,13 +9,15 @@ class ActorPPO(nn.Module):
             nn.Linear(state_dim, hidden_dim),
             nn.Tanh(),
             nn.Linear(hidden_dim, hidden_dim),
-            nn.Tanh(),
-            nn.Linear(hidden_dim, action_dim),
+            nn.Tanh()
         )
         self.log_std = nn.Parameter(torch.zeros(action_dim))
+        self.mean = nn.Linear(hidden_dim, action_dim)
+        self.log_std = nn.Linear(hidden_dim, action_dim)
 
     def forward(self, state):
-        mean = self.net(state)
-        std = torch.exp(self.log_std)
+        mean = self.mean(self.net(state))
+        std = self.log_std(self.net(state))
+        std = torch.exp(std)
         dist = torch.distributions.Normal(mean, std)
         return dist
