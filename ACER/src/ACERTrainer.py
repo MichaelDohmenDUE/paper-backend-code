@@ -30,6 +30,36 @@ class ACERTrainer:
         self.beta =  0.1
         self.retrace_lambda = 1.0
 
+    def _prepare_batch(self, replay_buffer, batch_size, on_policy):
+        if on_policy:
+            seq = list(replay_buffer.buffer)[-self.seq_len:]
+            batch = [seq]
+        else:
+            batch = replay_buffer.sample_sequence(self.seq_len, batch_size)
+
+        states, actions, rewards, not_dones, mu_logps, next_states, mu_means, mu_log_stds = [], [], [], [], [], [], [], []
+
+        for sequence in batch:
+            s, a, ns, r, nd, ml, mmean, mlogstd = zip(*sequence)
+            states.append(s)
+            actions.append(a)
+            next_states.append(ns)
+            rewards.append(r)
+            not_dones.append(nd)
+            mu_logps.append(ml)
+            mu_means.append(mmean)
+            mu_log_stds.append(mlogstd)
+
+        return (
+            torch.FloatTensor(np.array(states)).to(device),
+            torch.FloatTensor(np.array(actions)).to(device),
+            torch.FloatTensor(np.array(rewards)).to(device),
+            torch.FloatTensor(np.array(not_dones)).to(device),
+            torch.FloatTensor(np.array(mu_logps)).to(device),
+            torch.FloatTensor(np.array(next_states)).to(device),
+            torch.FloatTensor(np.array(mu_means)).to(device),
+            torch.FloatTensor(np.array(mu_log_stds)).to(device))
+
     def select_action(self, state, return_params=False):
         state_t = torch.FloatTensor(state).unsqueeze(0).to(device)
         action, mu_logp, mu_mean, mu_log_std = self.actor.sample_action_with_params(state_t)
@@ -43,36 +73,7 @@ class ACERTrainer:
             return action_np, mu_logp_np
 
     def train(self, replay_buffer, batch_size=256, on_policy=False):
-        if on_policy:
-            seq = list(replay_buffer.buffer)[-self.seq_len:]
-            fixed_seq = []
-            for transition in seq:
-                s, a, ns, r, nd, ml, mu_mean, mu_log_std = transition
-                fixed_seq.append((s, a, ns, r, nd, ml, mu_mean, mu_log_std))
-            batch = [fixed_seq]
-        else:
-            batch = replay_buffer.sample_sequence(self.seq_len, batch_size)
-
-        states, actions, rewards, not_dones, mu_logps, next_states, mu_means, mu_log_stds = [], [], [], [], [], [], [], []
-        for sequence in batch:
-            s, a, ns, r, nd, ml, mmean, mlogstd = zip(*sequence)
-            states.append(s)
-            actions.append(a)
-            next_states.append(ns)
-            rewards.append(r)
-            not_dones.append(nd)
-            mu_logps.append(ml)
-            mu_means.append(mmean)
-            mu_log_stds.append(mlogstd)
-
-        states = torch.FloatTensor(np.array(states)).to(device)
-        actions = torch.FloatTensor(np.array(actions)).to(device)
-        next_states = torch.FloatTensor(np.array(next_states)).to(device)
-        rewards = torch.FloatTensor(np.array(rewards)).to(device)
-        not_dones = torch.FloatTensor(np.array(not_dones)).to(device)
-        mu_logps = torch.FloatTensor(np.array(mu_logps)).to(device)
-        mu_means = torch.FloatTensor(np.array(mu_means)).to(device)
-        mu_log_stds = torch.FloatTensor(np.array(mu_log_stds)).to(device)
+        states, actions, rewards, not_dones, mu_logps, next_states, mu_means, mu_log_stds = self._prepare_batch(replay_buffer, batch_size, on_policy)
 
         B, T = states.shape[0], states.shape[1]
 
