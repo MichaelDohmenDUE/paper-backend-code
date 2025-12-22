@@ -12,6 +12,12 @@ class ReplayBuffer:
     def __str__(self) -> str:
         return f"{list(self.buffer)}"
 
+    def __getitem__(self, idx):
+        if isinstance(idx, slice):
+            return list(self.buffer)[idx]
+        else:
+            return self.buffer[idx]
+
     def append(self, x: Any) -> None:
         self.buffer.append(x)
 

@@ -7,7 +7,7 @@ class Actor(nn.Module):
         self.fc1 = nn.Linear(state_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
         self.mean = nn.Linear(hidden_dim, action_dim)
-        self.log_std = nn.Parameter(torch.zeros(action_dim))  # learnable log std
+        self.log_std = nn.Parameter(torch.zeros(action_dim))
 
     def forward(self, state):
         x = torch.relu(self.fc1(state))
@@ -19,10 +19,30 @@ class Actor(nn.Module):
     def sample_action(self, state):
         mean, std = self.forward(state)
         dist = torch.distributions.Normal(mean, std)
-        action = dist.sample()
-        return action.clamp(-1, 1), dist.log_prob(action).sum(dim=-1)
+        raw_action = dist.rsample()
+        action = torch.tanh(raw_action)
+        gaussian_logp = dist.log_prob(raw_action).sum(dim=-1)
+        log_det_jacobian = torch.log(1 - action.pow(2) + 1e-6).sum(dim=-1)
+        log_prob = gaussian_logp - log_det_jacobian
 
-    def log_prob(self, state, action):
+        return action, log_prob
+
+    def sample_action_with_params(self,state):
         mean, std = self.forward(state)
         dist = torch.distributions.Normal(mean, std)
-        return dist.log_prob(action).sum(dim=-1)
+        raw_action = dist.rsample()
+        action = torch.tanh(raw_action)
+        gaussian_logp = dist.log_prob(raw_action).sum(dim=-1)
+        log_det_jacobian = torch.log(1 - action.pow(2) + 1e-6).sum(dim=-1)
+        log_prob = gaussian_logp - log_det_jacobian  # behavior params
+        log_std = torch.log(std)
+        return action, log_prob, mean, log_std
+
+    def log_prob(self, state, action):
+        action = action.clamp(-0.999, 0.999)
+        raw_action = 0.5 * torch.log((1 + action) / (1 - action + 1e-6))
+        mean, std = self.forward(state)
+        dist = torch.distributions.Normal(mean, std)
+        gaussian_logp = dist.log_prob(raw_action).sum(dim=-1)
+        log_det_jacobian = torch.log(1 - action.pow(2) + 1e-6).sum(dim=-1)
+        return gaussian_logp - log_det_jacobian
