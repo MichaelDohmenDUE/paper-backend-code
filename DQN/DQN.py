@@ -3,6 +3,7 @@ from copy import deepcopy
 from typing import Tuple
 
 import torch
+from networkx.algorithms.tree import from_nested_tuple
 from sympy.plotting import plot3d
 from torch import nn
 import random
@@ -40,12 +41,7 @@ def get_env_specs(env: gym.Env) -> Tuple[int, int, float]:
 
 Transition = namedtuple("transition", ["state", "action", "reward", "next_state", "done"])
 
-class DynamicTransition():
-    def __init__(self, *keys):
-        for key in keys:
-            setattr()
 
-DynamicTransition("state", "action")
 class DataCollectionProcessor():
     def __init__(self, policy: nn.Module, env: gym.Env, buffer: ReplayBuffer):
         self.policy = policy
@@ -70,7 +66,6 @@ class DataCollectionProcessor():
 
         return transition
 
-
 class TrainProcessor():
     def __init__(self, buffer: ReplayBuffer, behavior_net: nn.Module, target_net: nn.Module, optimizer: torch.optim.Optimizer):
         self.buffer = buffer
@@ -85,6 +80,7 @@ class TrainProcessor():
         transitions = buffer.sample()
         states, actions, rewards, next_states, dones = zip(*transitions)
 
+
         states_tensor = torch.tensor(np.array(states), dtype=torch.float32)  # batch_size x 4
         actions_tensor = torch.tensor(actions, dtype=torch.int64).unsqueeze(-1)  # batch_size x 1
         rewards_tensor = torch.tensor(rewards, dtype=torch.float32).unsqueeze(-1)
@@ -92,10 +88,14 @@ class TrainProcessor():
         dones_tensor = torch.tensor(dones, dtype=torch.float32).unsqueeze(-1)
 
         qsa_behavior = behavior_net(states_tensor).gather(1, actions_tensor)  # ^y
+
+
         qs_target = target_net(next_states_tensor)  # batch_size x action_dim
         qsa_target = torch.max(qs_target, dim=1).values.unsqueeze(-1).detach()
         target = rewards_tensor + gamma * qsa_target * (1.0 - dones_tensor)  # [~dones_tensor]  # y
+        target = target.detach()
 
+        # ToDo: How to model dependent steps without forwarding anything
         optimizer.zero_grad()
         loss = F.mse_loss(qsa_behavior, target)
         loss.backward()
@@ -103,10 +103,31 @@ class TrainProcessor():
 
         return loss.item()
 
+class SyncProcessor():
+    def __init__(self, from_net : nn.Module, to_net : nn.Module, tau = 1.0):
+        self.from_net = from_net
+        self.to_net = to_net
+        self.tau = tau
+
+    def run(self):
+        if total_steps % sync_freq != 0:
+            return
+        if self.tau == 1.0:
+            self.hard_sync()
+        else:
+            self.soft_sync()
+
+    def hard_sync(self):
+        self.to_net.load_state_dict(self.from_net.state_dict())
+
+    def soft_sync(self):
+        for from_param, to_param in zip(self.from_net.parameters(), self.to_net.parameters()):
+            to_param.copy_(self.tau * from_param + (1.0 - self.tau) * to_param)
 
 if __name__ == '__main__':
 
     # initialization
+    # ToDo: Constants as global variables or member variables
     lr = 1e-3
     num_episodes = 1000
     epsilon = 0.2
@@ -115,7 +136,7 @@ if __name__ == '__main__':
     hidden_size = 32
     batch_size = 64
     max_buffer_size = 10000
-    tau = 1.0
+    TAU = 1.0
     gamma = 0.99
 
     env = gym.make(env_name)
@@ -129,12 +150,9 @@ if __name__ == '__main__':
     buffer = ReplayBuffer(max_buffer_size, batch_size)
 
     collector = DataCollectionProcessor(behavior_net, env, buffer)
-
+    train_process = TrainProcessor(buffer, behavior_net, target_net, optimizer)
+    sync_process = SyncProcessor(behavior_net, target_net)
     # Outer training loop
-
-    # run_data_collection():
-    # run_training_step() : if batch_size < len(buffer) return
-    # run_synchronization() : if total_step % sync_freq != 0 return
     total_steps = 0
     for episode in range(num_episodes):
         state, _ = env.reset()
@@ -143,35 +161,12 @@ if __name__ == '__main__':
         episode_rewards = 0
         while not done:
             transition = collector.run()
-            done = transition.done
-
-            # train_process.run()
-
-            # Learning
-            if len(buffer) > batch_size:
-                transitions = buffer.sample()
-                states, actions, rewards, next_states, dones = zip(*transitions)
-
-                states_tensor = torch.tensor(np.array(states), dtype=torch.float32)  # batch_size x 4
-                actions_tensor = torch.tensor(actions, dtype=torch.int64).unsqueeze(-1)  # batch_size x 1
-                rewards_tensor = torch.tensor(rewards, dtype=torch.float32).unsqueeze(-1)
-                next_states_tensor = torch.tensor(np.array(next_states), dtype=torch.float32)
-                dones_tensor = torch.tensor(dones, dtype=torch.float32).unsqueeze(-1)
-
-                qsa_behavior = behavior_net(states_tensor).gather(1, actions_tensor)  # ^y
-                qs_target = target_net(next_states_tensor)  # batch_size x action_dim
-                qsa_target = torch.max(qs_target, dim=1).values.unsqueeze(-1).detach()
-                target = rewards_tensor + gamma * qsa_target * (1.0 - dones_tensor)  # [~dones_tensor]  # y
-
-                optimizer.zero_grad()
-                loss = F.mse_loss(qsa_behavior, target)
-                loss.backward()
-                optimizer.step()
+            train_process.run()
+            sync_process.run()
 
             total_steps += 1
+            done = transition.done
             episode_rewards += transition.reward
             # synchronization
-            if total_steps % sync_freq == 0:
-                synchronize(behavior_net, target_net, tau=1.0)
         if episode % 10 == 0:
             print(f"Episode [{episode}] {episode_rewards}")
