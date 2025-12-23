@@ -1,93 +1,166 @@
+from collections import namedtuple
+from copy import deepcopy
+
 import torch
 from torch.nn import functional as F
+from torch import nn
 import numpy as np
 import gymnasium as gym
 
 from backend.CommonModels.src.Actor import Actor
 from backend.CommonModels.src.Critic import Critic
-from backend.Utils.src.utils import  synchronize
+from backend.DQN.DQN import get_env_specs
+from backend.Utils.src.utils import synchronize
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
+
+
+class DataCollectionProcess:
+    def __init__(self, env: gym.Env, behavior_net: nn.Module, buffer: ReplayBuffer):
+        self.env = env
+        self.behavior_net = behavior_net
+        self.buffer = buffer
+        # ToDo: env.reset() and done=False maybe misplaced
+        self.state, _ = env.reset()
+        self.done = False
+
+    def run(self):
+        state_tensor = torch.tensor(self.state, dtype=torch.float32)
+        action_tensor = actor(state_tensor)
+        action_tensor += torch.normal(noise_mean, noise_std, size=action_tensor.shape)
+        action = action_tensor.detach().numpy()
+        next_state, reward, terminated, truncated, _ = env.step(action)
+
+        self.done = terminated or truncated
+        transition = Transition(self.state, action, reward, next_state, self.done)
+
+        self.buffer.append(transition)
+
+        self.state = next_state
+
+        if self.done:
+            self.state, _ = env.reset()
+            self.done = False
+        return transition
+
+
+class TrainProcess:
+    def __init__(self, buffer: ReplayBuffer, actor: nn.Module, actor_target: nn.Module, critic: nn.Module,
+                 critic_target: nn.Module, actor_optimizer: torch.optim.Optimizer,
+                 critic_optimizer: torch.optim.Optimizer):
+        self.buffer = buffer
+        self.actor = actor
+        self.actor_target = actor_target
+        self.critic = critic
+        self.critic_target = critic_target
+        self.actor_optimizer = actor_optimizer
+        self.critic_optimizer = critic_optimizer
+
+    def run(self):
+        if len(buffer) < buffer.batch_size:
+            return None, None
+
+        batch = buffer.sample()
+        states, actions, rewards, next_states, dones = zip(*batch)
+
+        states_tensor = torch.tensor(np.array(states), dtype=torch.float32)
+        actions_tensor = torch.tensor(np.array(actions), dtype=torch.float32)
+        rewards_tensor = torch.tensor(np.array(rewards), dtype=torch.float32).unsqueeze(-1)
+        next_states_tensor = torch.tensor(np.array(next_states), dtype=torch.float32)
+        dones_tensor = torch.tensor(np.array(dones), dtype=torch.float32).unsqueeze(-1)
+
+        targets = (rewards_tensor + (1.0 - dones_tensor) * gamma *
+                   self.critic_target(next_states_tensor, self.actor_target(next_states_tensor))).detach()
+
+        self.critic_optimizer.zero_grad()
+        critic_loss = F.mse_loss(self.critic(states_tensor, actions_tensor), targets)
+        critic_loss.backward()
+        self.critic_optimizer.step()
+
+        self.actor_optimizer.zero_grad()
+        actor_loss = -self.critic(states_tensor, self.actor(states_tensor)).mean()
+        actor_loss.backward()
+        self.actor_optimizer.step()
+        return actor_loss, critic_loss
+
+class SyncProcessor():
+    def __init__(self, from_net : nn.Module, to_net : nn.Module, tau = 1.0):
+        self.from_net = from_net
+        self.to_net = to_net
+        self.tau = tau
+
+    def run(self):
+        with torch.no_grad():
+            if total_steps % sync_freq != 0:
+                return
+            if self.tau == 1.0:
+                self.hard_sync()
+            else:
+                self.soft_sync()
+
+    def hard_sync(self):
+        self.to_net.load_state_dict(self.from_net.state_dict())
+
+    def soft_sync(self):
+        for from_param, to_param in zip(self.from_net.parameters(), self.to_net.parameters()):
+            to_param.copy_(self.tau * from_param + (1.0 - self.tau) * to_param)
+
+
+Transition = namedtuple("Transition", ["state", "action", "reward", "next_state", "done"])
+
 if __name__ == '__main__':
-    env = gym.make("InvertedPendulum-v5")
-    action_scale  = float(env.action_space.high[0])
-    #env = gym.make("Pendulum-v1")
-    observation_size = env.observation_space.shape[0]
+    lr = 1e-3
+    num_episodes = 1000
+    env_name = "InvertedPendulum-v5"
+    sync_freq = 40
     hidden_size = 32
-    action_size = env.action_space.shape[0]
-    output_size = 1
-
-    num_episodes = 15000
-    batch_size = 128
-
+    batch_size = 64
+    max_buffer_size = 10000
+    tau = 0.05
     gamma = 0.99
-    lr=5e-3
+
+    env = gym.make(env_name)
+    observation_size, action_size, action_scale = get_env_specs(env)
+
+    noise_mean = 0.0
+    noise_std = 0.1
 
     # Initialize and synchronize behavior and target networks
     actor = Actor(observation_size, action_size, action_scale, hidden_size)
-    actor_target = Actor(observation_size, action_size, action_scale, hidden_size)
+    actor_target = deepcopy(actor)
     actor_optimizer = torch.optim.Adam(actor.parameters(), lr=lr)
 
     critic = Critic(observation_size, action_size, hidden_size)
-    critic_target = Critic(observation_size, action_size, hidden_size)
+    critic_target = deepcopy(critic)
     critic_optimizer = torch.optim.Adam(critic.parameters(), lr=lr)
 
+    buffer = ReplayBuffer(max_buffer_size, batch_size)
 
-    synchronize(actor, actor_target, 1.0)
-    synchronize(critic, critic_target, 1.0)
-
-    buffer = ReplayBuffer()
-
+    # Autogenerated
+    data_collection_process = DataCollectionProcess(env, actor, buffer)
+    train_process = TrainProcess(buffer, actor, actor_target, critic, critic_target,actor_optimizer, critic_optimizer)
+    sync_process_actor = SyncProcessor(actor, actor_target, tau)
+    sync_process_critic = SyncProcessor(critic,critic_target, tau)
+    total_steps = 0
     for episode in range(num_episodes):
-
         state, _ = env.reset()
         done = False
         episode_reward = 0
         actor_loss, critic_loss = None, None
-
         while not done:
             # Data Collection
-            state_tensor = torch.tensor(state, dtype=torch.float32)
-            action = actor(state_tensor)
-            action += torch.normal(0, 0.1, size=action.shape)
-            next_state, reward, terminated, truncated, _ = env.step([action.item()])
-            done = terminated or truncated
+            transition = data_collection_process.run()
+            total_steps += 1
+            actor_loss, critic_loss = train_process.run()
+            done = transition.done
+            episode_reward += transition.reward
 
-            transition = (state, action.item(), reward, next_state, done)
-            buffer.append(transition)
+            sync_process_actor.run()
+            sync_process_critic.run()
 
-            state = next_state
-            episode_reward += reward
-
-             # Learning
-            if len(buffer) > batch_size:
-                batch = buffer.sample(batch_size)
-                states, actions, rewards, next_states, dones = zip(*batch)
-
-                states_tensor = torch.tensor(np.array(states), dtype=torch.float32)
-                actions_tensor = torch.tensor(np.array(actions), dtype=torch.float32).unsqueeze(-1)
-                rewards_tensor = torch.tensor(np.array(rewards), dtype=torch.float32).unsqueeze(-1)
-                next_states_tensor = torch.tensor(np.array(next_states), dtype=torch.float32)
-                dones_tensor = torch.tensor(np.array(dones), dtype=torch.float32).unsqueeze(-1)
-
-                targets = (rewards_tensor + (1.0 - dones_tensor) * gamma *
-                           critic_target(next_states_tensor, actor_target(next_states_tensor))).detach()
-
-                critic_optimizer.zero_grad()
-                critic_loss = F.mse_loss(critic(states_tensor, actions_tensor), targets)
-                critic_loss.backward()
-                critic_optimizer.step()
-
-                actor_optimizer.zero_grad()
-                actor_loss = -critic(states_tensor, actor(states_tensor)).mean()
-                actor_loss.backward()
-                actor_optimizer.step()
-
-                # Synchronization
-                synchronize(actor, actor_target, 0.005)
-                synchronize(critic, critic_target, 0.005)
 
         if episode % 10 == 9:
             if actor_loss is not None and critic_loss is not None:
-                print(f"Episode: {episode+1}, Reward: {episode_reward}, actor_loss: {actor_loss.mean():.3f}, critic_loss: {critic_loss:.3f}" )
+                print(
+                    f"Episode: {episode + 1}, Reward: {episode_reward}, actor_loss: {actor_loss.mean():.3f}, critic_loss: {critic_loss:.3f}")
