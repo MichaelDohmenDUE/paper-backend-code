@@ -2,9 +2,11 @@ from typing import Iterable, Any
 import random
 from collections import deque
 
+
 class ReplayBuffer:
-    def __init__(self, buffer_size: int = 10_000):
-        self.buffer: deque[Any] = deque(maxlen=buffer_size)
+    def __init__(self, max_buffer_size: int = 10_000, batch_size: int = 32):
+        self.buffer: deque[Any] = deque(maxlen=max_buffer_size)
+        self.batch_size: int = batch_size
 
     def __len__(self) -> int:
         return len(self.buffer)
@@ -24,8 +26,8 @@ class ReplayBuffer:
     def extend(self, iterable: Iterable[Any]) -> None:
         self.buffer.extend(iterable)
 
-    def sample(self, batch_size: int) -> list[Any]:
-        return random.sample(self.buffer, batch_size)
+    def sample(self) -> list[Any]:
+        return random.sample(self.buffer, self.batch_size)
 
     def sample_sequence(self, seq_len: int, batch_size: int) -> list[list[Any]]:
         length_buffer = len(self.buffer)
@@ -38,6 +40,6 @@ class ReplayBuffer:
             sequences.append(sequence)
         return sequences
 
-    def choice(self, indices : list[Any]) -> list[Any]:
+    def choice(self, indices: list[Any]) -> list[Any]:
         indexed_list = [self.buffer[idx] for idx in indices]
         return indexed_list

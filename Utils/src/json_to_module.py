@@ -98,5 +98,6 @@ class JSONModule(nn.Module):
 
 if __name__ == '__main__':
     net = JSONModule(json_module)
+    print(net)
 
 
