@@ -3,16 +3,24 @@ from copy import deepcopy
 from typing import Tuple
 
 import torch
-from networkx.algorithms.tree import from_nested_tuple
-from sympy.plotting import plot3d
 from torch import nn
 import random
 import gymnasium as gym
 import numpy as np
-from backend.Utils.src.utils import synchronize
 import torch.nn.functional as F
+
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
+def preprocess(data):
+    if isinstance(data[0], int | np.int64):
+        data_tensor = torch.tensor(data, dtype=torch.int64).unsqueeze(-1)
+    elif isinstance(data[0], bool | float):
+        data_tensor = torch.tensor(data, dtype=torch.float32).unsqueeze(-1)
+    elif isinstance(data[0], np.ndarray):
+        data_tensor = torch.tensor(np.array(data), dtype=torch.float32)
+    else:
+        raise ValueError("Unknown data type")
+    return data_tensor
 
 def epsilon_greedy(q_values: torch.Tensor, epsilon: float) -> torch.Tensor:
     """ Epsilon-greedy policy, returns random action if random number is < epsilon, else greedy action
@@ -37,7 +45,6 @@ def get_env_specs(env: gym.Env) -> Tuple[int, int, float]:
         max_action = float(env.action_space.high[0])
 
     return observation_dim, action_dim, max_action
-
 
 class EpsilonGreedyPolicy:
     def __init__(self, epsilon: float):
@@ -95,7 +102,7 @@ class AlternativeDataCollectionProcessor:
         self.episode_count = 0
         self.episode_reward = 0
 
-    def run(self) -> Transition:
+    def run(self) -> None:
         """
         Thoughts: An episode is only relevant for logging. When an episode terminates, the done signal is relevant for
         the update. The done signal is also relevant for resetting the environment. So we are basically only interested
@@ -108,7 +115,7 @@ class AlternativeDataCollectionProcessor:
             self.state, _ = self.env.reset()
             self.done = False
 
-            if self.episode_count % 10 == 9:
+            if self.episode_count % 10 == 0:
                 print(f"Episode [{self.episode_count}] {self.episode_reward}")
 
             self.episode_count += 1
@@ -124,7 +131,6 @@ class AlternativeDataCollectionProcessor:
         self.episode_reward += reward
 
         self.state = next_state
-        return transition
 
 class TrainProcessor:
     def __init__(self, buffer: ReplayBuffer, behavior_net: nn.Module, target_net: nn.Module,
@@ -135,20 +141,18 @@ class TrainProcessor:
         self.optimizer = optimizer
         self.gamma = gamma
 
-    def run(self):
+    def run(self) -> None:
         if len(self.buffer) < self.buffer.batch_size:
             return
 
         transitions = self.buffer.sample()
-
         states, actions, rewards, next_states, dones = zip(*transitions)
 
-        # ToDo: Generic Preprocessing for all Elements
-        states_tensor = torch.tensor(np.array(states), dtype=torch.float32)  # batch_size x 4
-        actions_tensor = torch.tensor(actions, dtype=torch.int64).unsqueeze(-1)  # batch_size x 1
-        rewards_tensor = torch.tensor(rewards, dtype=torch.float32).unsqueeze(-1)
-        next_states_tensor = torch.tensor(np.array(next_states), dtype=torch.float32)
-        dones_tensor = torch.tensor(dones, dtype=torch.float32).unsqueeze(-1)
+        states_tensor = preprocess(states)
+        actions_tensor = preprocess(actions)  # batch_size x 1
+        rewards_tensor = preprocess(rewards)
+        next_states_tensor = preprocess(next_states)
+        dones_tensor = preprocess(dones)
 
         qsa_behavior = self.behavior_net(states_tensor).gather(1, actions_tensor)  # ^y
 
@@ -163,8 +167,6 @@ class TrainProcessor:
         loss.backward()
         self.optimizer.step()
 
-        return loss.item()
-
 
 class SyncProcessor:
     def __init__(self, from_net: nn.Module, to_net: nn.Module, tau: float, sync_freq: int):
@@ -175,7 +177,7 @@ class SyncProcessor:
         self.counter = 0
         self.sync_freq = sync_freq
 
-    def run(self):
+    def run(self) -> None:
         if self.counter % self.sync_freq == 0:
             if self.tau == 1.0:
                 self.hard_sync()
@@ -195,7 +197,6 @@ def alternative_main():
     # initialization
     # ToDo: Constants as global variables or member variables
     lr = 1e-3
-    num_episodes = 1000
     epsilon = 0.2
     env_name = "CartPole-v1"
     sync_freq = 40
