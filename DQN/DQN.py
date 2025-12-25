@@ -2,13 +2,16 @@ from copy import deepcopy
 import torch
 from torch import nn
 import random
-import gymnasium as gym
 import torch.nn.functional as F
+
 
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 class EpsilonGreedyPolicy:
     def __init__(self, epsilon: float):
@@ -18,8 +21,8 @@ class EpsilonGreedyPolicy:
         """ Epsilon-greedy policy, returns random action if random number is < epsilon, else greedy action
                 Randomly samples from max actions if there is a tie.
              """
-        actions = torch.arange(len(q_values))
-        max_q_value = torch.max(q_values)
+        actions = torch.arange(len(q_values)).to(q_values.device)
+        max_q_value = torch.max(q_values).to(q_values.device)
         max_idx = (q_values == max_q_value).to(torch.int64)
         greedy_action = random.choice(actions[max_idx == 1])
 
@@ -27,7 +30,7 @@ class EpsilonGreedyPolicy:
 
 
 class DataCollectionProcessor:
-    def __init__(self, policy: nn.Module, env: EnvironmentHandler, buffer: ReplayBuffer, action_selector: EpsilonGreedyPolicy, transition_factory: TransitionFactory):
+    def __init__(self, policy: nn.Module, env: EnvironmentHandler, buffer: ReplayBuffer, action_selector: EpsilonGreedyPolicy, transition_factory: TransitionFactory, device: torch.device):
         self.policy = policy
         self.env = env
         self.buffer = buffer
@@ -35,6 +38,7 @@ class DataCollectionProcessor:
         self.done = False
         self.action_selector = action_selector
         self.transition_factory = transition_factory
+        self.device = device
         # Logging
         self.episode_count = 0
         self.episode_reward = 0
@@ -51,7 +55,8 @@ class DataCollectionProcessor:
             self.state = self.env.reset()
             self.done = False
         with torch.no_grad():
-            q_values = self.policy(torch.as_tensor(self.state, dtype=torch.float32))
+            state_tensor = torch.as_tensor(self.state, dtype=torch.float32, device=self.device)
+            q_values = self.policy(state_tensor)
         action = self.action_selector.select_action(q_values=q_values)
         next_state, reward, done, done_bool = self.env.step(action.item(), self.total_steps)
         self.done = done
@@ -66,12 +71,13 @@ class DataCollectionProcessor:
 
 class TrainProcessor:
     def __init__(self, buffer: ReplayBuffer, behavior_net: nn.Module, target_net: nn.Module,
-                 optimizer: torch.optim.Optimizer, gamma: float):
+                 optimizer: torch.optim.Optimizer, gamma: float,  device: torch.device):
         self.buffer = buffer
-        self.behavior_net = behavior_net
-        self.target_net = target_net
+        self.behavior_net = behavior_net.to(device)
+        self.target_net = target_net.to(device)
         self.optimizer = optimizer
         self.gamma = gamma
+        self.device = device
 
     def run(self):
         if len(self.buffer) < self.buffer.batch_size:
@@ -79,11 +85,12 @@ class TrainProcessor:
 
         batch = self.buffer.sample_batch()
 
-        states_tensor      = batch["state"]
-        actions_tensor     = batch["action"]
-        rewards_tensor     = batch["reward"]
-        next_states_tensor = batch["next_state"]
-        dones_tensor       = batch["done"]
+        states_tensor      = batch["state"].to(self.device)
+        actions_tensor     = batch["action"].to(self.device)
+        rewards_tensor     = batch["reward"].to(self.device)
+        next_states_tensor = batch["next_state"].to(self.device)
+        dones_tensor       = batch["done"].to(self.device)
+
 
         qsa_behavior = self.behavior_net(states_tensor).gather(1, actions_tensor)  # ^y
 
@@ -119,14 +126,14 @@ def main():
     env = EnvironmentHandler(env_name, seed)
     obs_size, action_size, max_action = env.get_env_specs()
 
-    behavior_net = nn.Sequential(nn.Linear(obs_size, hidden_size), nn.ReLU(), nn.Linear(hidden_size, action_size))
+    behavior_net = nn.Sequential(nn.Linear(obs_size, hidden_size), nn.ReLU(), nn.Linear(hidden_size, action_size)).to(device)
     optimizer = torch.optim.Adam(behavior_net.parameters(), lr)
 
-    target_net = deepcopy(behavior_net)
+    target_net = deepcopy(behavior_net).to(device)
 
     buffer = ReplayBuffer(spec, max_buffer_size, batch_size)
-    collector = DataCollectionProcessor(behavior_net, env, buffer, EpsilonGreedyPolicy(epsilon), factory)
-    train_process = TrainProcessor(buffer, behavior_net, target_net, optimizer, gamma)
+    collector = DataCollectionProcessor(behavior_net, env, buffer, EpsilonGreedyPolicy(epsilon), factory, device)
+    train_process = TrainProcessor(buffer, behavior_net, target_net, optimizer, gamma, device)
     sync_process = SyncProcessor(behavior_net, target_net, tau, sync_freq)
 
 
