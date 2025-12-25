@@ -1,66 +1,83 @@
 import unittest
+import numpy as np
 from typing import Any
+
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
+from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 
 class TestReplayBuffer(unittest.TestCase):
-
     def setUp(self):
+        self.spec = TransitionSpec(["state", "action", "reward", "next_state", "done"])
+        self.factory = TransitionFactory(self.spec)
         self.buffer_size = 5
-        self.buffer = ReplayBuffer(buffer_size=self.buffer_size)
+        self.batch_size = 3
+        self.buffer = ReplayBuffer(
+            spec=self.spec,
+            max_buffer_size=self.buffer_size,
+            batch_size=self.batch_size
+        )
+
+        self.make_transition = lambda x: self.factory.create(
+            state=np.array([x], dtype=np.float32),
+            action=int(x),
+            reward=float(x),
+            next_state=np.array([x + 1], dtype=np.float32),
+            done=False)
 
     def test_len(self):
         self.assertEqual(len(self.buffer), 0)
-        self.buffer.append(1)
+        self.buffer.append(self.make_transition(1))
         self.assertEqual(len(self.buffer), 1)
 
-    def test_str(self):
-        self.buffer.extend([1, 2, 3])
-        self.assertEqual(str(self.buffer), str([1, 2, 3]))
-
     def test_append(self):
-        self.buffer.append("Michael")
-        self.assertIn("Michael", self.buffer.buffer)
+        t = self.make_transition(42)
+        self.buffer.append(t)
+        self.assertIn(t, self.buffer.buffer)
         self.assertEqual(len(self.buffer), 1)
 
     def test_extend(self):
-        items = [1, 2, 3]
+        items = [self.make_transition(i) for i in range(3)]
         self.buffer.extend(items)
         self.assertEqual(list(self.buffer.buffer), items)
 
     def test_sample(self):
-        self.buffer.extend([10, 20, 30, 40, 50])
-        sample = self.buffer.sample(3)
-        self.assertEqual(len(sample), 3)
+        items = [self.make_transition(i) for i in range(5)]
+        self.buffer.extend(items)
+        sample = self.buffer.sample()
+        self.assertEqual(len(sample), self.batch_size)
         for item in sample:
             self.assertIn(item, self.buffer.buffer)
-    def sample_sequence(self, seq_len: int, batch_size: int) -> list[list[Any]]:
-        length_buffer = len(self.buffer)
-        if seq_len > length_buffer:
-            raise BufferError(f"Buffer (Size {length_buffer}) is not long enough to allow a {seq_len}")
-        indices = [random.randint(0, length_buffer - seq_len) for _ in range(batch_size)]
-        sequences = []
-        for idx in indices:
-            sequence = [self.buffer[idx + t] for t in range(seq_len)]
-            sequences.append(sequence)
-        return sequences
+    def test_sample_batch(self):
+        items = [self.make_transition(i) for i in range(5)]
+        self.buffer.extend(items)
+        batch = self.buffer.sample_batch()
+        for field in self.spec.fields:
+            self.assertIn(field, batch)
+        self.assertEqual(batch["state"].shape[0], self.batch_size)
 
     def test_sample_sequence(self):
-        self.buffer.extend([10, 20, 30, 40, 50])
-        values = self.buffer.sample_sequence(2, batch_size=2)
-        # Check length
-        self.assertEqual(len(values), 2)
+        items = [self.make_transition(i) for i in range(5)]
+        self.buffer.extend(items)
+        seq = self.buffer.sample_sequence_batch(seq_len=2, batch_size=2)
+        for field in self.spec.fields:
+            self.assertIn(field, seq)
+        self.assertEqual(seq["state"].shape[0], 2)
+        self.assertEqual(seq["state"].shape[1], 2)
 
     def test_choice(self):
-        self.buffer.extend(["a", "b", "c", "d", "e"])
-        indices = [0, 2, 4]
-        chosen = self.buffer.choice(indices)
-        expected = ["a", "c", "e"]
-        self.assertEqual(chosen, expected)
+        items = [self.make_transition(i) for i in range(5)]
+        self.buffer.extend(items)
+        chosen = self.buffer.choice([0, 2, 4])
+        self.assertIn("state", chosen)
+        self.assertIn("action", chosen)
+        self.assertEqual(chosen["state"].shape[0], 3)
+        self.assertEqual(chosen["action"].shape[0], 3)
 
     def test_buffer_maxlen(self):
-        self.buffer.extend([1, 2, 3, 4, 5, 6])
+        items = [self.make_transition(i) for i in range(6)]
+        self.buffer.extend(items)
         self.assertEqual(len(self.buffer), self.buffer_size)
-        self.assertNotIn(1, self.buffer.buffer)
+        self.assertNotIn(items[0], self.buffer.buffer)
 
 if __name__ == "__main__":
     unittest.main()

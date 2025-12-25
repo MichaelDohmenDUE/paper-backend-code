@@ -9,18 +9,8 @@ import gymnasium as gym
 import numpy as np
 import torch.nn.functional as F
 
+from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory, TransitionBatch
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
-
-def preprocess(data):
-    if isinstance(data[0], (int, np.integer)):
-        data_tensor = torch.tensor(data, dtype=torch.int64).unsqueeze(-1)
-    elif isinstance(data[0], (bool, float, np.floating)):
-        data_tensor = torch.tensor(data, dtype=torch.float32).unsqueeze(-1)
-    elif isinstance(data[0], np.ndarray):
-        data_tensor = torch.tensor(np.array(data), dtype=torch.float32)
-    else:
-        raise ValueError("Unknown data type")
-    return data_tensor
 
 def epsilon_greedy(q_values: torch.Tensor, epsilon: float) -> torch.Tensor:
     """ Epsilon-greedy policy, returns random action if random number is < epsilon, else greedy action
@@ -62,31 +52,21 @@ class EpsilonGreedyPolicy:
         return random.choice(actions) if random.random() < self.epsilon else greedy_action
 
 
-Transition = namedtuple("transition", ["state", "action", "reward", "next_state", "done"])
-
-
 class DataCollectionProcessor:
-    def __init__(self, policy: nn.Module, env: gym.Env, buffer: ReplayBuffer, action_selector: EpsilonGreedyPolicy):
+    def __init__(self, policy: nn.Module, env: gym.Env, buffer: ReplayBuffer, action_selector: EpsilonGreedyPolicy, transition_factory: TransitionFactory):
         self.policy = policy
         self.env = env
         self.buffer = buffer
         self.state, _ = env.reset()
         self.done = False
         self.action_selector = action_selector
+        self.transition_factory = transition_factory
         # Logging
         self.episode_count = 0
         self.episode_reward = 0
         self.total_steps = 0
 
     def run(self) -> None:
-        """
-        Thoughts: An episode is only relevant for logging. When an episode terminates, the done signal is relevant for
-        the update. The done signal is also relevant for resetting the environment. So we are basically only interested
-        in whether we have to reset or not and wheter we have a next state or not. So let's try to do the steps without
-        looping over episodes. We can still log, when an episode terminates, and also count the number of episodes.
-        Returns:
-
-        """
         if self.done:
             if self.episode_count % 10 == 0:
                 print(f"Episode [{self.episode_count}] {self.episode_reward}")
@@ -96,13 +76,13 @@ class DataCollectionProcessor:
 
             self.state, _ = self.env.reset()
             self.done = False
-
-        q_values = self.policy(torch.tensor(self.state, dtype=torch.float32))
+        with torch.no_grad():
+            q_values = self.policy(torch.as_tensor(self.state, dtype=torch.float32))
         action = self.action_selector.select_action(q_values=q_values)
         next_state, reward, terminated, truncated, info = self.env.step(action.item())
         self.done = terminated or truncated
 
-        transition = Transition(self.state, action.item(), reward, next_state, self.done)
+        transition = self.transition_factory.create( state=self.state, action=action.item(), reward=reward, next_state=next_state, done=self.done )
         self.buffer.append(transition)
         self.episode_reward += reward
 
@@ -119,18 +99,17 @@ class TrainProcessor:
         self.optimizer = optimizer
         self.gamma = gamma
 
-    def run(self) -> None:
+    def run(self):
         if len(self.buffer) < self.buffer.batch_size:
             return
 
-        transitions = self.buffer.sample()
-        states, actions, rewards, next_states, dones = zip(*transitions)
+        batch = self.buffer.sample_batch()
 
-        states_tensor = preprocess(states)
-        actions_tensor = preprocess(actions)  # batch_size x 1
-        rewards_tensor = preprocess(rewards)
-        next_states_tensor = preprocess(next_states)
-        dones_tensor = preprocess(dones)
+        states_tensor      = batch["state"]
+        actions_tensor     = batch["action"]
+        rewards_tensor     = batch["reward"]
+        next_states_tensor = batch["next_state"]
+        dones_tensor       = batch["done"]
 
         qsa_behavior = self.behavior_net(states_tensor).gather(1, actions_tensor)  # ^y
 
@@ -183,7 +162,9 @@ def main():
     max_buffer_size = 10000
     tau = 1.0
     gamma = 0.99
-    max_steps = 10000
+    max_steps = 100000
+    spec = TransitionSpec(["state", "action", "reward", "next_state", "done"])
+    factory = TransitionFactory(spec)
 
     env = gym.make(env_name)
     obs_size, action_size, max_action = get_env_specs(env)
@@ -193,9 +174,8 @@ def main():
 
     target_net = deepcopy(behavior_net)
 
-    buffer = ReplayBuffer(max_buffer_size, batch_size)
-
-    collector = DataCollectionProcessor(behavior_net, env, buffer, EpsilonGreedyPolicy(epsilon))
+    buffer = ReplayBuffer(spec, max_buffer_size, batch_size)
+    collector = DataCollectionProcessor(behavior_net, env, buffer, EpsilonGreedyPolicy(epsilon), factory)
     train_process = TrainProcessor(buffer, behavior_net, target_net, optimizer, gamma)
     sync_process = SyncProcessor(behavior_net, target_net, tau, sync_freq)
 
