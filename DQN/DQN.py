@@ -72,31 +72,6 @@ class DataCollectionProcessor:
         self.buffer = buffer
         self.state, _ = env.reset()
         self.done = False
-        # ToDo: Action selector for now is always of Type EpsilonGreedyPolicy
-        self.action_selector = action_selector
-
-    def run(self) -> Transition:
-        q_values = self.policy(torch.tensor(self.state, dtype=torch.float32))
-        action = self.action_selector.select_action(q_values=q_values)
-        next_state, reward, terminated, truncated, info = self.env.step(action.item())
-        self.done = terminated or truncated
-
-        transition = Transition(self.state, action.item(), reward, next_state, self.done)
-        self.buffer.append(transition)
-        self.state = next_state
-        if self.done:
-            self.state, _ = self.env.reset()
-            self.done = False
-
-        return transition
-
-class AlternativeDataCollectionProcessor:
-    def __init__(self, policy: nn.Module, env: gym.Env, buffer: ReplayBuffer, action_selector: EpsilonGreedyPolicy):
-        self.policy = policy
-        self.env = env
-        self.buffer = buffer
-        self.state, _ = env.reset()
-        self.done = False
         self.action_selector = action_selector
         # Logging
         self.episode_count = 0
@@ -112,14 +87,14 @@ class AlternativeDataCollectionProcessor:
 
         """
         if self.done:
-            self.state, _ = self.env.reset()
-            self.done = False
-
             if self.episode_count % 10 == 0:
                 print(f"Episode [{self.episode_count}] {self.episode_reward}")
 
             self.episode_count += 1
             self.episode_reward = 0.0
+
+            self.state, _ = self.env.reset()
+            self.done = False
 
         q_values = self.policy(torch.tensor(self.state, dtype=torch.float32))
         action = self.action_selector.select_action(q_values=q_values)
@@ -193,7 +168,7 @@ class SyncProcessor:
             to_param.copy_(self.tau * from_param + (1.0 - self.tau) * to_param)
 
 
-def alternative_main():
+def main():
     # initialization
     # ToDo: Constants as global variables or member variables
     lr = 1e-3
@@ -205,39 +180,7 @@ def alternative_main():
     max_buffer_size = 10000
     tau = 1.0
     gamma = 0.99
-
-    env = gym.make(env_name)
-    obs_size, action_size, max_action = get_env_specs(env)
-
-    behavior_net = nn.Sequential(nn.Linear(obs_size, hidden_size), nn.ReLU(), nn.Linear(hidden_size, action_size))
-    optimizer = torch.optim.Adam(behavior_net.parameters(), lr)
-
-    target_net = deepcopy(behavior_net)
-
-    buffer = ReplayBuffer(max_buffer_size, batch_size)
-
-    collector = AlternativeDataCollectionProcessor(behavior_net, env, buffer, EpsilonGreedyPolicy(epsilon))
-    train_process = TrainProcessor(buffer, behavior_net, target_net, optimizer, gamma)
-    sync_process = SyncProcessor(behavior_net, target_net, tau, sync_freq)
-
     max_steps = 10000
-    for step in range(max_steps):
-        collector.run()
-        train_process.run()
-        sync_process.run()
-
-def main():
-    # ToDo: Constants as global variables or member variables
-    lr = 1e-3
-    num_episodes = 1000
-    epsilon = 0.2
-    env_name = "CartPole-v1"
-    sync_freq = 40
-    hidden_size = 32
-    batch_size = 64
-    max_buffer_size = 10000
-    tau = 1.0
-    gamma = 0.99
 
     env = gym.make(env_name)
     obs_size, action_size, max_action = get_env_specs(env)
@@ -252,25 +195,13 @@ def main():
     collector = DataCollectionProcessor(behavior_net, env, buffer, EpsilonGreedyPolicy(epsilon))
     train_process = TrainProcessor(buffer, behavior_net, target_net, optimizer, gamma)
     sync_process = SyncProcessor(behavior_net, target_net, tau, sync_freq)
-    # Outer training loop
-    total_steps = 0
-    for episode in range(num_episodes):
-        state, _ = env.reset()
-        done = False
 
-        episode_rewards = 0
-        while not done:
-            transition = collector.run()
-            train_process.run()
-            sync_process.run()
 
-            total_steps += 1
-            done = transition.done
-            episode_rewards += transition.reward
-            # synchronization
-        if episode % 10 == 0:
-            print(f"Episode [{episode}] {episode_rewards}")
+    for step in range(max_steps):
+        collector.run()
+        train_process.run()
+        sync_process.run()
 
 
 if __name__ == '__main__':
-    alternative_main()
+    main()
