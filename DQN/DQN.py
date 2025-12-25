@@ -12,9 +12,9 @@ import torch.nn.functional as F
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 def preprocess(data):
-    if isinstance(data[0], int | np.int64):
+    if isinstance(data[0], (int, np.integer)):
         data_tensor = torch.tensor(data, dtype=torch.int64).unsqueeze(-1)
-    elif isinstance(data[0], bool | float):
+    elif isinstance(data[0], (bool, float, np.floating)):
         data_tensor = torch.tensor(data, dtype=torch.float32).unsqueeze(-1)
     elif isinstance(data[0], np.ndarray):
         data_tensor = torch.tensor(np.array(data), dtype=torch.float32)
@@ -76,6 +76,7 @@ class DataCollectionProcessor:
         # Logging
         self.episode_count = 0
         self.episode_reward = 0
+        self.total_steps = 0
 
     def run(self) -> None:
         """
@@ -106,6 +107,8 @@ class DataCollectionProcessor:
         self.episode_reward += reward
 
         self.state = next_state
+
+        self.total_steps += 1
 
 class TrainProcessor:
     def __init__(self, buffer: ReplayBuffer, behavior_net: nn.Module, target_net: nn.Module,
