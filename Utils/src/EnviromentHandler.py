@@ -3,13 +3,14 @@ import numpy as np
 import gymnasium as gym
 
 class EnvironmentHandler:
-    def __init__(self, env_name: str, seed: int):
+    def __init__(self, env_name: str, seed: int, reward_scale: float = 1.0):
         self.env = gym.make(env_name)
         self.env.action_space.seed(seed)
         torch.manual_seed(seed)
         if torch.cuda.is_available():
             torch.cuda.manual_seed_all(seed)
         np.random.seed(seed)
+        self.reward_scale = reward_scale
 
         self.state_dim = self.env.observation_space.shape[0]
 
@@ -28,6 +29,7 @@ class EnvironmentHandler:
 
     def step(self, action, episode_timesteps: int):
         next_state, reward, terminated, truncated, info = self.env.step(action)
+        reward = reward * self.reward_scale
         done = terminated or truncated
         done_bool = float(done) if episode_timesteps < self.episode_max_steps else 0.0
         return next_state, reward, done, done_bool

@@ -13,8 +13,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class ACERTrainer:
     def __init__(self, state_size, action_size, hidden_size, learning_rate=1e-4, gamma=0.99, tau=0.005, trust_region_delta=0.01):
         self.actor = Actor(state_size, action_size, hidden_size).to(device)
-
-        # trust region reference policy
         self.trust_region_actor = copy.deepcopy(self.actor).to(device)
         self.critic = Critic(state_size, action_size, hidden_size).to(device)
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=learning_rate)
@@ -25,40 +23,40 @@ class ACERTrainer:
         self.gamma = gamma
         self.tau = tau
         self.delta = trust_region_delta
-        self.truncation_constant = 1.0
-        self.seq_len = 20
-        self.beta =  0.1
+        self.rho_bar = 1.0
+        self.c_bar = 1.0
+        self.seq_len = 10
+        self.beta = 0.1
         self.retrace_lambda = 1.0
 
     def _prepare_batch(self, replay_buffer, batch_size, on_policy):
         if on_policy:
             seq = list(replay_buffer.buffer)[-self.seq_len:]
-            batch = [seq]
+
+            states      = torch.tensor(np.array([[tr.state      for tr in seq]]), dtype=torch.float32, device=device)
+            actions     = torch.tensor(np.array([[tr.action     for tr in seq]]), dtype=torch.float32, device=device)
+            rewards     = torch.tensor(np.array([[tr.reward     for tr in seq]]), dtype=torch.float32, device=device)
+            not_dones   = torch.tensor(np.array([[tr.mask       for tr in seq]]), dtype=torch.float32, device=device)
+            next_states = torch.tensor(np.array([[tr.next_state for tr in seq]]), dtype=torch.float32, device=device)
+            mu_logps    = torch.tensor(np.array([[tr.mu_logp    for tr in seq]]), dtype=torch.float32, device=device)
+            mu_means    = torch.tensor(np.array([[tr.mu_mean    for tr in seq]]), dtype=torch.float32, device=device)
+            mu_log_stds = torch.tensor(np.array([[tr.mu_log_std for tr in seq]]), dtype=torch.float32, device=device)
+
+            return states, actions, rewards, not_dones, mu_logps, next_states, mu_means, mu_log_stds
+
         else:
-            batch = replay_buffer.sample_sequence(self.seq_len, batch_size)
+            batch = replay_buffer.sample_sequence_batch(self.seq_len, batch_size)
 
-        states, actions, rewards, not_dones, mu_logps, next_states, mu_means, mu_log_stds = [], [], [], [], [], [], [], []
+            states      = batch["state"].to(device)
+            actions     = batch["action"].to(device)
+            rewards     = batch["reward"].to(device).squeeze(-1)
+            not_dones   = batch["mask"].to(device).squeeze(-1)
+            next_states = batch["next_state"].to(device)
+            mu_logps    = batch["mu_logp"].to(device).squeeze(-1)
+            mu_means    = batch["mu_mean"].to(device)
+            mu_log_stds = batch["mu_log_std"].to(device)
 
-        for sequence in batch:
-            s, a, ns, r, nd, ml, mmean, mlogstd = zip(*sequence)
-            states.append(s)
-            actions.append(a)
-            next_states.append(ns)
-            rewards.append(r)
-            not_dones.append(nd)
-            mu_logps.append(ml)
-            mu_means.append(mmean)
-            mu_log_stds.append(mlogstd)
-
-        return (
-            torch.FloatTensor(np.array(states)).to(device),
-            torch.FloatTensor(np.array(actions)).to(device),
-            torch.FloatTensor(np.array(rewards)).to(device),
-            torch.FloatTensor(np.array(not_dones)).to(device),
-            torch.FloatTensor(np.array(mu_logps)).to(device),
-            torch.FloatTensor(np.array(next_states)).to(device),
-            torch.FloatTensor(np.array(mu_means)).to(device),
-            torch.FloatTensor(np.array(mu_log_stds)).to(device))
+            return states, actions, rewards, not_dones, mu_logps, next_states, mu_means, mu_log_stds
 
     def _compute_q_values(self, states, actions):
         return self.critic(states, actions)
@@ -67,14 +65,11 @@ class ACERTrainer:
         pi_actions, _ = self.actor.sample_action(states)
         return self.critic(states, pi_actions)
 
-    def _compute_importance_weights(self, policy_logp, mu_logps, on_policy):
-        if on_policy:
-            rho = torch.ones_like(policy_logp)
-            rho_bar = torch.ones_like(policy_logp)
-        else:
-            rho = torch.exp(policy_logp - mu_logps)
-            rho_bar = torch.clamp(rho, max=self.truncation_constant)
-        return rho, rho_bar
+    def _compute_importance_weights(self, policy_logp, mu_logps):
+        rho = torch.exp(policy_logp - mu_logps)
+        rho_bar = torch.clamp(rho, max=self.rho_bar)
+        c = torch.clamp(rho, max=self.c_bar)
+        return rho, rho_bar, c
 
     def _compute_bootstrap_value(self, next_states, not_dones):
         with torch.no_grad():
@@ -82,13 +77,18 @@ class ACERTrainer:
             v_last = self.critic(next_states, pi_last).squeeze(-1)
             return v_last * not_dones
 
-    def _compute_retrace_targets(self, rewards, not_dones, q_vals, v_tp1, rho_bar):
+    def _compute_retrace_targets(self, rewards, not_dones, q_vals, v_tp1, c):
         B, T = rewards.shape
         G = v_tp1[:, -1].clone()
         retrace_targets = []
         for t in reversed(range(T)):
-            delta_t = rewards[:, t] + not_dones[:, t] * self.gamma * v_tp1[:, t] - q_vals[:, t]
-            G = q_vals[:, t] + rho_bar[:, t] * delta_t  + not_dones[:, t] * self.gamma * self.retrace_lambda * rho_bar[:, t] * G
+            q_t = q_vals[:, t]
+            v_tp1_t = v_tp1[:, t]
+            r_t = rewards[:, t]
+            nd_t = not_dones[:, t]
+            c_t = c[:, t]
+            delta_t = r_t + nd_t * self.gamma * v_tp1_t - q_t
+            G = q_t + c_t * (delta_t + nd_t * self.gamma * self.retrace_lambda * (G - v_tp1_t))
             retrace_targets.insert(0, G)
         return torch.stack(retrace_targets, dim=1)
 
@@ -98,6 +98,8 @@ class ACERTrainer:
     def _update_critic(self, loss):
         self.critic_optimizer.zero_grad()
         loss.backward()
+        # NOT IN ACER PSEUDOCODE — numerical stability
+        torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=10.0)
         self.critic_optimizer.step()
 
     def _policy_gradient(self, s_t, a_t, rho_bar_t, advantage_t):
@@ -107,24 +109,35 @@ class ACERTrainer:
     def _bias_correction(self, s_t, mu_mean_t, mu_log_std_t, v_t):
         with torch.no_grad():
             a_bc, logp_bc = self.actor.sample_action(s_t)
-            mu_std_t = mu_log_std_t.exp()
+            # NOT IN ACER PSEUDOCODE — clamp log_std for stability
+            mu_log_std_t = mu_log_std_t.clamp(-5.0, 2.0)
+            mu_std_t = mu_log_std_t.exp().clamp(1e-3, 10.0)
+
             a_bc_clamped = a_bc.clamp(-0.999, 0.999)
             raw_a_bc = 0.5 * torch.log((1 + a_bc_clamped) / (1 - a_bc_clamped + 1e-6))
             mu_dist = torch.distributions.Normal(mu_mean_t, mu_std_t)
             gaussian_log_mu_bc = mu_dist.log_prob(raw_a_bc).sum(dim=-1)
             log_det_jacobian_mu = torch.log(1 - a_bc_clamped.pow(2) + 1e-6).sum(dim=-1)
             log_mu_bc = gaussian_log_mu_bc - log_det_jacobian_mu
-            rho_bc = torch.exp(logp_bc - log_mu_bc)
+            # NOT IN ACER PSEUDOCODE — clamp log-ratio to avoid exp overflow
+            log_ratio_bc = (logp_bc - log_mu_bc).clamp(-20.0, 20.0)
+            rho_bc = torch.exp(log_ratio_bc).clamp(0.0, 10.0)
             q_pi_bc_t = self.critic(s_t, a_bc).squeeze(-1)
             bias_adv_t = (q_pi_bc_t - v_t).detach()
-        return -((rho_bc - self.truncation_constant).clamp(min=0) * bias_adv_t).mean()
+        return -((rho_bc - self.rho_bar).clamp(min=0) * bias_adv_t).mean()
 
     def _entropy_correction(self, policy_mean, policy_std):
+        # NOT IN ACER PSEUDOCODE
+        policy_std = policy_std.clamp(1e-3, 10.0)
         dist = torch.distributions.Normal(policy_mean, policy_std)
         return dist.entropy().sum(dim=-1).mean()
 
     def _compute_kl(self, policy_mean, policy_std, ref_mean, ref_std):
-        kl = torch.log(ref_std / policy_std) + (policy_std ** 2 + (policy_mean - ref_mean) ** 2) / (2 * ref_std ** 2) - 0.5
+        # NOT IN ACER PSEUDOCODE — clamp std for stability
+        policy_std = policy_std.clamp(1e-3, 10.0)
+        ref_std = ref_std.clamp(1e-3, 10.0)
+        kl = torch.log(ref_std / policy_std) + \
+             (policy_std ** 2 + (policy_mean - ref_mean) ** 2) / (2 * ref_std ** 2) - 0.5
         return kl.sum(dim=-1)
 
     def _trust_region_projection(self, kl_grad):
@@ -141,6 +154,8 @@ class ACERTrainer:
         self.actor_optimizer.zero_grad()
         actor_loss.backward(retain_graph=True)
         self._trust_region_projection(kl_grad)
+        # NOT IN ACER PSEUDOCODE — gradient clipping
+        torch.nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=10.0)
         self.actor_optimizer.step()
 
     def select_action(self, state, return_params=False):
@@ -163,54 +178,43 @@ class ACERTrainer:
         flat_states = states.view(-1, self.state_dim)
         flat_actions = actions.view(-1, self.action_dim)
 
-        # Critic values
         q_vals = self._compute_q_values(flat_states, flat_actions).view(B, T)
 
         with torch.no_grad():
             v_vals = self._compute_v_values(flat_states).view(B, T)
 
-        # Importance weights
-
         policy_logp = self.actor.log_prob(flat_states, flat_actions).view(B, T)
-        rho, rho_bar = self._compute_importance_weights(policy_logp, mu_logps, on_policy)
+        rho, rho_bar, c = self._compute_importance_weights(policy_logp, mu_logps)
 
-        # Bootstrap V(s_T)
         v_last = self._compute_bootstrap_value(next_states[:, -1, :], not_dones[:, -1])
         v_tp1 = torch.empty(B, T, device=device)
         v_tp1[:, :-1] = v_vals[:, 1:]
         v_tp1[:, -1] = v_last
 
-        # Retrace recursion
-        target_q = self._compute_retrace_targets(rewards, not_dones, q_vals, v_tp1, rho_bar)
+        target_q = self._compute_retrace_targets(rewards, not_dones, q_vals, v_tp1, c)
 
-        # Critic update
         critic_loss = self._critic_loss_function(q_vals, target_q)
         self._update_critic(critic_loss)
 
-
-        # Actor update
-        actor_loss = torch.zeros((), device=device)
+        actor_loss = 0.0
         for t in range(T):
             s_t = states[:, t, :]
             a_t = actions[:, t, :]
             rho_bar_t = rho_bar[:, t]
 
-            q_t = q_vals[:, t]
+            q_ret_t = target_q[:, t]
             v_t = v_vals[:, t]
-            advantage_t = (q_t - v_t).detach()
+            advantage_t = (q_ret_t - v_t).detach()
 
             pg_loss_t = self._policy_gradient(s_t, a_t, rho_bar_t, advantage_t)
+            bc_loss_t = self._bias_correction(s_t, mu_means[:, t, :], mu_log_stds[:, t, :], v_t)
 
-            bias_correction_t = self._bias_correction( s_t, mu_means[:, t, :], mu_log_stds[:, t, :], v_t )
+            actor_loss = actor_loss + pg_loss_t + bc_loss_t
 
-            actor_loss = actor_loss + pg_loss_t + bias_correction_t
-
-        # Entropy regularization
         policy_mean, policy_std = self.actor(flat_states)
         entropy = self._entropy_correction(policy_mean, policy_std)
         actor_loss += -self.beta * entropy
 
-        # Trust region KL
         ref_mean, ref_std = self.trust_region_actor(flat_states)
         kl = self._compute_kl(policy_mean, policy_std, ref_mean, ref_std).view(B, T)
         kl = (kl * not_dones).mean()
@@ -218,4 +222,12 @@ class ACERTrainer:
 
         self._update_actor(actor_loss, kl_grad)
 
+        if torch.rand(1).item() < 0.001:
+            print(
+                f"critic_loss={critic_loss.item():.3f}, "
+                f"actor_loss={actor_loss.item():.3f}, "
+                f"entropy={entropy.item():.3f}, "
+                f"mean_rho={rho.mean().item():.3f}, "
+                f"mean_c={c.mean().item():.3f}, "
+                f"mean_kl={kl.item():.5f}")
         synchronize(self.actor, self.trust_region_actor, tau=self.tau)

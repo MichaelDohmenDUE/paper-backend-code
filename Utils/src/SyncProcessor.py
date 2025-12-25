@@ -1,3 +1,4 @@
+import torch
 from torch import nn
 
 class SyncProcessor:
@@ -5,7 +6,6 @@ class SyncProcessor:
         self.from_net = from_net
         self.to_net = to_net
         self.tau = tau
-        # Each process runs sequentially and can
         self.counter = 0
         self.sync_freq = sync_freq
 
@@ -21,5 +21,7 @@ class SyncProcessor:
         self.to_net.load_state_dict(self.from_net.state_dict())
 
     def soft_sync(self):
-        for from_param, to_param in zip(self.from_net.parameters(), self.to_net.parameters()):
-            to_param.copy_(self.tau * from_param + (1.0 - self.tau) * to_param)
+        with torch.no_grad():
+            for from_param, to_param in zip(self.from_net.parameters(), self.to_net.parameters()):
+                to_param.data.copy_(self.tau * from_param.data + (1.0 - self.tau) * to_param.data)
+

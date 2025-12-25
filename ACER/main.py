@@ -1,71 +1,58 @@
+import torch
 from backend.ACER.src.ACERTrainer import ACERTrainer
+from backend.ACER.src.ACERDataCollector import ACERDataCollector
+from backend.ACER.src.ACERTrainProcessor import ACERTrainProcessor
+from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
-from backend.Utils.src.EvaluationHelper import eval_trainer
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
+from backend.Utils.src.SyncProcessor import SyncProcessor
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def main():
     env_name = "Reacher-v5"
     seed = 100
     max_timesteps = 1000000
-    eval_freq = 2000
-    eval_episodes = 10
     batch_size = 32
-    learning_rate = 1e-4
-    hidden_dim = 256
-    tau = 0.01
+    learning_rate = 3e-4
+    hidden_dim = 128
+    tau = 0.005
     buffer_size = int(1e6)
-    seq_len = 20
+    seq_len = 10
     replay_ratio = 4
+    trust_region_delta = 0.001
+    gamma = 0.99
+    reward_scale = 0.1
 
-    env_handler = EnvironmentHandler(env_name, seed)
+    env_handler = EnvironmentHandler(env_name, seed, reward_scale=reward_scale)
 
+    # Transition spec for ACER
+    spec = TransitionSpec(["state", "action", "reward", "next_state", "mask", "mu_logp", "mu_mean", "mu_log_std"])
+    factory = TransitionFactory(spec)
+
+    # Trainer
     trainer = ACERTrainer(
         state_size=env_handler.state_dim,
         action_size=env_handler.action_dim,
         hidden_size=hidden_dim,
         learning_rate=learning_rate,
-        gamma=0.99,
+        gamma=gamma,
         tau=tau,
-        trust_region_delta=0.01
+        trust_region_delta=trust_region_delta
     )
 
-    replay_buffer = ReplayBuffer(buffer_size=buffer_size)
-    evaluations = [eval_trainer(trainer, env_handler)]
+    buffer = ReplayBuffer(spec, buffer_size, batch_size)
 
-    state = env_handler.reset()
-    episode_reward = 0
-    episode_timesteps = 0
-    episode_num = 0
+    # Processors
+    collector = ACERDataCollector(trainer, env_handler, buffer, factory, device)
+    train_process = ACERTrainProcessor(trainer, buffer, seq_len, replay_ratio, batch_size, tau)
+    #sync_process = SyncProcessor(trainer.actor, trainer.trust_region_actor, tau, sync_freq=1)
 
-    for t in range(max_timesteps):
-        episode_timesteps += 1
-
-        action, mu_logp, mu_mean, mu_log_std = trainer.select_action(state, return_params=True)
-
-        next_state, reward, done, done_bool = env_handler.step(action, episode_timesteps)
-
-        transition = (state, action, next_state,reward, 1.0 - done_bool,mu_logp, mu_mean, mu_log_std)
-        replay_buffer.append(transition)
-
-        state = next_state
-        episode_reward += reward
-
-        if len(replay_buffer) >= seq_len:
-            trainer.train(replay_buffer, batch_size=1, on_policy=True)
-
-        if len(replay_buffer) >= seq_len:
-            for _ in range(replay_ratio):
-                trainer.train(replay_buffer, batch_size=batch_size, on_policy=False)
-
-        if done:
-            print(f"Episode {episode_num+1} — Timestep {t+1} — Reward: {episode_reward:.2f}")
-            state = env_handler.reset()
-            episode_reward = 0
-            episode_timesteps = 0
-            episode_num += 1
-
-        if (t + 1) % eval_freq == 0:
-            evaluations.append(eval_trainer(trainer, env_handler, eval_episodes))
+    # Main loop
+    for step in range(max_timesteps):
+        collector.run()
+        train_process.run()
+        #sync_process.run() #TODO: This still gets handled on a lower level because of the on Policy off Policy rhythm
 
 if __name__ == "__main__":
     main()
