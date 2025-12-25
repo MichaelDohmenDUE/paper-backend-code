@@ -31,3 +31,7 @@ class EnvironmentHandler:
         done = terminated or truncated
         done_bool = float(done) if episode_timesteps < self.episode_max_steps else 0.0
         return next_state, reward, done, done_bool
+
+    def get_env_specs(self):
+        extracted_value = self.state_dim, self.action_dim, self.max_action
+        return extracted_value
