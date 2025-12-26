@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from dataclasses import make_dataclass
-
+import sys
 
 class TransitionSpec:
     def __init__(self, fields):
@@ -10,9 +10,12 @@ class TransitionSpec:
 class TransitionFactory:
     def __init__(self, spec: TransitionSpec):
         self.spec = spec
-        self.transition_cls = make_dataclass(
-            "Transition",
-            [(f, object) for f in spec.fields])
+
+        cls = make_dataclass("Transition", [(f, object) for f in spec.fields])
+
+        module = sys.modules[__name__]
+        setattr(module, "Transition", cls)
+        self.transition_cls = cls
 
     def create(self, **kwargs):
         for f in self.spec.fields:
@@ -30,16 +33,13 @@ class TransitionBatch:
     @staticmethod
     def preprocess(data):
         x0 = data[0]
-        if isinstance(x0, (int, np.integer)):
-            return torch.tensor(data, dtype=torch.int64).unsqueeze(-1)
-        elif isinstance(x0, (bool, float, np.floating)):
-            return torch.tensor(data, dtype=torch.float32).unsqueeze(-1)
-        elif isinstance(x0, np.ndarray):
+        if isinstance(x0, torch.Tensor):
+            return torch.stack(data)
+        if isinstance(x0, (int, float, bool, np.integer, np.floating)):
+            return torch.tensor(data, dtype=torch.float32)
+        if isinstance(x0, np.ndarray) or isinstance(x0, (list, tuple)):
             return torch.tensor(np.array(data), dtype=torch.float32)
-        elif isinstance(x0, (list, tuple)):
-            return torch.tensor(np.array(data), dtype=torch.float32)
-        else:
-            raise ValueError(f"Unknown data type: {type(x0)}")
+        raise ValueError(f"Unknown data type: {type(x0)}")
 
     def to_tensors(self):
         return {k: self.preprocess(v) for k, v in self.data.items()}
