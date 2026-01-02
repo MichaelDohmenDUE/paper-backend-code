@@ -1,7 +1,7 @@
 from typing import Any, Iterable
 import random
 from collections import deque
-
+import torch
 from backend.Utils.src.BatchTransitioner import TransitionBatch, TransitionSpec
 
 class ReplayBuffer:
@@ -35,7 +35,7 @@ class ReplayBuffer:
     def sample(self) -> list[Any]:
         return random.sample(self.buffer, self.batch_size)
 
-    def sample_batch(self) -> TransitionBatch:
+    def sample_batch(self) -> dict[str, torch.Tensor]:
         transitions = self.sample()
         batch = TransitionBatch(transitions, self.spec)
         return batch.to_tensors()

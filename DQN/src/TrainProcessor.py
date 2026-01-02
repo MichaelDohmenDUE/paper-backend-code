@@ -2,6 +2,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+from backend.Utils.src.BatchTransitioner import TransitionBatch
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 

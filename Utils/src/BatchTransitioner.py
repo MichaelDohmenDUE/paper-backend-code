@@ -1,3 +1,4 @@
+from typing import Any
 import numpy as np
 import torch
 from dataclasses import make_dataclass
@@ -30,6 +31,13 @@ class TransitionBatch:
             f: [getattr(t, f) for t in transitions]
             for f in self.fields
         }
+
+    def __getitem__(self, key) -> list[Any] :
+        return self.data[key]
+
+    def __len__(self) -> int:
+        return len(self.data)
+
     @staticmethod
     def preprocess(data):
         x0 = data[0]
