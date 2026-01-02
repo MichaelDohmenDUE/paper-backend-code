@@ -12,7 +12,6 @@ from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class DataCollectionProcessor:
     def __init__(
@@ -114,6 +113,9 @@ class TrainProcess:
         actor_loss.backward()
         self.actor_opt.step()
         return actor_loss, critic_loss
+
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def main():
