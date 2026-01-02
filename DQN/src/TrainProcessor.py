@@ -1,8 +1,6 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-
-from backend.Utils.src.BatchTransitioner import TransitionBatch
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
@@ -28,15 +26,13 @@ class TrainProcessor:
         next_states_tensor = batch["next_state"].to(self.device)
         dones_tensor       = batch["done"].to(self.device)
 
-
-
         actions_tensor = actions_tensor.long()
         qsa_behavior = self.behavior_net(states_tensor).gather(1, actions_tensor)  # ^y
 
-        qs_target = self.target_net(next_states_tensor)  # batch_size x action_dim
-        qsa_target = torch.max(qs_target, dim=1).values.unsqueeze(-1).detach()
-        target = rewards_tensor + self.gamma * qsa_target * (1.0 - dones_tensor)
-        target = target.detach()
+        with torch.no_grad():
+            qs_target = self.target_net(next_states_tensor) # batch_size x action_dim
+            qsa_target = qs_target.max(dim=1, keepdim=True).values
+            target = rewards_tensor + self.gamma * qsa_target * (1.0 - dones_tensor)
 
         # ToDo: How to model dependent steps without forwarding anything
         self.optimizer.zero_grad()
