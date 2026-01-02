@@ -27,14 +27,7 @@ class TrainProcessor:
         next_states_tensor = batch["next_state"].to(self.device)
         dones_tensor       = batch["done"].to(self.device)
 
-        if actions_tensor.dim() == 1:
-            actions_tensor = actions_tensor.unsqueeze(-1)
 
-        if rewards_tensor.dim() == 1:
-            rewards_tensor = rewards_tensor.unsqueeze(-1)
-
-        if dones_tensor.dim() == 1:
-            dones_tensor = dones_tensor.unsqueeze(-1)
 
         actions_tensor = actions_tensor.long()
         qsa_behavior = self.behavior_net(states_tensor).gather(1, actions_tensor)  # ^y

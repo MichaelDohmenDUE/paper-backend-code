@@ -33,13 +33,22 @@ class TransitionBatch:
     @staticmethod
     def preprocess(data):
         x0 = data[0]
+
+        # Convert to tensor
         if isinstance(x0, torch.Tensor):
-            return torch.stack(data)
-        if isinstance(x0, (int, float, bool, np.integer, np.floating)):
-            return torch.tensor(data, dtype=torch.float32)
-        if isinstance(x0, np.ndarray) or isinstance(x0, (list, tuple)):
-            return torch.tensor(np.array(data), dtype=torch.float32)
-        raise ValueError(f"Unknown data type: {type(x0)}")
+            out = torch.stack(data)
+        elif isinstance(x0, (int, float, bool, np.integer, np.floating)):
+            out = torch.tensor(data, dtype=torch.float32)
+        elif isinstance(x0, np.ndarray) or isinstance(x0, (list, tuple)):
+            out = torch.tensor(np.array(data), dtype=torch.float32)
+        else:
+            raise ValueError(f"Unknown data type: {type(x0)}")
+
+        # Shape normalization
+        if out.dim() == 1:
+            out = out.unsqueeze(-1)
+
+        return out
 
     def to_tensors(self):
         return {k: self.preprocess(v) for k, v in self.data.items()}
