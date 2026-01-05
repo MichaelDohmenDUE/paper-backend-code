@@ -3,7 +3,7 @@ import torch
 
 from backend.CommonModels.src.Policy import Policy
 from backend.DQN.src.ActionHandler import EpsilonGreedyPolicy
-from backend.DDQN.src.DataCollectionProcessor import DataCollectionProcessor
+from backend.DQN.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.DDQN.src.TrainProcessor import TrainProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler

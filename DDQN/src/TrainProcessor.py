@@ -42,6 +42,6 @@ class TrainProcessor:
 
         # Optimize
         self.optimizer.zero_grad()
-        loss = F.smooth_l1_loss(qsa_behavior, target)
+        loss = F.mse_loss(qsa_behavior, target)
         loss.backward()
         self.optimizer.step()
