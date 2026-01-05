@@ -1,79 +1,56 @@
-import random
-
-import numpy as np
+from copy import deepcopy
 import torch
 
-from backend.DDQN.src.DDQNTrainer import DDQNTrainer
+from backend.CommonModels.src.Policy import Policy
+from backend.DQN.src.ActionHandler import EpsilonGreedyPolicy
+from backend.DDQN.src.DataCollectionProcessor import DataCollectionProcessor
+from backend.DDQN.src.TrainProcessor import TrainProcessor
+from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
-from backend.CommonModels.src.Policy import Policy
+from backend.Utils.src.SyncProcessor import SyncProcessor
 
 
-def epsilon_greedy(q_values: torch.Tensor, epsilon: float) -> int:
-    q_values = q_values.to("cpu")
-    actions = torch.arange(len(q_values))
-    max_q_value = torch.max(q_values)
-    max_idx = (q_values == max_q_value).to(torch.bool)
-    greedy_action = random.choice(actions[max_idx].tolist())
-    return random.choice(actions.tolist()) if random.random() < epsilon else greedy_action
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def main():
-    env_name = "CartPole-v1"
-    seed = 0
-    num_episodes = 600
-    batch_size = 64
-    update_freq = 40
-    hidden_size = 32
-    gamma = 0.99
     epsilon = 0.2
+    env_name = "CartPole-v1"
+    sync_freq = 40
+    hidden_size = 32
+    batch_size = 64
+    max_buffer_size = 10000
     tau = 1.0
+    gamma = 0.99
+    max_steps = 100000
+    seed = 42
+    lr = 5e-4
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    env_handler = EnvironmentHandler(env_name, seed)
+    spec = TransitionSpec(["state", "action", "reward", "next_state", "done"])
+    factory = TransitionFactory(spec)
 
-    behavior_policy = Policy(env_handler.state_dim, env_handler.action_dim, hidden_size).to(device)
-    target_policy = Policy(env_handler.state_dim, env_handler.action_dim, hidden_size).to(device)
-    target_policy.load_state_dict(behavior_policy.state_dict())
+    env = EnvironmentHandler(env_name, seed)
+    obs_size, action_size, _ = env.get_env_specs()
 
-    optimizer = torch.optim.Adam(behavior_policy.parameters())
-    buffer = ReplayBuffer()
+    behavior_net = Policy(obs_size, action_size, hidden_size).to(device)
+    target_net = deepcopy(behavior_net).to(device)
 
-    trainer = DDQNTrainer(
-        env_handler=env_handler,
-        behavior_policy=behavior_policy,
-        target_policy=target_policy,
-        optimizer=optimizer,
-        buffer=buffer,
-        gamma=gamma,
-        batch_size=batch_size,
-        update_freq=update_freq,
-        epsilon=epsilon,
-        tau=tau,
-        device=device
-    )
+    optimizer = torch.optim.Adam(behavior_net.parameters(), lr)
 
-    for episode in range(num_episodes):
-        state = env_handler.reset()
-        done = False
-        episode_timesteps = 0
-        episode_reward = 0
+    buffer = ReplayBuffer(spec, max_buffer_size, batch_size)
 
-        while not done:
-            state_tensor = torch.tensor(state, dtype=torch.float32).to(device)
-            q_values = behavior_policy(state_tensor)
-            action = epsilon_greedy(q_values, epsilon)
+    collector = DataCollectionProcessor(behavior_net, env, buffer,EpsilonGreedyPolicy(epsilon), factory, device)
 
-            next_state, reward, done, done_bool = env_handler.step(action, episode_timesteps)
-            buffer.append((state, action, reward, next_state, done))
-            state = next_state
-            episode_timesteps += 1
-            episode_reward += reward
+    train_process = TrainProcessor(buffer, behavior_net, target_net,optimizer, gamma, device)
 
-            trainer.train()
+    sync_process = SyncProcessor(behavior_net, target_net, tau, sync_freq)
 
-        if episode % 10 == 0:
-            print(f"Episode [{episode}] Reward: {episode_reward:.2f}")
+    for step in range(max_steps):
+        collector.run()
+        train_process.run()
+        sync_process.run()
+
 
 if __name__ == "__main__":
     main()
