@@ -2,9 +2,9 @@ import torch
 from torch import nn
 
 from backend.DQN.src.ActionHandler import EpsilonGreedyPolicy
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
+from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
 class DataCollectionProcessor:
