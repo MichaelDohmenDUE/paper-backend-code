@@ -4,7 +4,8 @@ import torch
 from backend.CommonModels.src.Policy import Policy
 from backend.DQN.src.ActionHandler import EpsilonGreedyPolicy
 from backend.DQN.src.DataCollectionProcessor import DataCollectionProcessor
-from backend.DDQN.src.TrainProcessor import TrainProcessor
+from backend.DDQN.src.TrainProcessorGraph import TrainProcessor
+#from backend.DDQN.src.TrainProcessor import TrainProcessor TODO: CLEAN THIS UP AND DONT FORGET ABOUT THE CORRECT IMPORT
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
