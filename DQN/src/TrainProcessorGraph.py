@@ -3,16 +3,14 @@ from backend.Utils.src.NodeLib.Node import Graph
 
 
 class TrainProcessor:
-    def __init__(self, buffer, behavior_net, target_net, optimizer, gamma, device):
+    def __init__(self, graph, buffer, behavior_net, target_net, optimizer, gamma, device):
         self.buffer = buffer
         self.behavior_net = behavior_net.to(device)
         self.target_net = target_net.to(device)
         self.optimizer = optimizer
         self.gamma = gamma
         self.device = device
-
-        # Build the DQN graph
-        self.graph = Graph(build_dqn_graph())
+        self.graph = graph
 
     def run(self):
         if len(self.buffer) < self.buffer.batch_size:

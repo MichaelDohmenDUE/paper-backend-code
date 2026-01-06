@@ -2,12 +2,14 @@ from copy import deepcopy
 import torch
 
 from backend.CommonModels.src.Policy import Policy
+from backend.DDQN.ddqn_graph import build_ddqn_graph
 from backend.DQN.src.ActionHandler import EpsilonGreedyPolicy
 from backend.DQN.src.DataCollectionProcessor import DataCollectionProcessor
-from backend.DDQN.src.TrainProcessorGraph import TrainProcessor
+from backend.DQN.src.TrainProcessorGraph import TrainProcessor
 #from backend.DDQN.src.TrainProcessor import TrainProcessor TODO: CLEAN THIS UP AND DONT FORGET ABOUT THE CORRECT IMPORT
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
+from backend.Utils.src.NodeLib.Node import Graph
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
 
@@ -43,7 +45,9 @@ def main():
 
     collector = DataCollectionProcessor(behavior_net, env, buffer,EpsilonGreedyPolicy(epsilon), factory, device)
 
-    train_process = TrainProcessor(buffer, behavior_net, target_net,optimizer, gamma, device)
+    graph = Graph(build_ddqn_graph())
+
+    train_process = TrainProcessor(graph, buffer, behavior_net, target_net,optimizer, gamma, device)
 
     sync_process = SyncProcessor(behavior_net, target_net, tau, sync_freq)
 

@@ -1,3 +1,5 @@
+from backend.DQN.src.dqn_graph import build_dqn_graph
+from backend.Utils.src.NodeLib.Node import Graph
 from copy import deepcopy
 import torch
 from torch import nn
@@ -40,7 +42,9 @@ def main():
 
     buffer = ReplayBuffer(spec, max_buffer_size, batch_size)
     collector = DataCollectionProcessor(behavior_net, env, buffer, EpsilonGreedyPolicy(epsilon), factory, device)
-    train_process = TrainProcessor(buffer, behavior_net, target_net, optimizer, gamma, device)
+    dqn_graph = Graph(build_dqn_graph())
+    train_process = TrainProcessor(dqn_graph, buffer, behavior_net, target_net, optimizer, gamma, device)
+    #train_process = TrainProcessor(buffer,behavior_net, target_net, optimizer, gamma, device) TODO: OLD VERSION REMOVE LATER
     sync_process = SyncProcessor(behavior_net, target_net, tau, sync_freq)
 
 
