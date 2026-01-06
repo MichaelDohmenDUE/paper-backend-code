@@ -23,10 +23,15 @@ class A3CTrainingProcessor:
         if last_tr.done:
             R = torch.zeros(1, device=device)
         else:
-            R = last_tr.value.detach()  # V(s_t, θ′_v)
+            R = last_tr.value.detach().to(device)
 
         batch = TransitionBatch(rollout, TransitionSpec(["state", "action", "reward", "value", "log_prob", "done", "entropy"]))
         t = batch.to_tensors()
+
+        net_device = next(self.global_net.parameters()).device
+        for k, v in t.items():
+            if torch.is_tensor(v):
+                t[k] = v.to(net_device)
 
         rewards = t["reward"]
         values = t["value"]
@@ -36,8 +41,9 @@ class A3CTrainingProcessor:
 
 
         T_len = rewards.shape[0]
-        returns = torch.zeros(T_len, device=device)
-        R_t = R
+        returns = torch.zeros(T_len, device=net_device)
+        R_t = R.to(net_device)
+
         for i in reversed(range(T_len)):
             R_t = rewards[i] + self.gamma * R_t * (1.0 - dones[i])
             returns[i] = R_t
