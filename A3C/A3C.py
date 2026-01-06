@@ -6,7 +6,7 @@ from backend.CommonModels.src.ActorCriticA3C import ActorCritic
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 
-from backend.A3C.src.A3CDataCollectionProcessor import A3CDataCollectionProcessor
+from backend.A3C.src.A3CDataCollectionProcessorGraph import A3CDataCollectionProcessor
 from backend.A3C.src.A3CTrainingProcessorGraph import A3CTrainingProcessor
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

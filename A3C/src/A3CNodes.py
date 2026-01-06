@@ -1,3 +1,5 @@
+from torch.distributions import Categorical
+
 from backend.Utils.src.BatchTransitioner import TransitionBatch
 from backend.Utils.src.NodeLib.Node import Node
 import torch
@@ -189,6 +191,114 @@ def sync_local_with_global():
         outputs=[]
     )
 
+def state_to_tensor():
+    return Node(
+        name="state_to_tensor",
+        function=lambda state, device: torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0),
+        inputs=["state", "device"],
+        outputs=["state_t"]
+    )
+
+def forward_local_net():
+    return Node(
+        name="forward_local_net",
+        function=lambda net, state_t: net(state_t),
+        inputs=["local_net", "state_t"],
+        outputs=["logits", "value"]
+    )
+
+def compute_action_distribution():
+    return Node(
+        name="compute_action_distribution",
+        function=lambda logits: Categorical(torch.softmax(logits, dim=-1)),
+        inputs=["logits"],
+        outputs=["dist"]
+    )
+
+def sample_action():
+    return Node(
+        name="sample_action",
+        function=lambda dist: dist.sample(),
+        inputs=["dist"],
+        outputs=["action"]
+    )
+
+
+def env_step():
+    return Node(
+        name="env_step",
+        function=lambda env, action, episode_timesteps: env.step(action.item(), episode_timesteps=episode_timesteps),
+        inputs=["env", "action", "episode_timesteps"],
+        outputs=["next_state", "reward", "done", "info"]
+    )
+
+def build_transition():
+    return Node(
+        name="build_transition",
+        function=lambda factory, state_t, action, reward, value, dist, done: factory.create(
+            state=state_t,
+            action=action,
+            reward=float(reward),
+            value=value.squeeze(-1),
+            log_prob=dist.log_prob(action),
+            done=bool(done),
+            entropy=dist.entropy()
+        ),
+        inputs=["factory", "state_t", "action", "reward", "value", "dist", "done"],
+        outputs=["transition"]
+    )
+
+def append_transition():
+    return Node(
+        name="append_transition",
+        function=lambda rollout, transition: rollout.append(transition),
+        inputs=["rollout", "transition"],
+        outputs=[]
+    )
+
+def update_episode_reward():
+    return Node(
+        name="update_episode_reward",
+        function=lambda episode_reward, reward: episode_reward + reward,
+        inputs=["episode_reward", "reward"],
+        outputs=["episode_reward"]
+    )
+
+def update_state_done():
+    return Node(
+        name="update_state_done",
+        function=lambda next_state, done: (next_state, done),
+        inputs=["next_state", "done"],
+        outputs=["state", "done"]
+    )
+
+def increment_timestep():
+    return Node(
+        name="increment_timestep",
+        function=lambda t: t + 1,
+        inputs=["t"],
+        outputs=["t"]
+    )
+
+def check_episode_end():
+    return Node(
+        name="check_episode_end",
+        function=lambda done, episode_reward, avg_reward, beta, episode_count: (
+            beta * avg_reward + (1 - beta) * episode_reward if done else avg_reward,
+            episode_count + 1 if done else episode_count,
+            done
+        ),
+        inputs=["done", "episode_reward", "avg_reward", "beta", "episode_count"],
+        outputs=["avg_reward", "episode_count", "should_reset"]
+    )
+
+def reset_episode_if_needed():
+    return Node(
+        name="reset_episode_if_needed",
+        function=lambda should_reset, env: env.reset() if should_reset else None,
+        inputs=["should_reset", "env"],
+        outputs=["reset_state"]
+    )
 
 
 def build_a3c_graph():
@@ -208,4 +318,20 @@ def build_a3c_graph():
         push_local_grads_to_global(),
         optimizer_step(),
         sync_local_with_global(),
+    ]
+
+def build_a3c_rollout_graph():
+    return [
+        state_to_tensor(),
+        forward_local_net(),
+        compute_action_distribution(),
+        sample_action(),
+        env_step(),
+        build_transition(),
+        append_transition(),
+        update_episode_reward(),
+        update_state_done(),
+        increment_timestep(),
+        check_episode_end(),
+        reset_episode_if_needed(),
     ]
