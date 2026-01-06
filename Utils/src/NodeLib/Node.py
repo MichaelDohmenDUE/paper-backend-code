@@ -15,7 +15,8 @@ class Node:
                 result = self.function(*args)
         else:
             result = self.function(*args)
-
+        if len(self.outputs) == 0:
+            return
         if len(self.outputs) == 1:
             context[self.outputs[0]] = result
         else:
