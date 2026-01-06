@@ -155,7 +155,7 @@ def clip_local_grads():
         function=lambda local_net, max_grad_norm: nn_utils.clip_grad_norm_(local_net.parameters(),
                                                                            max_grad_norm),
         inputs=["local_net", "max_grad_norm"],
-        outputs=["grad_norm"]
+        outputs=[]
     )
 
 def push_local_grads_to_global():

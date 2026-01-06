@@ -16,7 +16,7 @@ class A3CWorker:
     def __init__(self, worker_id, env_name, seed, t_max, gamma, global_net, optimizer, counter, factory, obs_dim, act_dim, hidden):
         torch.manual_seed(seed + worker_id)
 
-        # Local network (θ′)
+        # Local network (theta′)
         self.local_net = ActorCritic(obs_dim, act_dim, hidden).to(device)
         self.local_net.load_state_dict(global_net.state_dict())
         self.global_net = global_net
