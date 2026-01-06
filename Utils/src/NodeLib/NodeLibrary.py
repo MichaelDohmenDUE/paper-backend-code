@@ -133,6 +133,15 @@ class NodeLibrary:
         )
 
     @staticmethod
+    def compute_huber_loss():
+        return Node(
+            name="compute_huber_loss",
+            function=lambda pred, target: F.smooth_l1_loss(pred, target),
+            inputs=["qsa_behavior", "target"],
+            outputs=["loss"]
+        )
+
+    @staticmethod
     def optimizer_step():
         return Node(
             name="optimizer_step",

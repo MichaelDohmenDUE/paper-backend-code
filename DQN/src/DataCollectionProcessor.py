@@ -33,8 +33,9 @@ class DataCollectionProcessor:
             self.state = self.env.reset()
             self.done = False
         with torch.no_grad():
-            state_tensor = torch.as_tensor(self.state, dtype=torch.float32, device=self.device)
+            state_tensor = torch.tensor(self.state, dtype=torch.float32, device=self.device).unsqueeze(0)
             q_values = self.policy(state_tensor)
+            q_values = q_values.squeeze(0)
         action = self.action_selector.select_action(q_values=q_values)
         next_state, reward, done, done_bool = self.env.step(action.item(), self.total_steps)
         self.done = done

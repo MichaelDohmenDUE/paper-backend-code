@@ -8,8 +8,8 @@ class TrainProcessor:
     def __init__(self,buffer: ReplayBuffer, behavior_net: nn.Module, target_net: nn.Module, optimizer: torch.optim.Optimizer, gamma: float,
                  device: torch.device, max_grad_norm: float = 10.0):
         self.buffer = buffer
-        self.behavior_net = behavior_net.to(device)
-        self.target_net = target_net.to(device)
+        self.behavior_net = behavior_net
+        self.target_net = target_net
         self.optimizer = optimizer
         self.gamma = gamma
         self.device = device
