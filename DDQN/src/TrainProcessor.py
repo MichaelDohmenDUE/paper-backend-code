@@ -4,7 +4,11 @@ import torch.nn.functional as F
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
+
 class TrainProcessor:
+    """
+    OLD TrainProcessor for algorithmic clarity, does not get used
+    """
     def __init__(self, buffer: ReplayBuffer, behavior_net: nn.Module, target_net: nn.Module,
                  optimizer: torch.optim.Optimizer, gamma: float, device: torch.device):
         self.buffer = buffer

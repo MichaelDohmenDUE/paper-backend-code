@@ -5,6 +5,9 @@ from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
 class TrainProcessor:
+    """
+    OLD TrainProcessor for algorithmic clarity, does not get used
+    """
     def __init__(self, buffer: ReplayBuffer, behavior_net: nn.Module, target_net: nn.Module,
                  optimizer: torch.optim.Optimizer, gamma: float,  device: torch.device):
         self.buffer = buffer
@@ -34,7 +37,6 @@ class TrainProcessor:
             qsa_target = qs_target.max(dim=1, keepdim=True).values
             target = rewards_tensor + self.gamma * qsa_target * (1.0 - dones_tensor)
 
-        # ToDo: How to model dependent steps without forwarding anything
         self.optimizer.zero_grad()
         loss = F.mse_loss(qsa_behavior, target)
         loss.backward()
