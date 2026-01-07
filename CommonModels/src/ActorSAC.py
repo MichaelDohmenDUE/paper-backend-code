@@ -1,4 +1,5 @@
 from torch import nn
+import torch
 
 
 class ActorSAC(nn.Module):
@@ -20,3 +21,17 @@ class ActorSAC(nn.Module):
         mean = self.mean(x)
         log_std = self.log_std(x)
         return mean, log_std
+
+
+    def sample(self, state):
+        mean, log_std = self.forward(state)
+        std = log_std.exp()
+
+
+        noise = torch.randn_like(mean)
+        z = mean + std * noise
+        action = torch.tanh(z) * self.max_action
+
+        log_prob = std # TODO: Compute Log_prob
+
+        return action, log_prob

@@ -28,6 +28,9 @@ class TrainProcessor:
         if len(self.buffer) < self.buffer.batch_size:
             return None, None
 
+        current_alpha = self.log_alpha.exp()
+
+
         batch = self.buffer.sample_batch()
 
         states      = batch["state"].to(self.device)
@@ -38,18 +41,45 @@ class TrainProcessor:
 
         # Critic update
         with torch.no_grad():
-            next_actions = self.actor(next_states)
-            target_q = self.critic_target_1(next_states, next_actions)
-            target = rewards + self.gamma * target_q * (1.0 - dones)
-        current_q = self.critic_1(states, actions)
-        critic_loss = F.mse_loss(current_q, target)
+            next_action, next_logp = self.actor.sample(next_states)
+            q1_next = self.critic_target_1(next_states, next_action)
+            q2_next = self.critic_target_2(next_states, next_action)
+            min_q_next = torch.min(q1_next, q2_next)
+
+            target = rewards + self.gamma * (1 - dones) * (min_q_next - current_alpha * next_logp)
+
+        q1 = self.critic_1(states, actions)
+        q2 = self.critic_2(states, actions)
+
+        critic_loss_1 = F.mse_loss(q1, target)
+        critic_loss_2 = F.mse_loss(q2, target)
 
         self.critic_opt_1.zero_grad()
-        critic_loss.backward()
+        critic_loss_1.backward()
         self.critic_opt_1.step()
+
+        self.critic_opt_2.zero_grad()
+        critic_loss_2.backward()
+        self.critic_opt_2.step()
         # Actor update
+
+        new_actions, logp = self.actor.sample(states)
+
+        q1_update = self.critic_1(states, new_actions)
+        q2_update = self.critic_2(states, new_actions)
+        min_q_update = torch.min(q1_update, q2_update)
+
+        actor_loss = (current_alpha * logp - min_q_update).mean()
         self.actor_opt.zero_grad()
-        actor_loss = -self.critic_1(states, self.actor(states)).mean()
         actor_loss.backward()
         self.actor_opt.step()
-        return actor_loss, critic_loss
+
+        # Train Temp
+
+        alpha_loss = -(self.log_alpha * (logp + self.target_entropy).detach()).mean()
+        self.alpha_optimizer.zero_grad()
+        alpha_loss.backward()
+        self.alpha_optimizer.step()
+
+
+        return actor_loss, 0.5 * (critic_loss_1 + critic_loss_2)
