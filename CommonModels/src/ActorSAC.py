@@ -22,16 +22,21 @@ class ActorSAC(nn.Module):
         log_std = self.log_std(x)
         return mean, log_std
 
-
     def sample(self, state):
         mean, log_std = self.forward(state)
+        log_std = torch.clamp(log_std, -20, 2)
         std = log_std.exp()
-
 
         noise = torch.randn_like(mean)
         z = mean + std * noise
-        action = torch.tanh(z) * self.max_action
 
-        log_prob = std # TODO: Compute Log_prob
+        raw_action = torch.tanh(z)
+        action = raw_action * self.max_action
+
+        # Gaussian log_prob
+        log_prob = (-0.5 * ((z - mean) / (std + 1e-9)).pow(2) - log_std - 0.5 * torch.log(torch.tensor(2 * torch.pi, device=state.device))).sum(dim=-1, keepdim=True)
+
+        # tanh correction
+        log_prob -= torch.log(1 - raw_action.pow(2) + 1e-9).sum(dim=-1, keepdim=True)
 
         return action, log_prob

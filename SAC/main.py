@@ -1,7 +1,6 @@
 
 from copy import deepcopy
 import torch
-from torch import nn
 
 from backend.CommonModels.src.ActorSAC import ActorSAC as Actor
 from backend.CommonModels.src.Critic import Critic
@@ -22,7 +21,7 @@ def main():
     num_episodes = 1000
     env_name = "InvertedPendulum-v5"
     sync_freq = 1
-    hidden_size = 32
+    hidden_size = 256
     batch_size = 64
     max_buffer_size = 10000
     tau = 0.001
