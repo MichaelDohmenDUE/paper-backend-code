@@ -5,12 +5,11 @@ from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
 class TrainProcessor:
-    def __init__(self, buffer: ReplayBuffer, actor: nn.Module, actor_target: nn.Module, critic_1: nn.Module,
+    def __init__(self, buffer: ReplayBuffer, actor: nn.Module, critic_1: nn.Module,
                  critic_target_1: nn.Module, critic_2: nn.Module, critic_target_2: nn.Module, actor_optimizer: torch.optim.Optimizer,
                  critic_optimizer_1: torch.optim.Optimizer,critic_optimizer_2: torch.optim.Optimizer, gamma, device):
         self.buffer = buffer
         self.actor = actor.to(device)
-        self.actor_target = actor_target.to(device)
         self.critic_1 = critic_1.to(device)
         self.critic_target_1 = critic_target_1.to(device)
         self.critic_2 = critic_2.to(device)

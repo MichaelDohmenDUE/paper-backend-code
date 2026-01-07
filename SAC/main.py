@@ -34,9 +34,6 @@ def main():
 
     # Networks
     actor = Actor(observation_size, action_size, max_action, hidden_size).to(device)
-    actor_target = deepcopy(actor).to(device)
-    actor_optimizer = torch.optim.Adam(actor.parameters(), lr=lr_actor)
-
     critic_1 = Critic(observation_size, action_size, hidden_size).to(device)
     critic_target_1 = deepcopy(critic_1).to(device)
     critic_optimizer_1 = torch.optim.Adam(critic_1.parameters(), lr=lr_critic)
@@ -54,9 +51,8 @@ def main():
 
     data_collection_process = DataCollectionProcessor(env, policy, buffer, factory, device)
 
-    train_process = TrainProcessor(buffer, actor, actor_target, critic_1, critic_target_1, critic_2, critic_target_2 ,actor_optimizer, critic_optimizer_1, critic_optimizer_2, gamma, device)
+    train_process = TrainProcessor(buffer, actor, critic_1, critic_target_1, critic_2, critic_target_2 ,actor_optimizer, critic_optimizer_1, critic_optimizer_2, gamma, device)
 
-    sync_process_actor = SyncProcessor(actor, actor_target, tau, sync_freq)
     sync_process_critic_1 = SyncProcessor(critic_1, critic_target_1, tau, sync_freq)
     sync_process_critic_2 = SyncProcessor(critic_2, critic_target_2, tau, sync_freq)
     for episode in range(num_episodes):
