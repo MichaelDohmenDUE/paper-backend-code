@@ -19,10 +19,10 @@ def main():
     lr_critic = 1e-3
     lr_alpha = 1e-4
     num_episodes = 1000
-    env_name = "InvertedPendulum-v5"
+    env_name = "Hopper-v5"
     sync_freq = 1
     hidden_size = 256
-    batch_size = 64
+    batch_size = 256
     max_buffer_size = 100000
     tau = 0.001
     gamma = 0.99
@@ -60,23 +60,26 @@ def main():
 
     sync_process_critic_1 = SyncProcessor(critic_1, critic_target_1, tau, sync_freq)
     sync_process_critic_2 = SyncProcessor(critic_2, critic_target_2, tau, sync_freq)
-    for episode in range(num_episodes):
+    total_steps = 0
+    episode = 0
+    while total_steps < 1000000:
         done = False
         episode_reward = 0.0
         actor_loss, critic_loss = None, None
 
         while not done:
             transition = data_collection_process.run()
+            total_steps += 1
             actor_loss, critic_loss_1, critic_loss_2, alpha_loss = train_process.run()
             done = transition.done
             episode_reward += transition.reward
 
             sync_process_critic_1.run()
             sync_process_critic_2.run()
-
+        episode += 1
         if episode % 10 == 9 and actor_loss is not None:
             print(
-                f"Episode: {episode+1}, Reward: {episode_reward:.2f}, "
+                f"Episode: {episode+1}, Steps: {total_steps},  Reward: {episode_reward:.2f}, "
                 f"actor_loss: {actor_loss:.3f}, critic_loss_1: {critic_loss_1:.3f}"
                 f"critic_loss_2: {critic_loss_2:.3f}, alpha_loss: {alpha_loss:.3f}"
             )
