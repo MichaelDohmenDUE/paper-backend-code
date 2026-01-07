@@ -19,6 +19,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def main():
     lr_actor = 1e-4
     lr_critic = 1e-3
+    lr_alpha = 1e-4
     num_episodes = 1000
     env_name = "InvertedPendulum-v5"
     sync_freq = 1
@@ -34,6 +35,7 @@ def main():
 
     # Networks
     actor = Actor(observation_size, action_size, max_action, hidden_size).to(device)
+    actor_optimizer = torch.optim.Adam(actor.parameters(), lr=lr_actor)
     critic_1 = Critic(observation_size, action_size, hidden_size).to(device)
     critic_target_1 = deepcopy(critic_1).to(device)
     critic_optimizer_1 = torch.optim.Adam(critic_1.parameters(), lr=lr_critic)
@@ -41,6 +43,10 @@ def main():
     critic_2 = Critic(observation_size, action_size, hidden_size).to(device)
     critic_target_2 = deepcopy(critic_2).to(device)
     critic_optimizer_2 = torch.optim.Adam(critic_2.parameters(), lr=lr_critic)
+    # temperature and entropy
+    log_alpha = torch.tensor(0.0, requires_grad=True, device=device)
+    alpha_optimizer = torch.optim.Adam([log_alpha], lr=lr_alpha)
+    target_entropy = -action_size
 
     spec = TransitionSpec(["state", "action", "reward", "next_state", "done"])
     factory = TransitionFactory(spec)
@@ -51,7 +57,8 @@ def main():
 
     data_collection_process = DataCollectionProcessor(env, policy, buffer, factory, device)
 
-    train_process = TrainProcessor(buffer, actor, critic_1, critic_target_1, critic_2, critic_target_2 ,actor_optimizer, critic_optimizer_1, critic_optimizer_2, gamma, device)
+    train_process = TrainProcessor(buffer, actor, critic_1, critic_target_1, critic_2, critic_target_2 ,actor_optimizer, critic_optimizer_1, critic_optimizer_2,
+                                   log_alpha, alpha_optimizer, target_entropy, gamma, device)
 
     sync_process_critic_1 = SyncProcessor(critic_1, critic_target_1, tau, sync_freq)
     sync_process_critic_2 = SyncProcessor(critic_2, critic_target_2, tau, sync_freq)
@@ -66,7 +73,6 @@ def main():
             done = transition.done
             episode_reward += transition.reward
 
-            sync_process_actor.run()
             sync_process_critic_1.run()
             sync_process_critic_2.run()
 

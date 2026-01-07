@@ -7,7 +7,11 @@ from backend.Utils.src.ReplayBuffer import ReplayBuffer
 class TrainProcessor:
     def __init__(self, buffer: ReplayBuffer, actor: nn.Module, critic_1: nn.Module,
                  critic_target_1: nn.Module, critic_2: nn.Module, critic_target_2: nn.Module, actor_optimizer: torch.optim.Optimizer,
-                 critic_optimizer_1: torch.optim.Optimizer,critic_optimizer_2: torch.optim.Optimizer, gamma, device):
+                 critic_optimizer_1: torch.optim.Optimizer,critic_optimizer_2: torch.optim.Optimizer,
+                 log_alpha, alpha_optimizer, target_entropy, gamma, device):
+        self.target_entropy = target_entropy
+        self.log_alpha = log_alpha
+        self.alpha_optimizer = alpha_optimizer
         self.buffer = buffer
         self.actor = actor.to(device)
         self.critic_1 = critic_1.to(device)
@@ -34,7 +38,7 @@ class TrainProcessor:
 
         # Critic update
         with torch.no_grad():
-            next_actions = self.actor_target(next_states)
+            next_actions = self.actor(next_states)
             target_q = self.critic_target_1(next_states, next_actions)
             target = rewards + self.gamma * target_q * (1.0 - dones)
         current_q = self.critic_1(states, actions)
