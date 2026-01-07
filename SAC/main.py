@@ -3,9 +3,8 @@ from copy import deepcopy
 import torch
 from torch import nn
 
-from backend.CommonModels.src.Actor import Actor
+from backend.CommonModels.src.ActorSAC import ActorSAC as Actor
 from backend.CommonModels.src.Critic import Critic
-from backend.DDPG.src.ActionHandler import OUNoise, DeterministicPolicyWithNoise
 from backend.SAC.src.ActionSelector import ActionSelector
 from backend.SAC.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.SAC.src.TrainProcessor import TrainProcessor
@@ -52,7 +51,7 @@ def main():
     factory = TransitionFactory(spec)
     buffer = ReplayBuffer(spec, max_buffer_size, batch_size)
 
-    policy = ActionSelector(actor, device)
+    policy = ActionSelector(actor, max_action ,device)
 
 
     data_collection_process = DataCollectionProcessor(env, policy, buffer, factory, device)
