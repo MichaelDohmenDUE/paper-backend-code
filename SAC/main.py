@@ -23,7 +23,7 @@ def main():
     sync_freq = 1
     hidden_size = 256
     batch_size = 64
-    max_buffer_size = 10000
+    max_buffer_size = 100000
     tau = 0.001
     gamma = 0.99
     seed = 42
@@ -50,7 +50,7 @@ def main():
     factory = TransitionFactory(spec)
     buffer = ReplayBuffer(spec, max_buffer_size, batch_size)
 
-    policy = ActionSelector(actor, max_action ,device)
+    policy = ActionSelector(actor ,device)
 
 
     data_collection_process = DataCollectionProcessor(env, policy, buffer, factory, device)
@@ -77,7 +77,7 @@ def main():
         if episode % 10 == 9 and actor_loss is not None:
             print(
                 f"Episode: {episode+1}, Reward: {episode_reward:.2f}, "
-                f"actor_loss: {actor_loss.mean():.3f}, critic_loss_1: {critic_loss_1:.3f}"
+                f"actor_loss: {actor_loss:.3f}, critic_loss_1: {critic_loss_1:.3f}"
                 f"critic_loss_2: {critic_loss_2:.3f}, alpha_loss: {alpha_loss:.3f}"
             )
 

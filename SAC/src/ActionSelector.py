@@ -3,7 +3,7 @@ from torch import nn
 
 
 class ActionSelector(nn.Module):
-    def __init__(self, actor_net: nn.Module, max_action: float ,device: torch.device):
+    def __init__(self, actor_net: nn.Module, device: torch.device):
         super().__init__()
         self.actor = actor_net
         self.device = device
