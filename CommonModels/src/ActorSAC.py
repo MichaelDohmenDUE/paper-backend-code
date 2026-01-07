@@ -2,7 +2,7 @@ from torch import nn
 
 
 class ActorSAC(nn.Module):
-    def __init__(self, obs_dim: int, act_dim: int, max_action: float|None, hidden: int):
+    def __init__(self, obs_dim: int, act_dim: int, max_action: float, hidden: int):
         super().__init__()
         self.max_action = max_action
         self.net = nn.Sequential(
