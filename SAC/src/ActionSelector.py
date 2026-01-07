@@ -7,7 +7,6 @@ class ActionSelector(nn.Module):
         super().__init__()
         self.actor = actor_net
         self.device = device
-        self.max_action = max_action
 
     def select_action(self, state_tensor):
         action, log_std = self.actor.sample(state_tensor)
