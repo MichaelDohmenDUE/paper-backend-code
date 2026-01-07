@@ -8,42 +8,44 @@ from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
 class DataCollectionProcessor:
-    def __init__(self, policy: nn.Module, env: EnvironmentHandler, buffer: ReplayBuffer, action_selector: EpsilonGreedyPolicy, transition_factory: TransitionFactory, device: torch.device):
-        self.policy = policy
+    def __init__(self,env: EnvironmentHandler,policy,buffer: ReplayBuffer,transition_factory: TransitionFactory,device: torch.device):
         self.env = env
+        self.policy = policy
         self.buffer = buffer
-        self.state = env.reset()
-        self.done = False
-        self.action_selector = action_selector
         self.transition_factory = transition_factory
         self.device = device
-        # Logging
-        self.episode_count = 0
-        self.episode_reward = 0
-        self.total_steps = 0
 
-    def run(self) -> None:
-        if self.done:
-            if self.episode_count % 10 == 0:
-                print(f"Episode [{self.episode_count}] {self.episode_reward}")
+        self.state = self.env.reset()
+        self.done = False
+        self.episode_timesteps = 0
 
-            self.episode_count += 1
-            self.episode_reward = 0.0
+    def run(self):
+        state_tensor = torch.as_tensor(self.state, dtype=torch.float32, device=self.device)
 
-            self.state = self.env.reset()
-            self.done = False
-        with torch.no_grad():
-            state_tensor = torch.tensor(self.state, dtype=torch.float32, device=self.device).unsqueeze(0)
-            q_values = self.policy(state_tensor)
-            q_values = q_values.squeeze(0)
-        action = self.action_selector.select_action(q_values=q_values)
-        next_state, reward, done, done_bool = self.env.step(action.item(), self.total_steps)
-        self.done = done
+        action_tensor = self.policy.select_action(state_tensor)
+        action_np = action_tensor.cpu().numpy()
 
-        transition = self.transition_factory.create( state=self.state, action=action.item(), reward=reward, next_state=next_state, done=self.done )
+        self.episode_timesteps += 1
+        next_state, reward, done, done_bool = self.env.step(
+            action_np, episode_timesteps=self.episode_timesteps
+        )
+
+        transition = self.transition_factory.create(
+            state=self.state,
+            action=action_np,
+            reward=reward,
+            next_state=next_state,
+            done=done_bool,
+        )
         self.buffer.append(transition)
-        self.episode_reward += reward
 
         self.state = next_state
+        self.done = done_bool
 
-        self.total_steps += 1
+        if self.done:
+            self.state = self.env.reset()
+            self.done = False
+            self.episode_timesteps = 0
+            self.policy.noise.reset()
+
+        return transition

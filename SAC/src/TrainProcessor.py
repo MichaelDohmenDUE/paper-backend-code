@@ -5,40 +5,45 @@ from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
 class TrainProcessor:
-    """
-    OLD TrainProcessor for algorithmic clarity, does not get used
-    """
-    def __init__(self, buffer: ReplayBuffer, behavior_net: nn.Module, target_net: nn.Module,
-                 optimizer: torch.optim.Optimizer, gamma: float,  device: torch.device):
+    def __init__(self, buffer: ReplayBuffer, actor: nn.Module, actor_target: nn.Module, critic: nn.Module,
+                 critic_target: nn.Module, actor_optimizer: torch.optim.Optimizer,
+                 critic_optimizer: torch.optim.Optimizer, gamma, device):
         self.buffer = buffer
-        self.behavior_net = behavior_net.to(device)
-        self.target_net = target_net.to(device)
-        self.optimizer = optimizer
+        self.actor = actor.to(device)
+        self.actor_target = actor_target.to(device)
+        self.critic = critic.to(device)
+        self.critic_target = critic_target.to(device)
+        self.actor_opt = actor_optimizer
+        self.critic_opt = critic_optimizer
         self.gamma = gamma
         self.device = device
 
     def run(self):
         if len(self.buffer) < self.buffer.batch_size:
-            return
+            return None, None
 
         batch = self.buffer.sample_batch()
 
-        states_tensor      = batch["state"].to(self.device)
-        actions_tensor     = batch["action"].to(self.device)
-        rewards_tensor     = batch["reward"].to(self.device)
-        next_states_tensor = batch["next_state"].to(self.device)
-        dones_tensor       = batch["done"].to(self.device)
+        states      = batch["state"].to(self.device)
+        actions     = batch["action"].to(self.device)
+        rewards     = batch["reward"].to(self.device)
+        next_states = batch["next_state"].to(self.device)
+        dones       = batch["done"].to(self.device)
 
-        actions_tensor = actions_tensor.long()
-        qsa_behavior = self.behavior_net(states_tensor).gather(1, actions_tensor)  # ^y
-
+        # Critic update
         with torch.no_grad():
-            qs_target = self.target_net(next_states_tensor) # batch_size x action_dim
-            qsa_target = qs_target.max(dim=1, keepdim=True).values
-            target = rewards_tensor + self.gamma * qsa_target * (1.0 - dones_tensor)
+            next_actions = self.actor_target(next_states)
+            target_q = self.critic_target(next_states, next_actions)
+            target = rewards + self.gamma * target_q * (1.0 - dones)
+        current_q = self.critic(states, actions)
+        critic_loss = F.mse_loss(current_q, target)
 
-        self.optimizer.zero_grad()
-        loss = F.mse_loss(qsa_behavior, target)
-        loss.backward()
-        self.optimizer.step()
-
+        self.critic_opt.zero_grad()
+        critic_loss.backward()
+        self.critic_opt.step()
+        # Actor update
+        self.actor_opt.zero_grad()
+        actor_loss = -self.critic(states, self.actor(states)).mean()
+        actor_loss.backward()
+        self.actor_opt.step()
+        return actor_loss, critic_loss
