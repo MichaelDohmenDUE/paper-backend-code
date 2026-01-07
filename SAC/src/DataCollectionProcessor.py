@@ -22,8 +22,8 @@ class DataCollectionProcessor:
     def run(self):
         state_tensor = torch.as_tensor(self.state, dtype=torch.float32, device=self.device)
 
-        action_tensor = self.policy.select_action(state_tensor)
-        action_np = action_tensor.cpu().numpy()
+        action_tensor = self.policy.select_action()
+        action_np = [0]#action_tensor.cpu().numpy()
 
         self.episode_timesteps += 1
         next_state, reward, done, done_bool = self.env.step(
@@ -46,6 +46,5 @@ class DataCollectionProcessor:
             self.state = self.env.reset()
             self.done = False
             self.episode_timesteps = 0
-            self.policy.noise.reset()
 
         return transition
