@@ -26,7 +26,7 @@ class TrainProcessor:
 
     def run(self):
         if len(self.buffer) < self.buffer.batch_size:
-            return None, None
+            return None, None, None, None
 
         current_alpha = self.log_alpha.exp()
 
@@ -82,4 +82,4 @@ class TrainProcessor:
         self.alpha_optimizer.step()
 
 
-        return actor_loss, 0.5 * (critic_loss_1 + critic_loss_2)
+        return actor_loss, critic_loss_1, critic_loss_2, alpha_loss

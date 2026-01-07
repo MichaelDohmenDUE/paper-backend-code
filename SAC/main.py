@@ -68,7 +68,7 @@ def main():
 
         while not done:
             transition = data_collection_process.run()
-            actor_loss, critic_loss = train_process.run()
+            actor_loss, critic_loss_1, critic_loss_2, alpha_loss = train_process.run()
             done = transition.done
             episode_reward += transition.reward
 
@@ -78,7 +78,8 @@ def main():
         if episode % 10 == 9 and actor_loss is not None:
             print(
                 f"Episode: {episode+1}, Reward: {episode_reward:.2f}, "
-                f"actor_loss: {actor_loss.mean():.3f}, critic_loss: {critic_loss:.3f}"
+                f"actor_loss: {actor_loss.mean():.3f}, critic_loss_1: {critic_loss_1:.3f}"
+                f"critic_loss_2: {critic_loss_2:.3f}, alpha_loss: {alpha_loss:.3f}"
             )
 
 if __name__ == "__main__":
