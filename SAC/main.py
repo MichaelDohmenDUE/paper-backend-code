@@ -65,7 +65,7 @@ def main():
     while total_steps < 1000000:
         done = False
         episode_reward = 0.0
-        actor_loss, critic_loss = None, None
+        actor_loss, critic_loss_1, critic_loss_2, alpha_loss = None, None, None, None
 
         while not done:
             transition = data_collection_process.run()
