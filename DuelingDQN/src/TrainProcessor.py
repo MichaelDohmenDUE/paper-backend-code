@@ -36,7 +36,7 @@ class TrainProcessor:
             q_next = self.target_net(next_states).gather(1, next_actions)
             target = rewards + self.gamma * q_next * (1.0 - dones)
 
-        loss = F.smooth_l1_loss(qsa_behavior, target)
+        loss = F.mse_loss(qsa_behavior, target)
 
         self.optimizer.zero_grad()
         loss.backward()

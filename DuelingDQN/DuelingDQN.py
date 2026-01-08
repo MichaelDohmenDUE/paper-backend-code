@@ -18,7 +18,7 @@ def main():
     epsilon = 0.2
     env_name = "CartPole-v1"
     sync_freq = 40
-    hidden_size = 32
+    hidden_size = 128
     batch_size = 64
     max_buffer_size = 10000
     tau = 1.0
