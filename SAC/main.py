@@ -15,16 +15,16 @@ from backend.Utils.src.SyncProcessor import SyncProcessor
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def main():
-    lr_actor = 1e-4
-    lr_critic = 1e-3
-    lr_alpha = 1e-4
+    lr_actor = 3e-4
+    lr_critic = 3e-4
+    lr_alpha = 3e-4
     num_episodes = 1000
-    env_name = "Hopper-v5"
+    env_name = "HalfCheetah-v5"
     sync_freq = 1
     hidden_size = 256
     batch_size = 256
     max_buffer_size = 100000
-    tau = 0.001
+    tau = 0.005
     gamma = 0.99
     seed = 42
 
@@ -71,7 +71,7 @@ def main():
             transition = data_collection_process.run()
             total_steps += 1
             actor_loss, critic_loss_1, critic_loss_2, alpha_loss = train_process.run()
-            done = transition.done
+            done = data_collection_process.done
             episode_reward += transition.reward
 
             sync_process_critic_1.run()
