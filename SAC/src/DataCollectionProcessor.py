@@ -1,14 +1,14 @@
 import torch
-from torch import nn
 
-from backend.DQN.src.ActionHandler import EpsilonGreedyPolicy
+from backend.SAC.src.ActionSelector import ActionSelector
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
 class DataCollectionProcessor:
-    def __init__(self,env: EnvironmentHandler,policy,buffer: ReplayBuffer,transition_factory: TransitionFactory,device: torch.device):
+    def __init__(self, env: EnvironmentHandler, policy: ActionSelector, buffer: ReplayBuffer,
+                 transition_factory: TransitionFactory, device: torch.device):
         self.env = env
         self.policy = policy
         self.buffer = buffer
