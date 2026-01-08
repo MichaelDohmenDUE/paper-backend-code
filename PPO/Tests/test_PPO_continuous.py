@@ -1,4 +1,5 @@
 import unittest
+
 import numpy as np
 import torch
 
@@ -10,7 +11,7 @@ class TestPPOTrainer(unittest.TestCase):
         self.state_dim = 4
         self.action_dim = 2
         self.hidden_dim = 16
-        self.trainer = PPOTrainer(self.state_dim, self.action_dim,self.hidden_dim)
+        self.trainer = PPOTrainer(self.state_dim, self.action_dim, self.hidden_dim)
 
     def test_select_action(self):
         state = np.zeros(self.state_dim, dtype=np.float32)
@@ -35,6 +36,7 @@ class TestPPOTrainer(unittest.TestCase):
         for p in list(self.trainer.actor.parameters()) + list(self.trainer.critic.parameters()):
             self.assertTrue(p.requires_grad)
             self.assertIsInstance(p.data, torch.Tensor)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -6,9 +6,9 @@ from backend.Utils.src.NodeLib.Node import Graph
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 class A3CTrainingProcessor:
     def __init__(self, global_net, local_net, optimizer, gamma, entropy_coef=0.001, max_grad_norm=40.0):
-
         self.global_net = global_net
         self.local_net = local_net
         self.optimizer = optimizer

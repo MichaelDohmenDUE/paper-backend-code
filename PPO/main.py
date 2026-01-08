@@ -4,6 +4,7 @@ from backend.Utils.src.EvaluationHelper import eval_trainer
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.utils import compute_gae
 
+
 def collect_rollout(env_handler, trainer, replay_buffer, rollout_size, episode_timesteps):
     state = env_handler.reset()
     for step in range(rollout_size):
@@ -23,9 +24,10 @@ def collect_rollout(env_handler, trainer, replay_buffer, rollout_size, episode_t
 
 def train_update(trainer, replay_buffer, last_value, batch_size, epochs):
     states, actions, logps, advs, rets = compute_gae(replay_buffer, gamma=0.99, lam=0.95, last_value=last_value)
-    stats = trainer.train(states, actions, logps, advs, rets,batch_size=batch_size, epochs=epochs)
+    stats = trainer.train(states, actions, logps, advs, rets, batch_size=batch_size, epochs=epochs)
     replay_buffer.buffer.clear()
     return stats
+
 
 def main():
     env_name = "InvertedPendulum-v5"
@@ -52,6 +54,7 @@ def main():
 
         if update % 10 == 0:
             eval_trainer(trainer, env_handler, eval_episodes=5)
+
 
 if __name__ == "__main__":
     main()

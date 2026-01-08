@@ -1,4 +1,5 @@
 import unittest
+
 import numpy as np
 
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
@@ -34,6 +35,7 @@ class TestEnvironmentHandler(unittest.TestCase):
         env = EnvironmentHandler(env_name="HalfCheetah-v5", seed=0)
         self.assertEqual(env.action_dim, env.env.action_space.shape[0])
         self.assertEqual(env.max_action, float(env.env.action_space.high[0]))
+
 
 if __name__ == "__main__":
     unittest.main()

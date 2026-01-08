@@ -1,7 +1,8 @@
 import numpy as np
-from numpy.typing import NDArray
 import torch
+from numpy.typing import NDArray
 from torch import nn
+
 
 def gae(gamma: float, lambda_: float, deltas: NDArray[np.float64], dones: NDArray[np.bool_]) -> NDArray[np.float64]:
     advantages = np.empty_like(deltas)
@@ -11,7 +12,8 @@ def gae(gamma: float, lambda_: float, deltas: NDArray[np.float64], dones: NDArra
         advantages[t] = advantage
     return advantages
 
-def compute_gae(buffer, gamma: float, lam: float, last_value:float):
+
+def compute_gae(buffer, gamma: float, lam: float, last_value: float):
     states, actions, logps, rewards, dones, values = zip(*buffer.buffer)
     states, actions = np.array(states), np.array(actions)
     logps = np.array(logps, dtype=np.float32)
@@ -25,8 +27,8 @@ def compute_gae(buffer, gamma: float, lam: float, last_value:float):
             next_value = last_value
             next_non_terminal = 1.0 - dones[t]
         else:
-            next_value = values[t+1]
-            next_non_terminal = 1.0 - dones[t+1]
+            next_value = values[t + 1]
+            next_non_terminal = 1.0 - dones[t + 1]
         deltas[t] = rewards[t] + gamma * next_value * next_non_terminal - values[t]
 
     advantages = gae(gamma, lam, deltas, dones)
@@ -49,10 +51,9 @@ def temporal_difference_residuals(gamma: float, rewards: NDArray[np.float64],
                                   state_values: NDArray[np.float64],
                                   next_state_values: NDArray[np.float64],
                                   dones: NDArray[np.bool_]) -> NDArray[np.float64]:
+    masked_next_state_values = next_state_values * (1. - dones.reshape(-1, 1))
 
-    masked_next_state_values = next_state_values * (1. - dones.reshape(-1,1))
-
-    td_residuals = rewards.reshape(-1,1) + gamma * masked_next_state_values - state_values
+    td_residuals = rewards.reshape(-1, 1) + gamma * masked_next_state_values - state_values
     return td_residuals
 
 

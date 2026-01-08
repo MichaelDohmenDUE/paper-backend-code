@@ -1,6 +1,7 @@
+from collections import defaultdict
+
 import torch
 from torch import nn
-from collections import defaultdict
 
 # TODO: Throw this into utils for now, think about file structure later
 json_module = {
@@ -46,6 +47,7 @@ def dfs(node, graph, path, streams):
             dfs(node, graph, path, streams)
     path.pop()
 
+
 def forward(x, node, graph, outputs, net):
     torch_node = net.__getattr__(node)
     print(net.__getattr__(node))
@@ -56,9 +58,6 @@ def forward(x, node, graph, outputs, net):
 
     for next_node in next_nodes:
         forward(x, next_node, graph, outputs, net)
-
-
-
 
 
 class JSONModule(nn.Module):
@@ -92,12 +91,10 @@ class JSONModule(nn.Module):
         print(graph)
         input_layer = data["input"]
         outputs = []
-        forward(torch.randn((1,10)), input_layer, graph, outputs, self)
+        forward(torch.randn((1, 10)), input_layer, graph, outputs, self)
         print(outputs)
 
 
 if __name__ == '__main__':
     net = JSONModule(json_module)
     print(net)
-
-

@@ -1,9 +1,7 @@
-
-
-
-
 from copy import deepcopy
+
 import torch
+
 from backend.CommonModels.src.DuellingDQN import DuellingDQN
 from backend.DQN.src.ActionHandler import EpsilonGreedyPolicy
 from backend.DQN.src.DataCollectionProcessor import DataCollectionProcessor
@@ -13,8 +11,8 @@ from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
 
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 def main():
     epsilon = 0.2
@@ -45,7 +43,7 @@ def main():
 
     collector = DataCollectionProcessor(behavior_net, env, buffer, EpsilonGreedyPolicy(epsilon), factory, device)
 
-    train_process = TrainProcessor(buffer,behavior_net,target_net,optimizer,gamma,device, max_grad_norm)
+    train_process = TrainProcessor(buffer, behavior_net, target_net, optimizer, gamma, device, max_grad_norm)
 
     sync_process = SyncProcessor(behavior_net, target_net, tau, sync_freq)
 
@@ -53,6 +51,7 @@ def main():
         collector.run()
         train_process.run()
         sync_process.run()
+
 
 if __name__ == "__main__":
     main()

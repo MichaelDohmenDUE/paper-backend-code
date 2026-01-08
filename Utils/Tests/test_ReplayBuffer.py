@@ -1,9 +1,10 @@
 import unittest
-import numpy as np
-from typing import Any
 
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
+import numpy as np
+
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
+from backend.Utils.src.ReplayBuffer import ReplayBuffer
+
 
 class TestReplayBuffer(unittest.TestCase):
     def setUp(self):
@@ -47,6 +48,7 @@ class TestReplayBuffer(unittest.TestCase):
         self.assertEqual(len(sample), self.batch_size)
         for item in sample:
             self.assertIn(item, self.buffer.buffer)
+
     def test_sample_batch(self):
         items = [self.make_transition(i) for i in range(5)]
         self.buffer.extend(items)
@@ -78,6 +80,7 @@ class TestReplayBuffer(unittest.TestCase):
         self.buffer.extend(items)
         self.assertEqual(len(self.buffer), self.buffer_size)
         self.assertNotIn(items[0], self.buffer.buffer)
+
 
 if __name__ == "__main__":
     unittest.main()

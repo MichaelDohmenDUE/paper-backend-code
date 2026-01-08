@@ -1,5 +1,5 @@
-from torch import nn
 import torch
+from torch import nn
 
 
 class ActorSAC(nn.Module):
@@ -34,7 +34,8 @@ class ActorSAC(nn.Module):
         action = raw_action * self.max_action
 
         # Gaussian log_prob
-        log_prob = (-0.5 * ((z - mean) / (std + 1e-9)).pow(2) - log_std - 0.5 * torch.log(torch.tensor(2 * torch.pi, device=state.device))).sum(dim=-1, keepdim=True)
+        log_prob = (-0.5 * ((z - mean) / (std + 1e-9)).pow(2) - log_std - 0.5 * torch.log(
+            torch.tensor(2 * torch.pi, device=state.device))).sum(dim=-1, keepdim=True)
 
         # tanh correction
         log_prob -= torch.log(1 - raw_action.pow(2) + 1e-9).sum(dim=-1, keepdim=True)

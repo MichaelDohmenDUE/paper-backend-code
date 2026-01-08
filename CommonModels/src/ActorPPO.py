@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 
+
 class ActorPPO(nn.Module):
     def __init__(self, state_dim, action_dim, hidden_dim=64):
         super().__init__()

@@ -1,7 +1,8 @@
 import unittest
+from copy import deepcopy
+
 import torch
 import torch.nn as nn
-from copy import deepcopy
 
 from backend.Utils.src.utils import synchronize
 
@@ -11,12 +12,11 @@ class DummyNet(nn.Module):
         super().__init__()
         self.linear = nn.Linear(6, 7)
 
+
 class TestSynchronize(unittest.TestCase):
     def setUp(self):
         self.source = DummyNet()
         self.target = DummyNet()
-
-
 
         for param in self.source.parameters():
             nn.init.constant_(param, 1.0)
@@ -47,6 +47,7 @@ class TestSynchronize(unittest.TestCase):
             synchronize(self.source, self.target, tau=-0.1)
         with self.assertRaises(AssertionError):
             synchronize(self.source, self.target, tau=1.1)
+
 
 if __name__ == "__main__":
     unittest.main()

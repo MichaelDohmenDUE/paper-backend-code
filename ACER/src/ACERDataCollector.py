@@ -1,14 +1,14 @@
 import torch
 
-from backend.Utils.src.BatchTransitioner import TransitionFactory
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
-from backend.Utils.src.EnviromentHandler import EnvironmentHandler
-
 from backend.ACER.src.ACERTrainer import ACERTrainer
+from backend.Utils.src.BatchTransitioner import TransitionFactory
+from backend.Utils.src.EnviromentHandler import EnvironmentHandler
+from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
 class ACERDataCollector:
-    def __init__(self, trainer: ACERTrainer, env: EnvironmentHandler, buffer: ReplayBuffer, factory: TransitionFactory, device: torch.device):
+    def __init__(self, trainer: ACERTrainer, env: EnvironmentHandler, buffer: ReplayBuffer, factory: TransitionFactory,
+                 device: torch.device):
         self.trainer = trainer
         self.env = env
         self.buffer = buffer

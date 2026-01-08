@@ -1,8 +1,10 @@
+import copy
+
 import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import optim
-import copy
+
 from backend.CommonModels.src.Actor import Actor
 from backend.CommonModels.src.Critic import Critic
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
@@ -10,12 +12,15 @@ from backend.Utils.src.utils import synchronize
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 class TD3Trainer(object):
     """
     Twin Delayed Deep Deterministic Policy Gradient (TD3)
     Paper: https://arxiv.org/abs/1802.09477
     """
-    def __init__(self, state_size: int, action_size: int, hidden_size: int, max_action: float, learning_rate: float, tau: float, noise_clip: float, policy_noise,synchro_frequency: int = 2, discount_factor : int = 0.99):
+
+    def __init__(self, state_size: int, action_size: int, hidden_size: int, max_action: float, learning_rate: float,
+                 tau: float, noise_clip: float, policy_noise, synchro_frequency: int = 2, discount_factor: int = 0.99):
         self.state_size = state_size
         self.action_size = action_size
         self.hidden_size = hidden_size

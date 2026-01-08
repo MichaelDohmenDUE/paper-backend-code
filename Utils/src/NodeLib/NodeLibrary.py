@@ -1,5 +1,7 @@
-from backend.Utils.src.NodeLib.Node import Node
 import torch.nn.functional as F
+
+from backend.Utils.src.NodeLib.Node import Node
+
 
 class NodeLibrary:
 
@@ -117,7 +119,9 @@ class NodeLibrary:
     def compute_dqn_target():
         return Node(
             name="compute_dqn_target",
-            function=lambda rewards, next_q_target, dones, gamma: rewards + gamma * next_q_target.max(dim=1, keepdim=True).values * (1.0 - dones),
+            function=lambda rewards, next_q_target, dones, gamma: rewards + gamma * next_q_target.max(dim=1,
+                                                                                                      keepdim=True).values * (
+                                                                              1.0 - dones),
             inputs=["rewards", "next_q_target", "dones", "gamma"],
             outputs=["target"],
             no_grad=True
@@ -145,7 +149,7 @@ class NodeLibrary:
     def optimizer_step():
         return Node(
             name="optimizer_step",
-            function=lambda optimizer, loss: (optimizer.zero_grad(),loss.backward(),optimizer.step(),loss)[-1],
+            function=lambda optimizer, loss: (optimizer.zero_grad(), loss.backward(), optimizer.step(), loss)[-1],
             inputs=["optimizer", "loss"],
             outputs=["loss"]
         )

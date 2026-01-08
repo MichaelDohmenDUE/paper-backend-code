@@ -5,7 +5,7 @@ from torch import Tensor
 
 
 class Critic(nn.Module):
-    def __init__(self,state_size: int,action_size: int, hidden_size: int):
+    def __init__(self, state_size: int, action_size: int, hidden_size: int):
         super(Critic, self).__init__()
 
         self.fc1 = nn.Linear(state_size + action_size, hidden_size)

@@ -1,8 +1,11 @@
-from typing import Any, Iterable
 import random
 from collections import deque
+from typing import Any, Iterable
+
 import torch
+
 from backend.Utils.src.BatchTransitioner import TransitionBatch, TransitionSpec
+
 
 class ReplayBuffer:
     def __init__(self, spec: TransitionSpec, max_buffer_size: int = 10_000, batch_size: int = 32):

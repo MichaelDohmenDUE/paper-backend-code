@@ -1,10 +1,12 @@
+import gymnasium as gym
+import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
-import gymnasium as gym
-import numpy as np
-from backend.Utils.src.utils import  gae, discounted_cumulative_reward, temporal_difference_residuals
+
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
+from backend.Utils.src.utils import gae, discounted_cumulative_reward, temporal_difference_residuals
+
 """ 
 PPO is based on the policy gradient theorem and can handle both
 discrete and continuous action spaces. It can be applied to low and high dimensional observation spaces. 
@@ -142,7 +144,6 @@ if __name__ == '__main__':
 
             states_tensor = torch.tensor(np.array(states), dtype=torch.float32)
             actions_tensor = torch.tensor(np.array(actions), dtype=torch.int64).squeeze(-1)
-
 
             new_action_probs = actor(states_tensor)
 

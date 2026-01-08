@@ -1,5 +1,7 @@
 import unittest
+
 import torch
+
 from backend.CommonModels.src.Critic import Critic
 
 
@@ -19,6 +21,7 @@ class TestCritic(unittest.TestCase):
 
         self.assertIsInstance(output, torch.Tensor)
         self.assertEqual(output.shape, (batch_size, 1))
+
 
 if __name__ == '__main__':
     unittest.main()

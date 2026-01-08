@@ -7,10 +7,10 @@ from backend.CommonModels.src.Critic import Critic
 from backend.DDPG.src.ActionHandler import OUNoise, DeterministicPolicyWithNoise
 from backend.DDPG.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.DDPG.src.TrainProcessor import TrainProcess
+from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
-from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -49,7 +49,8 @@ def main():
 
     data_collection_process = DataCollectionProcessor(env, policy, buffer, factory, device)
 
-    train_process = TrainProcess(buffer, actor, actor_target, critic, critic_target,actor_optimizer, critic_optimizer, gamma, device)
+    train_process = TrainProcess(buffer, actor, actor_target, critic, critic_target, actor_optimizer, critic_optimizer,
+                                 gamma, device)
 
     sync_process_actor = SyncProcessor(actor, actor_target, tau, sync_freq)
     sync_process_critic = SyncProcessor(critic, critic_target, tau, sync_freq)
@@ -70,9 +71,10 @@ def main():
 
         if episode % 10 == 9 and actor_loss is not None:
             print(
-                f"Episode: {episode+1}, Reward: {episode_reward:.2f}, "
+                f"Episode: {episode + 1}, Reward: {episode_reward:.2f}, "
                 f"actor_loss: {actor_loss.mean():.3f}, critic_loss: {critic_loss:.3f}"
             )
+
 
 if __name__ == "__main__":
     main()

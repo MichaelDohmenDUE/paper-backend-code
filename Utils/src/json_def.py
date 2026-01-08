@@ -19,7 +19,7 @@ JSON_SCHEMA = {
                 "action_space": {"type": "string", "enum": ["discrete", "continuous"]}
             }
         },
-        
+
         "networks": {
             "type": "object",
             "patternProperties": {
@@ -71,7 +71,7 @@ JSON_SCHEMA = {
                 }
             }
         },
-        
+
         "modules": {
             "type": "object",
             "patternProperties": {
@@ -128,7 +128,7 @@ DQN_EXAMPLE = {
         "action_size": 2,
         "action_space": "discrete"
     },
-    
+
     "networks": {
         "q_network": {
             "nodes": [
@@ -148,7 +148,7 @@ DQN_EXAMPLE = {
             "clone_from": "q_network"
         }
     },
-    
+
     "modules": {
         "data_collection": {
             "nodes": [
@@ -164,13 +164,13 @@ DQN_EXAMPLE = {
                 {"from": "epsilon_greedy", "to": "environment"}
             ]
         },
-        
+
         "data_buffering": {
             "nodes": [
                 {"name": "replay_buffer", "type": "ReplayBuffer", "capacity": 10000}
             ]
         },
-        
+
         "learning": {
             "nodes": [
                 {"name": "batch", "type": "BatchSource"},
@@ -225,7 +225,7 @@ DDPG_EXAMPLE = {
         "action_size": 1,
         "action_space": "continuous"
     },
-    
+
     "networks": {
         "actor": {
             "nodes": [
@@ -243,7 +243,7 @@ DDPG_EXAMPLE = {
                 {"from": "tanh", "to": "scale"}
             ]
         },
-        
+
         "critic": {
             "nodes": [
                 {"name": "state_fc", "type": "Linear", "input_features": 3, "output_features": 32},
@@ -262,11 +262,11 @@ DDPG_EXAMPLE = {
                 {"from": "relu2", "to": "fc3"}
             ]
         },
-        
+
         "actor_target": {"type": "clone", "clone_from": "actor"},
         "critic_target": {"type": "clone", "clone_from": "critic"}
     },
-    
+
     "modules": {
         "data_collection": {
             "nodes": [
@@ -282,13 +282,13 @@ DDPG_EXAMPLE = {
                 {"from": "noise", "to": "environment"}
             ]
         },
-        
+
         "data_buffering": {
             "nodes": [
                 {"name": "replay_buffer", "type": "ReplayBuffer", "capacity": 10000}
             ]
         },
-        
+
         "learning": {
             "nodes": [
                 {"name": "batch", "type": "BatchSource"},
@@ -319,7 +319,7 @@ DDPG_EXAMPLE = {
                 {"from": "critic", "to": "actor_loss"}
             ]
         },
-        
+
         "synchronization": {
             "pairs": [
                 {
@@ -353,7 +353,7 @@ PPO_EXAMPLE = {
         "action_size": 2,
         "action_space": "discrete"
     },
-    
+
     "networks": {
         "actor": {
             "nodes": [
@@ -369,7 +369,7 @@ PPO_EXAMPLE = {
                 {"from": "fc2", "to": "softmax"}
             ]
         },
-        
+
         "critic": {
             "nodes": [
                 {"name": "fc1", "type": "Linear", "input_features": 4, "output_features": 16},
@@ -383,7 +383,7 @@ PPO_EXAMPLE = {
             ]
         }
     },
-    
+
     "modules": {
         "data_collection": {
             "nodes": [
@@ -401,7 +401,7 @@ PPO_EXAMPLE = {
                 {"from": "sampler", "to": "environment"}
             ]
         },
-        
+
         "data_buffering": {
             "nodes": [
                 {"name": "rollout_buffer", "type": "RolloutBuffer", "size": 1024},
@@ -409,7 +409,7 @@ PPO_EXAMPLE = {
                 {"name": "old_probs_buffer", "type": "TensorBuffer"}
             ]
         },
-        
+
         "advantage_estimation": {
             "nodes": [
                 {"name": "rollout", "type": "RolloutSource"},
@@ -422,7 +422,7 @@ PPO_EXAMPLE = {
                 {"from": "values", "to": "gae"}
             ]
         },
-        
+
         "learning": {
             "nodes": [
                 {"name": "rollout", "type": "RolloutSource"},

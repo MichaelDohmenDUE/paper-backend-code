@@ -1,9 +1,10 @@
+import torch
+import torch.nn.utils as nn_utils
 from torch.distributions import Categorical
 
 from backend.Utils.src.BatchTransitioner import TransitionBatch
 from backend.Utils.src.NodeLib.Node import Node
-import torch
-import torch.nn.utils as nn_utils
+
 
 def rollout_to_batch():
     return Node(
@@ -12,6 +13,7 @@ def rollout_to_batch():
         inputs=["rollout", "transition_spec"],
         outputs=["batch"]
     )
+
 
 def move_batch_to_device():
     return Node(
@@ -23,6 +25,7 @@ def move_batch_to_device():
         inputs=["batch", "global_net"],
         outputs=["batch"]
     )
+
 
 def unpack_a3c_batch():
     return Node(
@@ -37,34 +40,7 @@ def unpack_a3c_batch():
         inputs=["batch"],
         outputs=["rewards", "values", "log_probs", "dones", "entropy"]
     )
-def bootstrap_value():
-    return Node(
-        name="bootstrap_value",
-        function=lambda last_done, last_value, global_net: (
-            torch.zeros(1, device=next(global_net.parameters()).device)
-            if last_done else last_value.detach().to(next(global_net.parameters()).device)
-        ),
-        inputs=["last_done", "last_value", "global_net"],
-        outputs=["R_bootstrap"]
-    )
 
-def compute_returns():
-    return Node(
-        name="compute_returns",
-        function=_compute_returns,
-        inputs=["rewards", "dones", "gamma", "R_bootstrap", "global_net"],
-        outputs=["returns"]
-    )
-
-def _compute_returns(rewards, dones, gamma, R_bootstrap, global_net):
-    device = next(global_net.parameters()).device
-    T_len = rewards.shape[0]
-    returns = torch.zeros(T_len, device=device)
-    R_t = R_bootstrap.to(device)
-    for i in reversed(range(T_len)):
-        R_t = rewards[i] + gamma * R_t * (1.0 - dones[i])
-        returns[i] = R_t
-    return returns
 
 def bootstrap_value():
     return Node(
@@ -77,6 +53,7 @@ def bootstrap_value():
         outputs=["R_bootstrap"]
     )
 
+
 def compute_returns():
     return Node(
         name="compute_returns",
@@ -84,6 +61,7 @@ def compute_returns():
         inputs=["rewards", "dones", "gamma", "R_bootstrap", "global_net"],
         outputs=["returns"]
     )
+
 
 def _compute_returns(rewards, dones, gamma, R_bootstrap, global_net):
     device = next(global_net.parameters()).device
@@ -94,6 +72,39 @@ def _compute_returns(rewards, dones, gamma, R_bootstrap, global_net):
         R_t = rewards[i] + gamma * R_t * (1.0 - dones[i])
         returns[i] = R_t
     return returns
+
+
+def bootstrap_value():
+    return Node(
+        name="bootstrap_value",
+        function=lambda last_done, last_value, global_net: (
+            torch.zeros(1, device=next(global_net.parameters()).device)
+            if last_done else last_value.detach().to(next(global_net.parameters()).device)
+        ),
+        inputs=["last_done", "last_value", "global_net"],
+        outputs=["R_bootstrap"]
+    )
+
+
+def compute_returns():
+    return Node(
+        name="compute_returns",
+        function=_compute_returns,
+        inputs=["rewards", "dones", "gamma", "R_bootstrap", "global_net"],
+        outputs=["returns"]
+    )
+
+
+def _compute_returns(rewards, dones, gamma, R_bootstrap, global_net):
+    device = next(global_net.parameters()).device
+    T_len = rewards.shape[0]
+    returns = torch.zeros(T_len, device=device)
+    R_t = R_bootstrap.to(device)
+    for i in reversed(range(T_len)):
+        R_t = rewards[i] + gamma * R_t * (1.0 - dones[i])
+        returns[i] = R_t
+    return returns
+
 
 def compute_advantages():
     return Node(
@@ -103,6 +114,7 @@ def compute_advantages():
         outputs=["advantages"]
     )
 
+
 def compute_policy_loss():
     return Node(
         name="compute_policy_loss",
@@ -110,6 +122,7 @@ def compute_policy_loss():
         inputs=["log_probs", "advantages"],
         outputs=["policy_loss"]
     )
+
 
 def compute_value_loss():
     return Node(
@@ -119,6 +132,7 @@ def compute_value_loss():
         outputs=["value_loss"]
     )
 
+
 def compute_entropy_term():
     return Node(
         name="compute_entropy_term",
@@ -127,15 +141,17 @@ def compute_entropy_term():
         outputs=["entropy_term"]
     )
 
+
 def combine_losses():
     return Node(
         name="combine_losses",
         function=lambda policy_loss, value_loss, entropy_term, entropy_coef: (
-            policy_loss + 0.5 * value_loss - entropy_coef * entropy_term
+                policy_loss + 0.5 * value_loss - entropy_coef * entropy_term
         ),
         inputs=["policy_loss", "value_loss", "entropy_term", "entropy_coef"],
         outputs=["loss"]
     )
+
 
 def backward_on_local():
     return Node(
@@ -149,6 +165,7 @@ def backward_on_local():
         outputs=["loss"]
     )
 
+
 def clip_local_grads():
     return Node(
         name="clip_local_grads",
@@ -158,6 +175,7 @@ def clip_local_grads():
         outputs=[]
     )
 
+
 def push_local_grads_to_global():
     return Node(
         name="push_local_grads_to_global",
@@ -165,6 +183,7 @@ def push_local_grads_to_global():
         inputs=["global_net", "local_net"],
         outputs=[]
     )
+
 
 def _push_grads(global_net, local_net):
     for g, l in zip(global_net.parameters(), local_net.parameters()):
@@ -175,6 +194,7 @@ def _push_grads(global_net, local_net):
         else:
             g.grad.copy_(l.grad.detach())
 
+
 def optimizer_step():
     return Node(
         name="optimizer_step",
@@ -182,6 +202,7 @@ def optimizer_step():
         inputs=["optimizer", "loss"],
         outputs=["loss"]
     )
+
 
 def sync_local_with_global():
     return Node(
@@ -191,6 +212,7 @@ def sync_local_with_global():
         outputs=[]
     )
 
+
 def state_to_tensor():
     return Node(
         name="state_to_tensor",
@@ -198,6 +220,7 @@ def state_to_tensor():
         inputs=["state", "device"],
         outputs=["state_t"]
     )
+
 
 def forward_local_net():
     return Node(
@@ -207,6 +230,7 @@ def forward_local_net():
         outputs=["logits", "value"]
     )
 
+
 def compute_action_distribution():
     return Node(
         name="compute_action_distribution",
@@ -214,6 +238,7 @@ def compute_action_distribution():
         inputs=["logits"],
         outputs=["dist"]
     )
+
 
 def sample_action():
     return Node(
@@ -232,6 +257,7 @@ def env_step():
         outputs=["next_state", "reward", "done", "info"]
     )
 
+
 def build_transition():
     return Node(
         name="build_transition",
@@ -248,6 +274,7 @@ def build_transition():
         outputs=["transition"]
     )
 
+
 def append_transition():
     return Node(
         name="append_transition",
@@ -255,6 +282,7 @@ def append_transition():
         inputs=["rollout", "transition"],
         outputs=[]
     )
+
 
 def update_episode_reward():
     return Node(
@@ -264,6 +292,7 @@ def update_episode_reward():
         outputs=["episode_reward"]
     )
 
+
 def update_state_done():
     return Node(
         name="update_state_done",
@@ -272,6 +301,7 @@ def update_state_done():
         outputs=["state", "done"]
     )
 
+
 def increment_timestep():
     return Node(
         name="increment_timestep",
@@ -279,6 +309,7 @@ def increment_timestep():
         inputs=["t"],
         outputs=["t"]
     )
+
 
 def check_episode_end():
     return Node(
@@ -291,6 +322,7 @@ def check_episode_end():
         inputs=["done", "episode_reward", "avg_reward", "beta", "episode_count"],
         outputs=["avg_reward", "episode_count", "should_reset"]
     )
+
 
 def reset_episode_if_needed():
     return Node(
@@ -319,6 +351,7 @@ def build_a3c_graph():
         optimizer_step(),
         sync_local_with_global(),
     ]
+
 
 def build_a3c_rollout_graph():
     return [

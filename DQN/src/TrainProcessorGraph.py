@@ -1,7 +1,3 @@
-from backend.DQN.src.dqn_graph import build_dqn_graph
-from backend.Utils.src.NodeLib.Node import Graph
-
-
 class TrainProcessor:
     def __init__(self, graph, buffer, behavior_net, target_net, optimizer, gamma, device):
         self.buffer = buffer

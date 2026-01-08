@@ -3,7 +3,6 @@ import random
 import torch
 
 
-
 class EpsilonGreedyPolicy:
     def __init__(self, epsilon: float):
         self.epsilon = epsilon

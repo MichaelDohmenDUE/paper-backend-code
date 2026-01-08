@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+
 class Actor(nn.Module):
     def __init__(self, state_dim, action_dim, hidden_dim):
         super().__init__()

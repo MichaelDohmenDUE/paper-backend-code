@@ -2,7 +2,7 @@ import copy
 
 import numpy as np
 import torch
-from torch import optim, nn
+from torch import optim
 
 from backend.CommonModels.src.Actor_ACER import Actor
 from backend.CommonModels.src.Critic import Critic
@@ -10,8 +10,10 @@ from backend.Utils.src.utils import synchronize
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 class ACERTrainer:
-    def __init__(self, state_size, action_size, hidden_size, learning_rate=1e-4, gamma=0.99, tau=0.005, trust_region_delta=0.01):
+    def __init__(self, state_size, action_size, hidden_size, learning_rate=1e-4, gamma=0.99, tau=0.005,
+                 trust_region_delta=0.01):
         self.actor = Actor(state_size, action_size, hidden_size).to(device)
         self.trust_region_actor = copy.deepcopy(self.actor).to(device)
         self.critic = Critic(state_size, action_size, hidden_size).to(device)
@@ -33,13 +35,13 @@ class ACERTrainer:
         if on_policy:
             seq = list(replay_buffer.buffer)[-self.seq_len:]
 
-            states      = torch.tensor(np.array([[tr.state      for tr in seq]]), dtype=torch.float32, device=device)
-            actions     = torch.tensor(np.array([[tr.action     for tr in seq]]), dtype=torch.float32, device=device)
-            rewards     = torch.tensor(np.array([[tr.reward     for tr in seq]]), dtype=torch.float32, device=device)
-            not_dones   = torch.tensor(np.array([[tr.mask       for tr in seq]]), dtype=torch.float32, device=device)
+            states = torch.tensor(np.array([[tr.state for tr in seq]]), dtype=torch.float32, device=device)
+            actions = torch.tensor(np.array([[tr.action for tr in seq]]), dtype=torch.float32, device=device)
+            rewards = torch.tensor(np.array([[tr.reward for tr in seq]]), dtype=torch.float32, device=device)
+            not_dones = torch.tensor(np.array([[tr.mask for tr in seq]]), dtype=torch.float32, device=device)
             next_states = torch.tensor(np.array([[tr.next_state for tr in seq]]), dtype=torch.float32, device=device)
-            mu_logps    = torch.tensor(np.array([[tr.mu_logp    for tr in seq]]), dtype=torch.float32, device=device)
-            mu_means    = torch.tensor(np.array([[tr.mu_mean    for tr in seq]]), dtype=torch.float32, device=device)
+            mu_logps = torch.tensor(np.array([[tr.mu_logp for tr in seq]]), dtype=torch.float32, device=device)
+            mu_means = torch.tensor(np.array([[tr.mu_mean for tr in seq]]), dtype=torch.float32, device=device)
             mu_log_stds = torch.tensor(np.array([[tr.mu_log_std for tr in seq]]), dtype=torch.float32, device=device)
 
             return states, actions, rewards, not_dones, mu_logps, next_states, mu_means, mu_log_stds
@@ -47,13 +49,13 @@ class ACERTrainer:
         else:
             batch = replay_buffer.sample_sequence_batch(self.seq_len, batch_size)
 
-            states      = batch["state"].to(device)
-            actions     = batch["action"].to(device)
-            rewards     = batch["reward"].to(device).squeeze(-1)
-            not_dones   = batch["mask"].to(device).squeeze(-1)
+            states = batch["state"].to(device)
+            actions = batch["action"].to(device)
+            rewards = batch["reward"].to(device).squeeze(-1)
+            not_dones = batch["mask"].to(device).squeeze(-1)
             next_states = batch["next_state"].to(device)
-            mu_logps    = batch["mu_logp"].to(device).squeeze(-1)
-            mu_means    = batch["mu_mean"].to(device)
+            mu_logps = batch["mu_logp"].to(device).squeeze(-1)
+            mu_means = batch["mu_mean"].to(device)
             mu_log_stds = batch["mu_log_std"].to(device)
 
             return states, actions, rewards, not_dones, mu_logps, next_states, mu_means, mu_log_stds
@@ -171,7 +173,8 @@ class ACERTrainer:
             return action_np, mu_logp_np
 
     def train(self, replay_buffer, batch_size=256, on_policy=False):
-        states, actions, rewards, not_dones, mu_logps, next_states, mu_means, mu_log_stds = self._prepare_batch(replay_buffer, batch_size, on_policy)
+        states, actions, rewards, not_dones, mu_logps, next_states, mu_means, mu_log_stds = self._prepare_batch(
+            replay_buffer, batch_size, on_policy)
 
         B, T = states.shape[0], states.shape[1]
 

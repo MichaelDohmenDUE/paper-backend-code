@@ -3,9 +3,10 @@ from torch.distributions import Categorical
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 class A3CDataCollectionProcessor:
     def __init__(self, local_net, env, t_max, factory, gamma):
-        self.local_net = local_net          # θ′, θ′_v
+        self.local_net = local_net  # θ′, θ′_v
         self.env = env
         self.t_max = t_max
         self.factory = factory

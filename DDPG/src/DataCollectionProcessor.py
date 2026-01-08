@@ -1,10 +1,13 @@
 import torch
+
 from backend.Utils.src import ReplayBuffer
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 
+
 class DataCollectionProcessor:
-    def __init__(self,env: EnvironmentHandler,policy,buffer: ReplayBuffer,transition_factory: TransitionFactory,device: torch.device):
+    def __init__(self, env: EnvironmentHandler, policy, buffer: ReplayBuffer, transition_factory: TransitionFactory,
+                 device: torch.device):
         self.env = env
         self.policy = policy
         self.buffer = buffer
@@ -45,4 +48,3 @@ class DataCollectionProcessor:
             self.policy.noise.reset()
 
         return transition
-

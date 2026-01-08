@@ -1,13 +1,14 @@
 import torch
-from backend.ACER.src.ACERTrainer import ACERTrainer
+
 from backend.ACER.src.ACERDataCollector import ACERDataCollector
 from backend.ACER.src.ACERTrainProcessor import ACERTrainProcessor
+from backend.ACER.src.ACERTrainer import ACERTrainer
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
-from backend.Utils.src.SyncProcessor import SyncProcessor
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 def main():
     env_name = "Reacher-v5"
@@ -46,13 +47,14 @@ def main():
     # Processors
     collector = ACERDataCollector(trainer, env_handler, buffer, factory, device)
     train_process = ACERTrainProcessor(trainer, buffer, seq_len, replay_ratio, batch_size, tau)
-    #sync_process = SyncProcessor(trainer.actor, trainer.trust_region_actor, tau, sync_freq=1)
+    # sync_process = SyncProcessor(trainer.actor, trainer.trust_region_actor, tau, sync_freq=1)
 
     # Main loop
     for step in range(max_timesteps):
         collector.run()
         train_process.run()
-        #sync_process.run() #TODO: This still gets handled on a lower level because of the on Policy off Policy rhythm
+        # sync_process.run() #TODO: This still gets handled on a lower level because of the on Policy off Policy rhythm
+
 
 if __name__ == "__main__":
     main()

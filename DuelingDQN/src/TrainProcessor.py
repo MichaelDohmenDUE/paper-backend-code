@@ -1,11 +1,13 @@
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
+
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
 class TrainProcessor:
-    def __init__(self,buffer: ReplayBuffer, behavior_net: nn.Module, target_net: nn.Module, optimizer: torch.optim.Optimizer, gamma: float,
+    def __init__(self, buffer: ReplayBuffer, behavior_net: nn.Module, target_net: nn.Module,
+                 optimizer: torch.optim.Optimizer, gamma: float,
                  device: torch.device, max_grad_norm: float = 10.0):
         self.buffer = buffer
         self.behavior_net = behavior_net
@@ -21,11 +23,11 @@ class TrainProcessor:
 
         batch = self.buffer.sample_batch()
 
-        states      = batch["state"].to(self.device)
-        actions     = batch["action"].long().to(self.device)
-        rewards     = batch["reward"].to(self.device)
+        states = batch["state"].to(self.device)
+        actions = batch["action"].long().to(self.device)
+        rewards = batch["reward"].to(self.device)
         next_states = batch["next_state"].to(self.device)
-        dones       = batch["done"].to(self.device)
+        dones = batch["done"].to(self.device)
 
         qsa_behavior = self.behavior_net(states).gather(1, actions)
 

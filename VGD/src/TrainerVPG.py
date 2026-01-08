@@ -1,8 +1,6 @@
-
-import torch
 import numpy as np
+import torch
 
-from backend.CommonModels.src.Policy import Policy
 from backend.CommonModels.src.Policy_VPG import PolicyVPG
 from backend.Utils.src.utils import discounted_cumulative_reward
 
@@ -11,11 +9,11 @@ class VPGTrainer:
     def __init__(self,
                  policy: PolicyVPG,
                  optimizer,
-                 beta: float =0.01,
-                 gamma: float =0.99
+                 beta: float = 0.01,
+                 gamma: float = 0.99
                  ):
         self.policy = policy
-        self.optimizer  =optimizer
+        self.optimizer = optimizer
         self.baseline_mean = 0.0
         self.beta = beta
         self.gamma = gamma
@@ -40,16 +38,13 @@ class VPGTrainer:
             rewards.append(reward)
             t += 1
 
-
         rewards = np.array(rewards, dtype=np.float64)
         dones = np.zeros_like(rewards, dtype=np.bool_)
         G = discounted_cumulative_reward(self.gamma, rewards, dones)
         G = torch.tensor(G, dtype=torch.float32)
 
-
         b = torch.full_like(G, self.baseline_mean)
         advantages = G - b
-
 
         loss = -(torch.stack(logps) * advantages).sum()
         self.optimizer.zero_grad()

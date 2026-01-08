@@ -1,13 +1,15 @@
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
+
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
 class TrainProcessor:
     def __init__(self, buffer: ReplayBuffer, actor: nn.Module, critic_1: nn.Module,
-                 critic_target_1: nn.Module, critic_2: nn.Module, critic_target_2: nn.Module, actor_optimizer: torch.optim.Optimizer,
-                 critic_optimizer_1: torch.optim.Optimizer,critic_optimizer_2: torch.optim.Optimizer,
+                 critic_target_1: nn.Module, critic_2: nn.Module, critic_target_2: nn.Module,
+                 actor_optimizer: torch.optim.Optimizer,
+                 critic_optimizer_1: torch.optim.Optimizer, critic_optimizer_2: torch.optim.Optimizer,
                  log_alpha, alpha_optimizer, target_entropy, gamma, device):
         self.target_entropy = target_entropy
         self.log_alpha = log_alpha
@@ -30,14 +32,13 @@ class TrainProcessor:
 
         current_alpha = self.log_alpha.exp()
 
-
         batch = self.buffer.sample_batch()
 
-        states      = batch["state"].to(self.device)
-        actions     = batch["action"].to(self.device)
-        rewards     = batch["reward"].to(self.device)
+        states = batch["state"].to(self.device)
+        actions = batch["action"].to(self.device)
+        rewards = batch["reward"].to(self.device)
         next_states = batch["next_state"].to(self.device)
-        dones       = batch["done"].to(self.device)
+        dones = batch["done"].to(self.device)
 
         # Critic update
         with torch.no_grad():
@@ -80,6 +81,5 @@ class TrainProcessor:
         self.alpha_optimizer.zero_grad()
         alpha_loss.backward()
         self.alpha_optimizer.step()
-
 
         return actor_loss, critic_loss_1, critic_loss_2, alpha_loss

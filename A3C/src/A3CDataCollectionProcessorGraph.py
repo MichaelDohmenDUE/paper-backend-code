@@ -5,6 +5,7 @@ from backend.Utils.src.NodeLib.Node import Graph
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 class A3CDataCollectionProcessor:
     def __init__(self, local_net, env, t_max, factory, gamma):
         self.local_net = local_net
@@ -32,7 +33,6 @@ class A3CDataCollectionProcessor:
         t = 0
 
         while t < self.t_max and not self.done:
-
             ctx = {
                 "state": self.state,
                 "device": device,

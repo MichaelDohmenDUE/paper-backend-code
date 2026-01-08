@@ -1,5 +1,6 @@
 from backend.Utils.src.NodeLib.NodeLibrary import NodeLibrary as NL
 
+
 def build_dueling_ddqn_graph():
     return [
         NL.sample_batch(),

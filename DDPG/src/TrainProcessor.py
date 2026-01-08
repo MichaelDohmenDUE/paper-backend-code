@@ -1,7 +1,9 @@
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
+
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
+
 
 class TrainProcess:
     def __init__(self, buffer: ReplayBuffer, actor: nn.Module, actor_target: nn.Module, critic: nn.Module,
@@ -23,11 +25,11 @@ class TrainProcess:
 
         batch = self.buffer.sample_batch()
 
-        states      = batch["state"].to(self.device)
-        actions     = batch["action"].to(self.device)
-        rewards     = batch["reward"].to(self.device)
+        states = batch["state"].to(self.device)
+        actions = batch["action"].to(self.device)
+        rewards = batch["reward"].to(self.device)
         next_states = batch["next_state"].to(self.device)
-        dones       = batch["done"].to(self.device)
+        dones = batch["done"].to(self.device)
 
         # Critic update
         with torch.no_grad():

@@ -8,7 +8,8 @@ from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 
 
 class DataCollectionProcessor:
-    def __init__(self, policy: nn.Module, env: EnvironmentHandler, buffer: ReplayBuffer, action_selector: EpsilonGreedyPolicy, transition_factory: TransitionFactory, device: torch.device):
+    def __init__(self, policy: nn.Module, env: EnvironmentHandler, buffer: ReplayBuffer,
+                 action_selector: EpsilonGreedyPolicy, transition_factory: TransitionFactory, device: torch.device):
         self.policy = policy
         self.env = env
         self.buffer = buffer
@@ -40,7 +41,8 @@ class DataCollectionProcessor:
         next_state, reward, done, done_bool = self.env.step(action.item(), self.total_steps)
         self.done = done
 
-        transition = self.transition_factory.create( state=self.state, action=action.item(), reward=reward, next_state=next_state, done=self.done )
+        transition = self.transition_factory.create(state=self.state, action=action.item(), reward=reward,
+                                                    next_state=next_state, done=self.done)
         self.buffer.append(transition)
         self.episode_reward += reward
 

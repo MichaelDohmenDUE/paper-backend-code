@@ -4,6 +4,7 @@ from backend.CommonModels.src.Policy_VPG import PolicyVPG
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.VGD.src.TrainerVPG import VPGTrainer
 
+
 # TODO: Training is naturally unstable, keep this in mind later
 
 def main():
@@ -27,7 +28,8 @@ def main():
         ep_return, ep_length = trainer.train_episode(env_handler)
 
         if (episode + 1) % 50 == 0:
-            print(f"Ep {episode+1}: length {ep_length}, return {ep_return}")
+            print(f"Ep {episode + 1}: length {ep_length}, return {ep_return}")
+
 
 if __name__ == "__main__":
     main()

@@ -5,6 +5,7 @@ from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.EvaluationHelper import eval_trainer
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
+
 def main():
     env_name = "HalfCheetah-v5"
     seed = 100
@@ -49,7 +50,8 @@ def main():
             action = np.random.uniform(-env_handler.max_action, env_handler.max_action, env_handler.action_dim)
         else:
             noise = np.random.normal(0, env_handler.max_action * expl_noise, size=env_handler.action_dim)
-            action = (trainer.select_action(np.array(state)) + noise).clip(-env_handler.max_action, env_handler.max_action)
+            action = (trainer.select_action(np.array(state)) + noise).clip(-env_handler.max_action,
+                                                                           env_handler.max_action)
 
         next_state, reward, done, done_bool = env_handler.step(action, episode_timesteps)
         replay_buffer.append((state, action, next_state, reward, 1.0 - done_bool))
@@ -61,7 +63,7 @@ def main():
             trainer.train(replay_buffer, batch_size)
 
         if done:
-            print(f"Episode {episode_num+1} — Timestep {t+1} — Reward: {episode_reward:.2f}")
+            print(f"Episode {episode_num + 1} — Timestep {t + 1} — Reward: {episode_reward:.2f}")
             state = env_handler.reset()
             episode_reward = 0
             episode_timesteps = 0
@@ -69,6 +71,7 @@ def main():
 
         if (t + 1) % eval_freq == 0:
             evaluations.append(eval_trainer(trainer, env_handler, eval_episodes))
+
 
 if __name__ == "__main__":
     main()

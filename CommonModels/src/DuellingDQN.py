@@ -1,5 +1,6 @@
 import torch.nn as nn
 
+
 class DuellingDQN(nn.Module):
     """
     https://arxiv.org/pdf/1511.06581

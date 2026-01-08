@@ -1,5 +1,5 @@
-
 from copy import deepcopy
+
 import torch
 
 from backend.CommonModels.src.ActorSAC import ActorSAC as Actor
@@ -13,6 +13,7 @@ from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 def main():
     lr_actor = 3e-4
@@ -50,12 +51,12 @@ def main():
     factory = TransitionFactory(spec)
     buffer = ReplayBuffer(spec, max_buffer_size, batch_size)
 
-    policy = ActionSelector(actor ,device)
-
+    policy = ActionSelector(actor, device)
 
     data_collection_process = DataCollectionProcessor(env, policy, buffer, factory, device)
 
-    train_process = TrainProcessor(buffer, actor, critic_1, critic_target_1, critic_2, critic_target_2 ,actor_optimizer, critic_optimizer_1, critic_optimizer_2,
+    train_process = TrainProcessor(buffer, actor, critic_1, critic_target_1, critic_2, critic_target_2, actor_optimizer,
+                                   critic_optimizer_1, critic_optimizer_2,
                                    log_alpha, alpha_optimizer, target_entropy, gamma, device)
 
     sync_process_critic_1 = SyncProcessor(critic_1, critic_target_1, tau, sync_freq)
@@ -79,10 +80,11 @@ def main():
         episode += 1
         if episode % 10 == 9 and actor_loss is not None:
             print(
-                f"Episode: {episode+1}, Steps: {total_steps},  Reward: {episode_reward:.2f}, "
+                f"Episode: {episode + 1}, Steps: {total_steps},  Reward: {episode_reward:.2f}, "
                 f"actor_loss: {actor_loss:.3f}, critic_loss_1: {critic_loss_1:.3f}"
                 f"critic_loss_2: {critic_loss_2:.3f}, alpha_loss: {alpha_loss:.3f}"
             )
+
 
 if __name__ == "__main__":
     main()

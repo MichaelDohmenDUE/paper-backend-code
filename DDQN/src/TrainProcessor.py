@@ -1,14 +1,15 @@
 import torch
-from torch import nn
 import torch.nn.functional as F
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
+from torch import nn
 
+from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
 class TrainProcessor:
     """
     OLD TrainProcessor for algorithmic clarity, does not get used
     """
+
     def __init__(self, buffer: ReplayBuffer, behavior_net: nn.Module, target_net: nn.Module,
                  optimizer: torch.optim.Optimizer, gamma: float, device: torch.device):
         self.buffer = buffer
@@ -24,11 +25,11 @@ class TrainProcessor:
 
         batch = self.buffer.sample_batch()
 
-        states_tensor      = batch["state"].to(self.device)
-        actions_tensor     = batch["action"].to(self.device).long()
-        rewards_tensor     = batch["reward"].to(self.device)
+        states_tensor = batch["state"].to(self.device)
+        actions_tensor = batch["action"].to(self.device).long()
+        rewards_tensor = batch["reward"].to(self.device)
         next_states_tensor = batch["next_state"].to(self.device)
-        dones_tensor       = batch["done"].to(self.device)
+        dones_tensor = batch["done"].to(self.device)
 
         # Q(s,a) from behavior net
         q_values = self.behavior_net(states_tensor)

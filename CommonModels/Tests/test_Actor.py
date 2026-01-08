@@ -1,4 +1,5 @@
 import unittest
+
 import torch
 
 from backend.CommonModels.src.Actor import Actor
@@ -16,6 +17,7 @@ class TestActor(unittest.TestCase):
         output = actor(dummy_input)
         self.assertIsInstance(output, torch.Tensor)
         self.assertEqual(output.shape, (5, action_size))
+
 
 if __name__ == '__main__':
     unittest.main()

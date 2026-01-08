@@ -1,8 +1,11 @@
 import unittest
 from unittest.mock import MagicMock
-import torch
+
 import numpy as np
+import torch
+
 from backend.T3D.src.TD3Trainer import TD3Trainer
+
 
 class TestTD3Trainer(unittest.TestCase):
     def setUp(self):

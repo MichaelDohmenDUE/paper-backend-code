@@ -1,6 +1,7 @@
-import torch
-import numpy as np
 import gymnasium as gym
+import numpy as np
+import torch
+
 
 class EnvironmentHandler:
     def __init__(self, env_name: str, seed: int, reward_scale: float = 1.0):
@@ -18,10 +19,11 @@ class EnvironmentHandler:
             self.action_dim: int = self.env.action_space.n
             self.max_action = None
         else:
-            self.action_dim :int  = self.env.action_space.shape[0]
+            self.action_dim: int = self.env.action_space.shape[0]
             self.max_action = float(self.env.action_space.high[0])
 
-        self.episode_max_steps = getattr(self.env, "_max_episode_steps", None) or getattr(self.env.spec, "max_episode_steps", None)
+        self.episode_max_steps = getattr(self.env, "_max_episode_steps", None) or getattr(self.env.spec,
+                                                                                          "max_episode_steps", None)
 
     def reset(self):
         state, _ = self.env.reset()
@@ -39,6 +41,6 @@ class EnvironmentHandler:
             done_bool = float(terminated)
         return next_state, reward, done, done_bool
 
-    def get_env_specs(self)-> tuple[int, int ,float|None] :
+    def get_env_specs(self) -> tuple[int, int, float | None]:
         extracted_value = self.state_dim, self.action_dim, self.max_action
         return extracted_value

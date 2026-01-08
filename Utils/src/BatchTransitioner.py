@@ -1,12 +1,15 @@
+import sys
+from dataclasses import make_dataclass
 from typing import Any
+
 import numpy as np
 import torch
-from dataclasses import make_dataclass
-import sys
+
 
 class TransitionSpec:
     def __init__(self, fields):
         self.fields = fields
+
 
 class TransitionFactory:
     def __init__(self, spec: TransitionSpec):
@@ -24,6 +27,7 @@ class TransitionFactory:
                 raise ValueError(f"Missing field: {f}")
         return self.transition_cls(**kwargs)
 
+
 class TransitionBatch:
     def __init__(self, transitions, spec: TransitionSpec):
         self.fields = spec.fields
@@ -32,7 +36,7 @@ class TransitionBatch:
             for f in self.fields
         }
 
-    def __getitem__(self, key) -> list[Any] :
+    def __getitem__(self, key) -> list[Any]:
         return self.data[key]
 
     def __len__(self) -> int:

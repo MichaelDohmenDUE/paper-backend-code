@@ -1,19 +1,20 @@
-from backend.Utils.src.SyncProcessor import SyncProcessor
 import torch
-from torch import optim
 import torch.multiprocessing as mp
-from backend.CommonModels.src.ActorCriticA3C import ActorCritic
-from backend.Utils.src.EnviromentHandler import EnvironmentHandler
-from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
+from torch import optim
 
 from backend.A3C.src.A3CDataCollectionProcessor import A3CDataCollectionProcessor
 from backend.A3C.src.A3CTrainingProcessor import A3CTrainingProcessor
+from backend.CommonModels.src.ActorCriticA3C import ActorCritic
+from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
+from backend.Utils.src.EnviromentHandler import EnvironmentHandler
+from backend.Utils.src.SyncProcessor import SyncProcessor
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class A3CWorker:
-    def __init__(self, worker_id, env_name, seed, t_max, gamma, global_net, optimizer, counter, factory, obs_dim, act_dim, hidden):
+    def __init__(self, worker_id, env_name, seed, t_max, gamma, global_net, optimizer, counter, factory, obs_dim,
+                 act_dim, hidden):
         torch.manual_seed(seed + worker_id)
 
         # Local network (theta′)
@@ -61,15 +62,18 @@ class GlobalCounter:
         with self.T.get_lock():
             return self.T.value >= self.T_max
 
-def worker_entry(worker_id, env_name, seed, t_max, gamma, global_net, optimizer, T, T_max, obs_dim, act_dim, hidden, spec_fields):
 
+def worker_entry(worker_id, env_name, seed, t_max, gamma, global_net, optimizer, T, T_max, obs_dim, act_dim, hidden,
+                 spec_fields):
     counter = GlobalCounter(T, T_max)
     spec = TransitionSpec(spec_fields)
     factory = TransitionFactory(spec)
 
-    worker = A3CWorker(worker_id, env_name, seed, t_max, gamma, global_net, optimizer, counter, factory, obs_dim, act_dim, hidden)
+    worker = A3CWorker(worker_id, env_name, seed, t_max, gamma, global_net, optimizer, counter, factory, obs_dim,
+                       act_dim, hidden)
 
     worker.run()
+
 
 def main():
     env_name = "CartPole-v1"
@@ -93,7 +97,8 @@ def main():
     for worker_id in range(num_workers):
         p = mp.Process(
             target=worker_entry,
-            args=(worker_id, env_name, seed, t_max, gamma, global_net, optimizer, T, T_max,obs_dim, act_dim, hidden_size, spec_fields)
+            args=(worker_id, env_name, seed, t_max, gamma, global_net, optimizer, T, T_max, obs_dim, act_dim,
+                  hidden_size, spec_fields)
         )
         p.start()
         processes.append(p)
