@@ -7,7 +7,7 @@ from backend.DDQN.ddqn_graph import build_ddqn_graph
 from backend.DDQN.src.TrainProcessor import TrainProcessor
 from backend.DQN.src.ActionHandler import EpsilonGreedyPolicy
 from backend.DQN.src.DataCollectionProcessor import DataCollectionProcessor
-from backend.DQN.src.TrainProcessorGraph import TrainProcessor
+#from backend.DQN.src.TrainProcessorGraph import TrainProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.NodeLib.Node import Graph
