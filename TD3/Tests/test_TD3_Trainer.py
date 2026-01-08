@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 import numpy as np
 import torch
 
-from backend.T3D.src.TD3Trainer import TD3Trainer
+from backend.TD3.src.TD3Trainer import TD3Trainer
 
 
 class TestTD3Trainer(unittest.TestCase):
