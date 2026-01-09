@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 import numpy as np
 import torch
 
+from backend.CommonModels.src.Actor import Actor
 from backend.TD3.src.TD3Trainer import TD3Trainer
 
 
@@ -20,6 +21,7 @@ class TestTD3Trainer(unittest.TestCase):
         self.batch_size = 32
 
         self.trainer = TD3Trainer(
+            actor= Actor(action_size=self.action_size, state_size=self.state_size, max_action=self.max_action ,hidden_size=self.hidden_size),
             state_size=self.state_size,
             action_size=self.action_size,
             hidden_size=self.hidden_size,
@@ -54,7 +56,7 @@ class TestTD3Trainer(unittest.TestCase):
         initial_actor_weights = [p.clone() for p in self.trainer.actor.parameters()]
         initial_target_weights = [p.clone() for p in self.trainer.actor_target.parameters()]
 
-        self.trainer.train(self.mock_buffer, batch_size=self.batch_size)
+        self.trainer.train(self.mock_buffer)
 
         updated_actor_weights = [p for p in self.trainer.actor.parameters()]
         self.assertFalse(all(torch.equal(i, u) for i, u in zip(initial_actor_weights, updated_actor_weights)))
@@ -63,7 +65,7 @@ class TestTD3Trainer(unittest.TestCase):
         initial_critic_1_weights = [p.clone() for p in self.trainer.critic_1.parameters()]
         initial_critic_2_weights = [p.clone() for p in self.trainer.critic_2.parameters()]
 
-        self.trainer.train(self.mock_buffer, batch_size=self.batch_size)
+        self.trainer.train(self.mock_buffer)
 
         updated_critic_1_weights = [p for p in self.trainer.critic_1.parameters()]
         updated_critic_2_weights = [p for p in self.trainer.critic_2.parameters()]

@@ -1,11 +1,15 @@
 import numpy as np
+import torch
 
+from backend.CommonModels.src.Actor import Actor
+from backend.TD3.src.ActionHandler import ActionHandler
 from backend.TD3.src.TD3Trainer import TD3Trainer
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.EvaluationHelper import eval_trainer
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def main():
     env_name = "HalfCheetah-v5"
@@ -30,7 +34,10 @@ def main():
 
     transition_factory = TransitionFactory(spec)
 
+    actor = Actor(observation_size, action_size, max_action, hidden_dim).to(device)
+
     trainer = TD3Trainer(
+        actor = actor,
         state_size=observation_size,
         action_size=action_size,
         hidden_size=hidden_dim,
@@ -40,6 +47,8 @@ def main():
         noise_clip=noise_clip * max_action,
         policy_noise=policy_noise * max_action
     )
+
+    action_handler = ActionHandler(actor, action_size, max_action, expl_noise, start_timesteps,device)
 
     replay_buffer = ReplayBuffer(spec=spec, max_buffer_size=buffer_size, batch_size=batch_size)
     evaluations = [eval_trainer(trainer, env_handler)]
@@ -52,12 +61,7 @@ def main():
     for t in range(max_timesteps):
         episode_timesteps += 1
 
-        if t < start_timesteps:
-            action = np.random.uniform(-max_action, max_action, action_size)
-        else:
-            noise = np.random.normal(0, max_action * expl_noise, size=action_size)
-            action = (trainer.select_action(np.array(state)) + noise).clip(-max_action,max_action)
-
+        action = action_handler.select_action(state, t)
         next_state, reward, done_env, done_bool =env_handler.step(
             action, episode_timesteps=episode_timesteps
         )
@@ -75,7 +79,7 @@ def main():
         episode_reward += reward
 
         if t >= start_timesteps:
-            trainer.train(replay_buffer, batch_size)
+            trainer.train(replay_buffer)
 
         if done_env:
             print(f"Episode {episode_num + 1} — Timestep {t + 1} — Reward: {episode_reward:.2f}")

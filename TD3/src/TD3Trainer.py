@@ -3,7 +3,7 @@ import copy
 import numpy as np
 import torch
 import torch.nn.functional as F
-from torch import optim
+from torch import optim, nn
 
 from backend.CommonModels.src.Actor import Actor
 from backend.CommonModels.src.Critic import Critic
@@ -19,7 +19,7 @@ class TD3Trainer(object):
     Paper: https://arxiv.org/abs/1802.09477
     """
 
-    def __init__(self, state_size: int, action_size: int, hidden_size: int, max_action: float, learning_rate: float,
+    def __init__(self, actor: nn.Module , state_size: int, action_size: int, hidden_size: int, max_action: float, learning_rate: float,
                  tau: float, noise_clip: float, policy_noise, synchro_frequency: int = 2, discount_factor: int = 0.99):
         self.state_size = state_size
         self.action_size = action_size
@@ -32,9 +32,9 @@ class TD3Trainer(object):
         self.syncro_frequency = synchro_frequency
         self.discount_factor = discount_factor
         self.iteration = 0
+        self.actor = actor.to(device)
         self.device = device
 
-        self.actor = Actor(state_size, action_size, max_action, hidden_size).to(device)
         self.actor_target = copy.deepcopy(self.actor)
         self.optimizer_actor = optim.Adam(self.actor.parameters(), lr=learning_rate)
 
@@ -46,13 +46,8 @@ class TD3Trainer(object):
         self.optimizer_critic_1 = optim.Adam(self.critic_1.parameters(), lr=learning_rate)
         self.optimizer_critic_2 = optim.Adam(self.critic_2.parameters(), lr=learning_rate)
 
-    def select_action(self, state):
-        state = torch.FloatTensor(state.reshape(1, -1)).to(device)
-        with torch.no_grad():
-            action = self.actor(state)
-        return action.cpu().data.numpy().flatten()
 
-    def train(self, replay_buffer: ReplayBuffer, batch_size: int):
+    def train(self, replay_buffer: ReplayBuffer):
         self.iteration += 1
 
         batch = replay_buffer.sample_batch()
