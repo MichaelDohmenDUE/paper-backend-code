@@ -3,9 +3,6 @@ import torch.nn.functional as F
 from torch import  nn
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
 class TrainProcessor:
     """
     Twin Delayed Deep Deterministic Policy Gradient (TD3)
@@ -16,16 +13,11 @@ class TrainProcessor:
                  optimizer_critic_1: torch.optim.Optimizer, optimizer_critic_2: torch.optim.Optimizer,
                  optimizer_actor: torch.optim.Optimizer,
                  actor_target: nn.Module, critic_target_1: nn.Module, critic_target_2: nn.Module,
-                 replay_buffer: ReplayBuffer,
-                 state_size: int, action_size: int, hidden_size: int, max_action: float, learning_rate: float,
-                 tau: float, noise_clip: float,
-                 policy_noise, start_timesteps=25000, synchro_frequency: int = 2, discount_factor: int = 0.99):
-        self.state_size = state_size
-        self.action_size = action_size
-        self.hidden_size = hidden_size
+                 replay_buffer: ReplayBuffer, max_action: float, learning_rate: float, noise_clip: float,
+                 policy_noise, start_timesteps=25000, synchro_frequency: int = 2, discount_factor: float = 0.99,
+                 device : torch.device = torch.device("cpu")):
         self.max_action = max_action
         self.learning_rate = learning_rate
-        self.tau = tau
         self.noise_clip = noise_clip
         self.policy_noise = policy_noise
         self.syncro_frequency = synchro_frequency

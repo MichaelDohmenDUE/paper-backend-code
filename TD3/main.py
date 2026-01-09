@@ -68,26 +68,22 @@ def main():
         optimizer_critic_2=optimizer_critic_2,
         optimizer_actor=optimizer_actor,
         replay_buffer=replay_buffer,
-        state_size=observation_size,
-        action_size=action_size,
-        hidden_size=hidden_dim,
         max_action=max_action,
         learning_rate=learning_rate,
-        tau=tau,
         start_timesteps=start_timesteps,
         synchro_frequency=sync_freq,
         noise_clip=noise_clip * max_action,
-        policy_noise=policy_noise * max_action
+        policy_noise=policy_noise * max_action,
+        device=device,
     )
 
-    evaluations = [eval_trainer(trainer, env_handler)]
+    datacollector = DataCollectionProcessor(env_handler, action_handler, transition_factory, replay_buffer)
 
     sync_process_critic_1 = SyncProcessor(critic_1, critic_target_1, tau, sync_freq)
     sync_process_critic_2 = SyncProcessor(critic_2, critic_target_2, tau, sync_freq)
     sync_process_actor = SyncProcessor(actor, actor_target, tau, sync_freq)
 
-
-    datacollector = DataCollectionProcessor(env_handler, action_handler, transition_factory, replay_buffer)
+    evaluations = [eval_trainer(trainer, env_handler)]
 
     for t in range(max_timesteps):
         datacollector.run()
