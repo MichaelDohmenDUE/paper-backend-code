@@ -4,7 +4,6 @@ from torch import optim
 
 from backend.CommonModels.src.Critic import Critic
 from backend.TD3.src.DataCollectionProcessor import DataCollectionProcessor
-import numpy as np
 import torch
 
 from backend.CommonModels.src.Actor import Actor

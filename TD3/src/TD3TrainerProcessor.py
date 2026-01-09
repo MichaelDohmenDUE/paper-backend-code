@@ -30,7 +30,6 @@ class TrainProcessor:
         self.policy_noise = policy_noise
         self.syncro_frequency = synchro_frequency
         self.discount_factor = discount_factor
-        self.iteration = 0
         self.global_timestep = 0
         self.start_timesteps = start_timesteps
         self.actor = actor.to(device)
@@ -51,8 +50,6 @@ class TrainProcessor:
         self.global_timestep += 1
 
     def train(self):
-        self.iteration += 1
-
         batch = self.replay_buffer.sample_batch()
         state = batch["state"].to(self.device)
         action = batch["action"].to(self.device)
@@ -85,7 +82,7 @@ class TrainProcessor:
         critic_loss_2.backward()
         self.optimizer_critic_2.step()
 
-        if self.iteration % self.syncro_frequency == 0:
+        if self.global_timestep % self.syncro_frequency == 0:
             actor_loss = -self.critic_1(state, self.actor(state)).mean()
 
             self.optimizer_actor.zero_grad()
