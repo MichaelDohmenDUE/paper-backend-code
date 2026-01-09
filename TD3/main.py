@@ -4,7 +4,7 @@ import torch
 
 from backend.CommonModels.src.Actor import Actor
 from backend.TD3.src.ActionHandler import ActionHandler
-from backend.TD3.src.TD3Trainer import TD3Trainer
+from backend.TD3.src.TD3Trainer import TrainProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.EvaluationHelper import eval_trainer
@@ -37,34 +37,33 @@ def main():
 
     actor = Actor(observation_size, action_size, max_action, hidden_dim).to(device)
 
-    trainer = TD3Trainer(
-        actor = actor,
+    action_handler = ActionHandler(actor, action_size, max_action, expl_noise, start_timesteps,device)
+
+
+
+    replay_buffer = ReplayBuffer(spec=spec, max_buffer_size=buffer_size, batch_size=batch_size)
+
+    trainer = TrainProcessor(
+        actor=actor,
+        replay_buffer=replay_buffer,
         state_size=observation_size,
         action_size=action_size,
         hidden_size=hidden_dim,
         max_action=max_action,
         learning_rate=learning_rate,
         tau=tau,
+        start_timesteps=start_timesteps,
         noise_clip=noise_clip * max_action,
         policy_noise=policy_noise * max_action
     )
 
-    action_handler = ActionHandler(actor, action_size, max_action, expl_noise, start_timesteps,device)
-
-    replay_buffer = ReplayBuffer(spec=spec, max_buffer_size=buffer_size, batch_size=batch_size)
     evaluations = [eval_trainer(trainer, env_handler)]
 
     datacollector = DataCollectionProcessor(env_handler, action_handler, transition_factory, replay_buffer)
 
-    state = env_handler.reset()
-    episode_reward = 0
-    episode_timesteps = 0
-    episode_num = 0
-
     for t in range(max_timesteps):
         datacollector.run()
-        if t >= start_timesteps:
-            trainer.train(replay_buffer)
+        trainer.run()
         if (t + 1) % eval_freq == 0:
             evaluations.append(eval_trainer(trainer, env_handler, eval_episodes))
 

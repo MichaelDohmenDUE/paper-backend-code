@@ -13,14 +13,14 @@ from backend.Utils.src.utils import synchronize
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class TD3Trainer(object):
+class TrainProcessor:
     """
     Twin Delayed Deep Deterministic Policy Gradient (TD3)
     Paper: https://arxiv.org/abs/1802.09477
     """
 
-    def __init__(self, actor: nn.Module , state_size: int, action_size: int, hidden_size: int, max_action: float, learning_rate: float,
-                 tau: float, noise_clip: float, policy_noise, synchro_frequency: int = 2, discount_factor: int = 0.99):
+    def __init__(self, actor: nn.Module ,replay_buffer: ReplayBuffer, state_size: int, action_size: int, hidden_size: int, max_action: float, learning_rate: float,
+                 tau: float, noise_clip: float, policy_noise, start_timesteps=25000, synchro_frequency: int = 2, discount_factor: int = 0.99):
         self.state_size = state_size
         self.action_size = action_size
         self.hidden_size = hidden_size
@@ -32,7 +32,10 @@ class TD3Trainer(object):
         self.syncro_frequency = synchro_frequency
         self.discount_factor = discount_factor
         self.iteration = 0
+        self.global_timestep = 0
+        self.start_timesteps = start_timesteps
         self.actor = actor.to(device)
+        self.replay_buffer = replay_buffer
         self.device = device
 
         self.actor_target = copy.deepcopy(self.actor)
@@ -46,11 +49,15 @@ class TD3Trainer(object):
         self.optimizer_critic_1 = optim.Adam(self.critic_1.parameters(), lr=learning_rate)
         self.optimizer_critic_2 = optim.Adam(self.critic_2.parameters(), lr=learning_rate)
 
+    def run(self):
+        if self.global_timestep >= self.start_timesteps:
+            self.train()
+        self.global_timestep += 1
 
-    def train(self, replay_buffer: ReplayBuffer):
+    def train(self):
         self.iteration += 1
 
-        batch = replay_buffer.sample_batch()
+        batch = self.replay_buffer.sample_batch()
         state = batch["state"].to(self.device)
         action = batch["action"].to(self.device)
         reward = batch["reward"].to(self.device)
