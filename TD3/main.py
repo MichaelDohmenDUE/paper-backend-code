@@ -1,14 +1,20 @@
+import copy
+
+from torch import optim
+
+from backend.CommonModels.src.Critic import Critic
 from backend.TD3.src.DataCollectionProcessor import DataCollectionProcessor
 import numpy as np
 import torch
 
 from backend.CommonModels.src.Actor import Actor
 from backend.TD3.src.ActionHandler import ActionHandler
-from backend.TD3.src.TD3Trainer import TrainProcessor
+from backend.TD3.src.TD3TrainerProcessor import TrainProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.EvaluationHelper import eval_trainer
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
+from backend.Utils.src.SyncProcessor import SyncProcessor
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -21,6 +27,7 @@ def main():
     eval_episodes = 10
     expl_noise = 0.1
     batch_size = 256
+    sync_freq = 2
     learning_rate = 3e-4
     tau = 0.005
     noise_clip = 0.5
@@ -37,14 +44,30 @@ def main():
 
     actor = Actor(observation_size, action_size, max_action, hidden_dim).to(device)
 
+    actor_target = copy.deepcopy(actor)
+    optimizer_actor = optim.Adam(actor.parameters(), lr=learning_rate)
+
+    critic_1 = Critic(observation_size, action_size, hidden_dim).to(device)
+    critic_2 = Critic(observation_size, action_size, hidden_dim).to(device)
+    critic_target_1 = copy.deepcopy(critic_1)
+    critic_target_2 = copy.deepcopy(critic_2)
+
+    optimizer_critic_1 = optim.Adam(critic_1.parameters(), lr=learning_rate)
+    optimizer_critic_2 = optim.Adam(critic_2.parameters(), lr=learning_rate)
+
     action_handler = ActionHandler(actor, action_size, max_action, expl_noise, start_timesteps,device)
-
-
-
     replay_buffer = ReplayBuffer(spec=spec, max_buffer_size=buffer_size, batch_size=batch_size)
 
     trainer = TrainProcessor(
         actor=actor,
+        actor_target=actor_target,
+        critic_1=critic_1,
+        critic_2=critic_2,
+        critic_target_1=critic_target_1,
+        critic_target_2=critic_target_2,
+        optimizer_critic_1=optimizer_critic_1,
+        optimizer_critic_2=optimizer_critic_2,
+        optimizer_actor=optimizer_actor,
         replay_buffer=replay_buffer,
         state_size=observation_size,
         action_size=action_size,
@@ -53,17 +76,26 @@ def main():
         learning_rate=learning_rate,
         tau=tau,
         start_timesteps=start_timesteps,
+        synchro_frequency=sync_freq,
         noise_clip=noise_clip * max_action,
         policy_noise=policy_noise * max_action
     )
 
     evaluations = [eval_trainer(trainer, env_handler)]
 
+    sync_process_critic_1 = SyncProcessor(critic_1, critic_target_1, tau, sync_freq)
+    sync_process_critic_2 = SyncProcessor(critic_2, critic_target_2, tau, sync_freq)
+    sync_process_actor = SyncProcessor(actor, actor_target, tau, sync_freq)
+
+
     datacollector = DataCollectionProcessor(env_handler, action_handler, transition_factory, replay_buffer)
 
     for t in range(max_timesteps):
         datacollector.run()
         trainer.run()
+        sync_process_critic_1.run()
+        sync_process_critic_2.run()
+        sync_process_actor.run()
         if (t + 1) % eval_freq == 0:
             evaluations.append(eval_trainer(trainer, env_handler, eval_episodes))
 

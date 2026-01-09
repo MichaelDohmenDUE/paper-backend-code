@@ -5,7 +5,7 @@ import numpy as np
 import torch
 
 from backend.CommonModels.src.Actor import Actor
-from backend.TD3.src.TD3Trainer import TD3Trainer
+from backend.TD3.src.TD3TrainerProcessor import TD3Trainer
 
 
 class TestTD3Trainer(unittest.TestCase):

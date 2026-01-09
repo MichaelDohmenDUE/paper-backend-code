@@ -1,14 +1,7 @@
-import copy
-
-import numpy as np
 import torch
 import torch.nn.functional as F
-from torch import optim, nn
-
-from backend.CommonModels.src.Actor import Actor
-from backend.CommonModels.src.Critic import Critic
+from torch import  nn
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
-from backend.Utils.src.utils import synchronize
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -19,8 +12,14 @@ class TrainProcessor:
     Paper: https://arxiv.org/abs/1802.09477
     """
 
-    def __init__(self, actor: nn.Module ,replay_buffer: ReplayBuffer, state_size: int, action_size: int, hidden_size: int, max_action: float, learning_rate: float,
-                 tau: float, noise_clip: float, policy_noise, start_timesteps=25000, synchro_frequency: int = 2, discount_factor: int = 0.99):
+    def __init__(self, actor: nn.Module, critic_1: nn.Module, critic_2: nn.Module,
+                 optimizer_critic_1: torch.optim.Optimizer, optimizer_critic_2: torch.optim.Optimizer,
+                 optimizer_actor: torch.optim.Optimizer,
+                 actor_target: nn.Module, critic_target_1: nn.Module, critic_target_2: nn.Module,
+                 replay_buffer: ReplayBuffer,
+                 state_size: int, action_size: int, hidden_size: int, max_action: float, learning_rate: float,
+                 tau: float, noise_clip: float,
+                 policy_noise, start_timesteps=25000, synchro_frequency: int = 2, discount_factor: int = 0.99):
         self.state_size = state_size
         self.action_size = action_size
         self.hidden_size = hidden_size
@@ -35,19 +34,16 @@ class TrainProcessor:
         self.global_timestep = 0
         self.start_timesteps = start_timesteps
         self.actor = actor.to(device)
+        self.critic_1 = critic_1.to(device)
+        self.critic_2 = critic_2.to(device)
+        self.optimizer_critic_1 = optimizer_critic_1
+        self.optimizer_critic_2 = optimizer_critic_2
+        self.optimizer_actor = optimizer_actor
+        self.actor_target = actor_target.to(device)
+        self.critic_target_1 = critic_target_1.to(device)
+        self.critic_target_2 = critic_target_2.to(device)
         self.replay_buffer = replay_buffer
         self.device = device
-
-        self.actor_target = copy.deepcopy(self.actor)
-        self.optimizer_actor = optim.Adam(self.actor.parameters(), lr=learning_rate)
-
-        self.critic_1 = Critic(state_size, action_size, hidden_size).to(device)
-        self.critic_2 = Critic(state_size, action_size, hidden_size).to(device)
-        self.critic_target_1 = copy.deepcopy(self.critic_1)
-        self.critic_target_2 = copy.deepcopy(self.critic_2)
-
-        self.optimizer_critic_1 = optim.Adam(self.critic_1.parameters(), lr=learning_rate)
-        self.optimizer_critic_2 = optim.Adam(self.critic_2.parameters(), lr=learning_rate)
 
     def run(self):
         if self.global_timestep >= self.start_timesteps:
@@ -95,7 +91,3 @@ class TrainProcessor:
             self.optimizer_actor.zero_grad()
             actor_loss.backward()
             self.optimizer_actor.step()
-
-            synchronize(self.critic_1, self.critic_target_1, self.tau)
-            synchronize(self.critic_2, self.critic_target_2, self.tau)
-            synchronize(self.actor, self.actor_target, self.tau)
