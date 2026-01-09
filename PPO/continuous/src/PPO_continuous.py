@@ -9,28 +9,17 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class PPOTrainer:
-    def __init__(self, state_dim, action_dim, hidden_dim=64, lr=3e-4, clip_eps=0.2, vf_coef=1.0, ent_coef=0.01,
+    def __init__(self, actor, critic, optimizer, clip_eps=0.2, vf_coef=1.0, ent_coef=0.01,
                  max_grad_norm=0.5):
-        self.actor = ActorPPO(state_dim, action_dim, hidden_dim).to(device)
-        self.critic = CriticPPO(state_dim, hidden_dim).to(device)
-        self.optimizer = optim.Adam(list(self.actor.parameters()) + list(self.critic.parameters()), lr=lr)
+        self.actor = actor
+        self.critic = critic
+        self.optimizer = optimizer
         self.clip_eps = clip_eps
         self.vf_coef = vf_coef
         self.ent_coef = ent_coef
         self.max_grad_norm = max_grad_norm
         self.use_value_clip = False  # TODO: Spinup Implementation uses value Clipping, original PPO Paper does not
         self.device = device
-
-    def select_action(self, state):
-        state = np.array(state, dtype=np.float32)
-        state_t = torch.as_tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
-        with torch.no_grad():
-            dist = self.actor(state_t)
-            action = dist.sample()
-            # print(action)
-            logp = dist.log_prob(action).sum(-1)
-            value = self.critic(state_t).squeeze(-1)
-        return action.cpu().numpy().squeeze(0), float(logp.cpu().numpy()), float(value.cpu().numpy())
 
     def train(self, states, actions, old_logps, advantages, returns, batch_size=64, epochs=10):
         # advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)

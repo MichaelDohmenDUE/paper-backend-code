@@ -1,17 +1,27 @@
+from backend.PPO.continuous.src.ActionHandler import ActionHandler
 from backend.PPO.continuous.src.PPO_continuous import PPOTrainer
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
+
 class DataCollectionProcessor:
-    def run(self, env_handler: EnvironmentHandler, trainer: PPOTrainer, replay_buffer: ReplayBuffer,
-            transition_factory: TransitionFactory, rollout_size: int):
+    def __init__(self, env_handler: EnvironmentHandler, transition_factory: TransitionFactory,
+                 replay_buffer: ReplayBuffer, rollout_size: int,
+                 action_handler: ActionHandler):
+        self.env_handler = env_handler
+        self.transition_factory = transition_factory
+        self.replay_buffer = replay_buffer
+        self.rollout_size = rollout_size
+        self.policy = action_handler
+
+    def run(self):
         episode_timesteps= 0
-        state = env_handler.reset()
-        for step in range(rollout_size):
+        state = self.env_handler.reset()
+        for step in range(self.rollout_size):
             episode_timesteps += 1
-            action, logp, value = trainer.select_action(state)
-            next_state, reward, done, done_bool = env_handler.step(action, episode_timesteps)
-            transition = transition_factory.create(
+            action, logp, value = self.policy.select_action(state)
+            next_state, reward, done, done_bool = self.env_handler.step(action, episode_timesteps)
+            transition = self.transition_factory.create(
                 state=state,
                 action=action,
                 logp=logp,
@@ -19,13 +29,13 @@ class DataCollectionProcessor:
                 done=done_bool,
                 value=value
             )
-            replay_buffer.append(transition)
+            self.replay_buffer.append(transition)
             state = next_state
 
             if done:
                 print(f"Rollout: {episode_timesteps}")
-                state = env_handler.reset()
+                state = self.env_handler.reset()
                 episode_timesteps = 0
 
-        _, _, last_value = trainer.select_action(state)
+        _, _, last_value = self.policy.select_action(state)
         return last_value

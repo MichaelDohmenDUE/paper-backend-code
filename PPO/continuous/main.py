@@ -1,3 +1,9 @@
+import torch
+from torch import optim
+
+from backend.CommonModels.src.ActorPPO import ActorPPO
+from backend.CommonModels.src.CriticPPO import CriticPPO
+from backend.PPO.continuous.src.ActionHandler import ActionHandler
 from backend.PPO.continuous.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.PPO.continuous.src.PPO_continuous import PPOTrainer
@@ -7,6 +13,7 @@ from backend.Utils.src.EvaluationHelper import eval_trainer
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.utils import compute_gae
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def train_update(trainer, replay_buffer, last_value, batch_size, epochs):
@@ -23,23 +30,30 @@ def main():
     batch_size = 64
     epochs = 10
     num_updates = 1000
+    lr = 3e-4
+    hidden_dim = 64
 
     spec = TransitionSpec(["state", "action","logp", "reward", "done","value"])
     transition_factory = TransitionFactory(spec)
 
     env_handler = EnvironmentHandler(env_name, seed)
-    trainer = PPOTrainer(
-        state_dim=env_handler.state_dim,
-        action_dim=env_handler.action_dim,
-        hidden_dim=64,
-        lr=3e-4
-    )
+    state_dim, action_dim, _ = env_handler.get_env_specs()
+
+    actor = ActorPPO(state_dim, action_dim, hidden_dim).to(device)
+    critic = CriticPPO(state_dim, hidden_dim).to(device)
+    optimizer = optim.Adam(list(actor.parameters()) + list(critic.parameters()), lr=lr)
+
+    action_handler = ActionHandler(actor, critic, device)
+
+    trainer = PPOTrainer(actor, critic, optimizer)
+
     replay_buffer = ReplayBuffer(spec, max_buffer_size=rollout_size, batch_size=batch_size)
 
-    data_collector = DataCollectionProcessor()
+    data_collector = DataCollectionProcessor(env_handler, transition_factory, replay_buffer, rollout_size,
+                                             action_handler)
 
     for update in range(num_updates):
-        last_value = data_collector.run(env_handler, trainer, replay_buffer,transition_factory, rollout_size)
+        last_value = data_collector.run()
 
         train_update(trainer, replay_buffer, last_value, batch_size, epochs)
 
