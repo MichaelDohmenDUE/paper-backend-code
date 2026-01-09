@@ -1,3 +1,4 @@
+from backend.TD3.src.DataCollectionProcessor import DataCollectionProcessor
 import numpy as np
 import torch
 
@@ -53,41 +54,17 @@ def main():
     replay_buffer = ReplayBuffer(spec=spec, max_buffer_size=buffer_size, batch_size=batch_size)
     evaluations = [eval_trainer(trainer, env_handler)]
 
+    datacollector = DataCollectionProcessor(env_handler, action_handler, transition_factory, replay_buffer)
+
     state = env_handler.reset()
     episode_reward = 0
     episode_timesteps = 0
     episode_num = 0
 
     for t in range(max_timesteps):
-        episode_timesteps += 1
-
-        action = action_handler.select_action(state, t)
-        next_state, reward, done_env, done_bool =env_handler.step(
-            action, episode_timesteps=episode_timesteps
-        )
-
-        transition = transition_factory.create(
-            state=state,
-            action=action,
-            reward=reward,
-            next_state=next_state,
-            done=done_bool,
-        )
-        replay_buffer.append(transition)
-
-        state = next_state
-        episode_reward += reward
-
+        datacollector.run()
         if t >= start_timesteps:
             trainer.train(replay_buffer)
-
-        if done_env:
-            print(f"Episode {episode_num + 1} — Timestep {t + 1} — Reward: {episode_reward:.2f}")
-            state = env_handler.reset()
-            episode_reward = 0
-            episode_timesteps = 0
-            episode_num += 1
-
         if (t + 1) % eval_freq == 0:
             evaluations.append(eval_trainer(trainer, env_handler, eval_episodes))
 
