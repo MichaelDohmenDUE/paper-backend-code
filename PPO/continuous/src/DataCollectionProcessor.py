@@ -1,5 +1,4 @@
 from backend.PPO.continuous.src.ActionHandler import ActionHandler
-from backend.PPO.continuous.src.PPO_continuous import PPOTrainer
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
@@ -15,6 +14,7 @@ class DataCollectionProcessor:
         self.policy = action_handler
 
     def run(self):
+        self.replay_buffer.buffer.clear()
         episode_timesteps= 0
         state = self.env_handler.reset()
         for step in range(self.rollout_size):

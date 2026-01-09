@@ -1,24 +1,27 @@
 import numpy as np
 import torch
-from torch import optim
 
-from backend.CommonModels.src.ActorPPO import ActorPPO
-from backend.CommonModels.src.CriticPPO import CriticPPO
+from backend.Utils.src.utils import compute_gae
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class PPOTrainer:
-    def __init__(self, actor, critic, optimizer, clip_eps=0.2, vf_coef=1.0, ent_coef=0.01,
-                 max_grad_norm=0.5):
+class PPOTrainerProcessor:
+    def __init__(self, actor, critic, optimizer, replay_buffer, batch_size: int = 64, epochs: int = 10,
+                 clip_eps=0.2, vf_coef=1.0, ent_coef=0.01, max_grad_norm=0.5, gamma=0.99, lam=0.95):
         self.actor = actor
         self.critic = critic
         self.optimizer = optimizer
+        self.replay_buffer = replay_buffer
+        self.batch_size = batch_size
+        self.epochs = epochs
         self.clip_eps = clip_eps
         self.vf_coef = vf_coef
         self.ent_coef = ent_coef
         self.max_grad_norm = max_grad_norm
         self.use_value_clip = False  # TODO: Spinup Implementation uses value Clipping, original PPO Paper does not
+        self.gamma = gamma
+        self.lam = lam
         self.device = device
 
     def train(self, states, actions, old_logps, advantages, returns, batch_size=64, epochs=10):
@@ -68,3 +71,10 @@ class PPOTrainer:
                 loss.backward()
                 # nn.utils.clip_grad_norm_(list(self.actor.parameters()) + list(self.critic.parameters()),self.max_grad_norm)
                 self.optimizer.step()
+
+    def train_update(self, last_value) -> None:
+        states, actions, logps, advs, rets = compute_gae(self.replay_buffer, gamma=self.gamma, lam=self.lam, last_value=last_value)
+        self.train(states, actions, logps, advs, rets, batch_size=self.batch_size, epochs=self.epochs)
+
+    def run(self, last_value) -> None:
+        self.train_update(last_value)
