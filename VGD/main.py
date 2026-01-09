@@ -20,12 +20,13 @@ def main():
     gamma = 0.99
 
     env_handler = EnvironmentHandler(env_name, seed=seed)
-    policy = PolicyVPG(env_handler.state_dim, env_handler.action_dim, hidden_dim=hidden_dim)
+    observation_size, action_size, _ = env_handler.get_env_specs()
+    policy = PolicyVPG(observation_size, action_size, hidden_dim=hidden_dim)
     optimizer = torch.optim.SGD(policy.parameters(), lr=learn_rate)
-    trainer = VPGTrainer(policy, optimizer, beta, gamma)
+    trainer = VPGTrainer(policy,env_handler, optimizer, beta, gamma)
 
     for episode in range(num_episodes):
-        ep_return, ep_length = trainer.train_episode(env_handler)
+        ep_return, ep_length = trainer.train_episode()
 
         if (episode + 1) % 50 == 0:
             print(f"Ep {episode + 1}: length {ep_length}, return {ep_return}")
