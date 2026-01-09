@@ -43,13 +43,13 @@ def main():
 
     actor = Actor(observation_size, action_size, max_action, hidden_dim).to(device)
 
-    actor_target = copy.deepcopy(actor)
+    actor_target = copy.deepcopy(actor).to(device)
     optimizer_actor = optim.Adam(actor.parameters(), lr=learning_rate)
 
     critic_1 = Critic(observation_size, action_size, hidden_dim).to(device)
     critic_2 = Critic(observation_size, action_size, hidden_dim).to(device)
-    critic_target_1 = copy.deepcopy(critic_1)
-    critic_target_2 = copy.deepcopy(critic_2)
+    critic_target_1 = copy.deepcopy(critic_1).to(device)
+    critic_target_2 = copy.deepcopy(critic_2).to(device)
 
     optimizer_critic_1 = optim.Adam(critic_1.parameters(), lr=learning_rate)
     optimizer_critic_2 = optim.Adam(critic_2.parameters(), lr=learning_rate)

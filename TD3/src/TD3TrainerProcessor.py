@@ -24,15 +24,15 @@ class TrainProcessor:
         self.discount_factor = discount_factor
         self.global_timestep = 0
         self.start_timesteps = start_timesteps
-        self.actor = actor.to(device)
-        self.critic_1 = critic_1.to(device)
-        self.critic_2 = critic_2.to(device)
+        self.actor = actor
+        self.critic_1 = critic_1
+        self.critic_2 = critic_2
         self.optimizer_critic_1 = optimizer_critic_1
         self.optimizer_critic_2 = optimizer_critic_2
         self.optimizer_actor = optimizer_actor
-        self.actor_target = actor_target.to(device)
-        self.critic_target_1 = critic_target_1.to(device)
-        self.critic_target_2 = critic_target_2.to(device)
+        self.actor_target = actor_target
+        self.critic_target_1 = critic_target_1
+        self.critic_target_2 = critic_target_2
         self.replay_buffer = replay_buffer
         self.device = device
 
