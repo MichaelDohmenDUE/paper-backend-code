@@ -12,7 +12,8 @@ class VPGTrainer:
                  enviroment_handler: EnviromentHandler,
                  optimizer,
                  beta: float = 0.01,
-                 gamma: float = 0.99
+                 gamma: float = 0.99,
+                 device: torch.device = torch.device("cpu")
                  ):
         self.policy = policy
         self.enviroment_handler = enviroment_handler
@@ -20,9 +21,10 @@ class VPGTrainer:
         self.baseline_mean = 0.0
         self.beta = beta
         self.gamma = gamma
+        self.device = device
 
     def select_action(self, state):
-        state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
+        state = torch.tensor(state, dtype=torch.float32).unsqueeze(0).to(self.device)
         dist = self.policy.dist_categorical(state)
         action_dist = dist.sample()
         log_prob = dist.log_prob(action_dist).squeeze(0)
@@ -44,12 +46,12 @@ class VPGTrainer:
         rewards = np.array(rewards, dtype=np.float64)
         dones = np.zeros_like(rewards, dtype=np.bool_)
         G = discounted_cumulative_reward(self.gamma, rewards, dones)
-        G = torch.tensor(G, dtype=torch.float32)
+        G = torch.tensor(G, dtype=torch.float32).to(self.device)
 
-        b = torch.full_like(G, self.baseline_mean)
+        b = torch.full_like(G, self.baseline_mean).to(self.device)
         advantages = G - b
 
-        loss = -(torch.stack(logps) * advantages).sum()
+        loss = -(torch.stack(logps) * advantages).sum().to(self.device)
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
