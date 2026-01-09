@@ -33,7 +33,7 @@ class DataCollectionProcessor:
             state = next_state
 
             if done:
-                print(f"Rollout: {episode_timesteps}")
+                #print(f"Rollout: {episode_timesteps}")
                 state = self.env_handler.reset()
                 episode_timesteps = 0
 

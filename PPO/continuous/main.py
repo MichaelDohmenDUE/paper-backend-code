@@ -9,10 +9,27 @@ from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.PPO.continuous.src.PPOTrainerProcessor import PPOTrainerProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
-from backend.Utils.src.EvaluationHelper import eval_trainer
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+def eval_trainer(trainer, env_handler, eval_episodes=5):
+    avg_reward = 0.0
+    for _ in range(eval_episodes):
+        state = env_handler.reset()
+        done = False
+        while not done:
+            state_t = torch.FloatTensor(state.reshape(1, -1)).to(trainer.device)
+            with torch.no_grad():
+                dist = trainer.actor(state_t)
+                action = dist.mean.cpu().numpy().flatten()
+
+            next_state, reward, done, _ = env_handler.step(action, 0)
+            avg_reward += reward
+            state = next_state
+    avg_reward /= eval_episodes
+    print(f"Average Reward over {eval_episodes} episodes: {avg_reward:.3f}")
+    return avg_reward
 
 def main():
     env_name = "InvertedPendulum-v5"
@@ -49,8 +66,8 @@ def main():
         last_value = data_collector.run()
         trainer.run(last_value)
 
-        #if update % 10 == 0:
-        #    eval_trainer(trainer, env_handler, eval_episodes=5)
+        if update % 10 == 0:
+            eval_trainer(trainer, env_handler, eval_episodes=5)
 
 
 if __name__ == "__main__":
