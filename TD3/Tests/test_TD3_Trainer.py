@@ -31,16 +31,22 @@ class TestTD3Trainer(unittest.TestCase):
         )
 
         self.mock_buffer = MagicMock()
-        self.mock_buffer.sample.return_value = [
-            (
-                np.random.randn(self.state_size),
-                np.random.randn(self.action_size),
-                np.random.randn(self.state_size),
-                np.random.randn(),
-                np.random.choice([0.0, 1.0])
-            )
-            for _ in range(self.batch_size)
-        ]
+
+        def fake_sample_batch():
+            state = torch.randn(self.batch_size, self.state_size)
+            action = torch.randn(self.batch_size, self.action_size)
+            reward = torch.randn(self.batch_size, 1)
+            next_state = torch.randn(self.batch_size, self.state_size)
+            done = torch.randint(0, 2, (self.batch_size, 1)).float()
+            return {
+                "state": state,
+                "action": action,
+                "reward": reward,
+                "next_state": next_state,
+                "done": done,
+            }
+
+        self.mock_buffer.sample_batch.side_effect = fake_sample_batch
 
     def test_actor_update(self):
         self.trainer.iteration = self.trainer.syncro_frequency - 1

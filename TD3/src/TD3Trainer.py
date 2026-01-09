@@ -32,6 +32,7 @@ class TD3Trainer(object):
         self.syncro_frequency = synchro_frequency
         self.discount_factor = discount_factor
         self.iteration = 0
+        self.device = device
 
         self.actor = Actor(state_size, action_size, max_action, hidden_size).to(device)
         self.actor_target = copy.deepcopy(self.actor)
@@ -54,14 +55,13 @@ class TD3Trainer(object):
     def train(self, replay_buffer: ReplayBuffer, batch_size: int):
         self.iteration += 1
 
-        batch = replay_buffer.sample(batch_size)
-        state, action, next_state, reward, valid_transition = zip(*batch)
-
-        state = torch.FloatTensor(np.array(state)).to(device)
-        action = torch.FloatTensor(np.array(action)).to(device)
-        next_state = torch.FloatTensor(np.array(next_state)).to(device)
-        reward = torch.FloatTensor(np.array(reward)).unsqueeze(1).to(device)
-        valid_transition = torch.FloatTensor(np.array(valid_transition)).unsqueeze(1).to(device)
+        batch = replay_buffer.sample_batch()
+        state = batch["state"].to(self.device)
+        action = batch["action"].to(self.device)
+        reward = batch["reward"].to(self.device)
+        next_state = batch["next_state"].to(self.device)
+        done = batch["done"].to(self.device)
+        valid_transition = 1.0 - done
 
         with torch.no_grad():
             noise = (torch.randn_like(action) * self.policy_noise).clamp(-self.noise_clip, self.noise_clip)
