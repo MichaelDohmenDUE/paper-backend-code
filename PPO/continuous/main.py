@@ -1,25 +1,12 @@
-from backend.PPO.src.PPO_continuous import PPOTrainer
+from backend.PPO.continuous.src.DataCollectionProcessor import DataCollectionProcessor
+from backend.Utils.src.BatchTransitioner import TransitionFactory
+from backend.PPO.continuous.src.PPO_continuous import PPOTrainer
+from backend.Utils.src.BatchTransitioner import TransitionSpec
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.EvaluationHelper import eval_trainer
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.utils import compute_gae
 
-
-def collect_rollout(env_handler, trainer, replay_buffer, rollout_size, episode_timesteps):
-    state = env_handler.reset()
-    for step in range(rollout_size):
-        episode_timesteps += 1
-        action, logp, value = trainer.select_action(state)
-        next_state, reward, done, done_bool = env_handler.step(action, episode_timesteps)
-        replay_buffer.append((state, action, logp, reward, done, value))
-        if not done:
-            state = next_state
-        else:
-            env_handler.reset()
-        if done:
-            episode_timesteps = 0
-    _, _, last_value = trainer.select_action(state)
-    return last_value
 
 
 def train_update(trainer, replay_buffer, last_value, batch_size, epochs):
@@ -37,6 +24,9 @@ def main():
     epochs = 10
     num_updates = 1000
 
+    spec = TransitionSpec(["state", "action","logp", "reward", "done","value"])
+    transition_factory = TransitionFactory(spec)
+
     env_handler = EnvironmentHandler(env_name, seed)
     trainer = PPOTrainer(
         state_dim=env_handler.state_dim,
@@ -44,16 +34,17 @@ def main():
         hidden_dim=64,
         lr=3e-4
     )
-    replay_buffer = ReplayBuffer(buffer_size=rollout_size)
-    episode_timesteps = 0
+    replay_buffer = ReplayBuffer(spec, max_buffer_size=rollout_size, batch_size=batch_size)
+
+    data_collector = DataCollectionProcessor()
 
     for update in range(num_updates):
-        last_value = collect_rollout(env_handler, trainer, replay_buffer, rollout_size, episode_timesteps)
+        last_value = data_collector.run(env_handler, trainer, replay_buffer,transition_factory, rollout_size)
 
         train_update(trainer, replay_buffer, last_value, batch_size, epochs)
 
-        if update % 10 == 0:
-            eval_trainer(trainer, env_handler, eval_episodes=5)
+        #if update % 10 == 0:
+        #    eval_trainer(trainer, env_handler, eval_episodes=5)
 
 
 if __name__ == "__main__":

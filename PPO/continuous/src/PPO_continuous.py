@@ -72,6 +72,7 @@ class PPOTrainer:
                 value_loss = (b_ret - value_pred).pow(2).mean()
 
                 loss = policy_loss + self.vf_coef * value_loss - self.ent_coef * entropy
+                #print(f"total loss {loss}")
 
                 # Backprop
                 self.optimizer.zero_grad()
