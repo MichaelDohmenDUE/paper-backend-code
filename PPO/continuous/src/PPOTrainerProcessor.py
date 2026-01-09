@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from torch import nn
 
 from backend.Utils.src.utils import compute_gae
 
@@ -24,7 +25,10 @@ class PPOTrainerProcessor:
         self.lam = lam
         self.device = device
 
-    def train(self, states, actions, old_logps, advantages, returns, batch_size=64, epochs=10):
+    def run(self, last_value):
+        states, actions, old_logps, advantages, returns = compute_gae(self.replay_buffer, gamma=self.gamma, lam=self.lam,
+                                                         last_value=last_value)
+
         # advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
         # Convert to tensors
@@ -37,10 +41,10 @@ class PPOTrainerProcessor:
         # Replaybuffer Rollout
         replaybuffer_rollout = list(zip(states, actions, old_logps, advantages, returns))
 
-        for _ in range(epochs):
+        for _ in range(self.epochs):
             np.random.shuffle(replaybuffer_rollout)
-            for start in range(0, len(replaybuffer_rollout), batch_size):
-                batch = replaybuffer_rollout[start:start + batch_size]
+            for start in range(0, len(replaybuffer_rollout), self.batch_size):
+                batch = replaybuffer_rollout[start:start + self.batch_size]
                 b_states, b_actions, b_old_logps, b_adv, b_ret = zip(*batch)
                 b_states = torch.stack(b_states)
                 b_actions = torch.stack(b_actions)
@@ -69,12 +73,7 @@ class PPOTrainerProcessor:
                 # Backprop
                 self.optimizer.zero_grad()
                 loss.backward()
-                # nn.utils.clip_grad_norm_(list(self.actor.parameters()) + list(self.critic.parameters()),self.max_grad_norm)
+                if self.use_value_clip : # NOT USED BY ORIGINAL PPO
+                    nn.utils.clip_grad_norm_(list(self.actor.parameters()) + list(self.critic.parameters()),self.max_grad_norm)
                 self.optimizer.step()
 
-    def train_update(self, last_value) -> None:
-        states, actions, logps, advs, rets = compute_gae(self.replay_buffer, gamma=self.gamma, lam=self.lam, last_value=last_value)
-        self.train(states, actions, logps, advs, rets, batch_size=self.batch_size, epochs=self.epochs)
-
-    def run(self, last_value) -> None:
-        self.train_update(last_value)
