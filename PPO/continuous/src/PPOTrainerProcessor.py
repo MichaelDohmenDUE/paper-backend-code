@@ -72,7 +72,7 @@ class PPOTrainerProcessor:
                 # Backprop
                 self.optimizer.zero_grad()
                 loss.backward()
-                if self.use_value_clip : # NOT USED BY ORIGINAL PPO
+                if self.use_value_clip: # NOT USED BY ORIGINAL PPO
                     nn.utils.clip_grad_norm_(list(self.actor.parameters()) + list(self.critic.parameters()),self.max_grad_norm)
                 self.optimizer.step()
 

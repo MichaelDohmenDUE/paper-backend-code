@@ -39,4 +39,4 @@ class DataCollectionProcessor:
                 episode_timesteps = 0
 
         _, _, last_value = self.policy.select_action(state)
-        self.replay_buffer.buffer[-1].bootstrap_value = last_value
+        self.replay_buffer.buffer[-1].bootstrap_value = last_value # overwrite last transition Bootsrap value that gets later extracted for GAE
