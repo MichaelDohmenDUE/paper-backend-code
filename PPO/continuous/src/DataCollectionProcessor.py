@@ -41,4 +41,4 @@ class DataCollectionProcessor:
 
         _, _, last_value = self.policy.select_action(state)
         self.replay_buffer.buffer[
-            -1].bootstrap_value = last_value  # overwrite last transition Bootsrap value that gets later extracted for GAE
+            -1].bootstrap_value = last_value  # overwrite last Bootstrap value that gets later extracted for GAE
