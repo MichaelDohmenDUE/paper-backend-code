@@ -1,8 +1,9 @@
+from backend.AbstractHandlers.AbstractActionHandler import AbstractActionHandler
 import numpy as np
 import torch
 from torch import nn
 
-class ActionHandler:
+class ActionHandler(AbstractActionHandler):
     def __init__(self, actor: nn.Module, critic: nn.Module, device: torch.device):
         self.actor = actor
         self.critic = critic

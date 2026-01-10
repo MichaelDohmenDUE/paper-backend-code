@@ -1,4 +1,4 @@
-from backend.PPO.continuous.src.ActionHandler import ActionHandler
+from backend.AbstractHandlers.AbstractActionHandler import AbstractActionHandler
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
@@ -6,7 +6,7 @@ from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 class DataCollectionProcessor:
     def __init__(self, env_handler: EnvironmentHandler, transition_factory: TransitionFactory,
                  replay_buffer: ReplayBuffer, rollout_size: int,
-                 action_handler: ActionHandler):
+                 action_handler: AbstractActionHandler):
         self.env_handler = env_handler
         self.transition_factory = transition_factory
         self.replay_buffer = replay_buffer
@@ -15,7 +15,7 @@ class DataCollectionProcessor:
 
     def run(self):
         self.replay_buffer.buffer.clear()
-        episode_timesteps= 0
+        episode_timesteps = 0
         state = self.env_handler.reset()
         for step in range(self.rollout_size):
             episode_timesteps += 1
@@ -39,4 +39,4 @@ class DataCollectionProcessor:
                 episode_timesteps = 0
 
         _, _, last_value = self.policy.select_action(state)
-        self.replay_buffer.buffer[-1].bootstrap_value = last_value # overwrite last transition Bootsrap value that gets later extracted for GAE
+        self.replay_buffer.buffer[-1].bootstrap_value = last_value  # overwrite last transition Bootsrap value that gets later extracted for GAE

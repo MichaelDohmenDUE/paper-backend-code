@@ -3,7 +3,6 @@ from torch import optim
 
 from backend.CommonModels.src.CriticPPO import CriticPPO
 from backend.CommonModels.src.DiscreteActorPPO import DiscreteActorPPO
-from backend.PPO.continuous.src.ActionHandler import ActionHandler
 from backend.PPO.continuous.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.PPO.discrete.src.DiscreteActionHandler import ActionHandler
 from backend.Utils.src.BatchTransitioner import TransitionFactory
@@ -61,7 +60,8 @@ def main():
 
     trainer = PPOTrainerProcessor(actor, critic, optimizer, replay_buffer, batch_size, epochs, gamma=gamma, lam=lam)
 
-    data_collector = DataCollectionProcessor(env_handler, transition_factory, replay_buffer, rollout_size,action_handler)
+    data_collector = DataCollectionProcessor(env_handler, transition_factory, replay_buffer, rollout_size,
+                                             action_handler)
 
     for update in range(num_updates):
         data_collector.run()

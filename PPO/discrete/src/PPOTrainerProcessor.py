@@ -32,7 +32,7 @@ class PPOTrainerProcessor:
 
         # Convert to tensors
         states = torch.as_tensor(states, dtype=torch.float32, device=self.device)
-        actions = torch.as_tensor(actions, dtype=torch.float32, device=self.device)
+        actions = torch.as_tensor(actions, dtype=torch.long, device=self.device)
         old_logps = torch.as_tensor(old_logps, dtype=torch.float32, device=self.device)
         advantages = torch.as_tensor(advantages, dtype=torch.float32, device=self.device)
         returns = torch.as_tensor(returns, dtype=torch.float32, device=self.device)
@@ -46,15 +46,14 @@ class PPOTrainerProcessor:
                 batch = replaybuffer_rollout[start:start + self.batch_size]
                 b_states, b_actions, b_old_logps, b_adv, b_ret = zip(*batch)
                 b_states = torch.stack(b_states)
-                b_actions = torch.stack(b_actions)
+                b_actions = torch.stack(b_actions).long()
                 b_old_logps = torch.stack(b_old_logps)
                 b_adv = torch.stack(b_adv)
                 b_ret = torch.stack(b_ret)
 
                 dist = self.actor(b_states)
-                new_logp = dist.log_prob(b_actions).sum(-1)
-                # print(new_logp)
-                entropy = dist.entropy().sum(-1).mean()
+                new_logp = dist.log_prob(b_actions)
+                entropy = dist.entropy().mean()
                 value_pred = self.critic(b_states).squeeze(-1)
 
                 # Policy Losses
