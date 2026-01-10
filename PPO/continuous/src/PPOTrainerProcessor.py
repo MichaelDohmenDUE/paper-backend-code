@@ -25,9 +25,8 @@ class PPOTrainerProcessor:
         self.lam = lam
         self.device = device
 
-    def run(self, last_value):
-        states, actions, old_logps, advantages, returns = compute_gae(self.replay_buffer, gamma=self.gamma, lam=self.lam,
-                                                         last_value=last_value)
+    def run(self):
+        states, actions, old_logps, advantages, returns = compute_gae(self.replay_buffer, gamma=self.gamma, lam=self.lam)
 
         # advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 

@@ -43,7 +43,7 @@ def main():
     gamma = 0.99
     lam = 0.95
 
-    spec = TransitionSpec(["state", "action","logp", "reward", "done","value"])
+    spec = TransitionSpec(["state", "action","logp", "reward", "done","value", "bootstrap_value"])
     transition_factory = TransitionFactory(spec)
 
     env_handler = EnvironmentHandler(env_name, seed)
@@ -63,8 +63,8 @@ def main():
                                              action_handler)
 
     for update in range(num_updates):
-        last_value = data_collector.run()
-        trainer.run(last_value)
+        data_collector.run()
+        trainer.run()
 
         if update % 10 == 0:
             eval_trainer(trainer, env_handler, eval_episodes=5)

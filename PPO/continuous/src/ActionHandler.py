@@ -3,7 +3,7 @@ import torch
 from torch import nn
 
 class ActionHandler:
-    def __init__(self, actor: nn.Module,critic: nn.Module,device: torch.device):
+    def __init__(self, actor: nn.Module, critic: nn.Module, device: torch.device):
         self.actor = actor
         self.critic = critic
         self.device = device

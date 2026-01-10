@@ -27,7 +27,8 @@ class DataCollectionProcessor:
                 logp=logp,
                 reward=reward,
                 done=done_bool,
-                value=value
+                value=value,
+                bootstrap_value=None
             )
             self.replay_buffer.append(transition)
             state = next_state
@@ -38,4 +39,4 @@ class DataCollectionProcessor:
                 episode_timesteps = 0
 
         _, _, last_value = self.policy.select_action(state)
-        return last_value
+        self.replay_buffer.buffer[-1].bootstrap_value = last_value

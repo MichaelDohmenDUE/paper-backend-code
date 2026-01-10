@@ -13,7 +13,7 @@ def gae(gamma: float, lambda_: float, deltas: NDArray[np.float64], dones: NDArra
     return advantages
 
 
-def compute_gae(buffer, gamma: float, lam: float, last_value: float):
+def compute_gae(buffer, gamma: float, lam: float):
     states  = [t.state for t in buffer.buffer]
     actions = [t.action for t in buffer.buffer]
     logps   = [t.logp for t in buffer.buffer]
@@ -30,7 +30,7 @@ def compute_gae(buffer, gamma: float, lam: float, last_value: float):
     deltas = np.zeros_like(rewards)
     for t in range(len(rewards)):
         if t == len(rewards) - 1:
-            next_value = last_value
+            next_value = buffer.buffer[t].bootstrap_value
             next_non_terminal = 1.0 - dones[t]
         else:
             next_value = values[t + 1]
