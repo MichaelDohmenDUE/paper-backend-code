@@ -26,7 +26,8 @@ class PPOTrainerProcessor:
         self.device = device
 
     def run(self):
-        states, actions, old_logps, advantages, returns = compute_gae(self.replay_buffer, gamma=self.gamma, lam=self.lam)
+        states, actions, old_logps, advantages, returns = compute_gae(self.replay_buffer, gamma=self.gamma,
+                                                                      lam=self.lam)
 
         # advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
@@ -67,12 +68,12 @@ class PPOTrainerProcessor:
                 value_loss = (b_ret - value_pred).pow(2).mean()
 
                 loss = policy_loss + self.vf_coef * value_loss - self.ent_coef * entropy
-                #print(f"total loss {loss}")
+                # print(f"total loss {loss}")
 
                 # Backprop
                 self.optimizer.zero_grad()
                 loss.backward()
-                if self.use_value_clip: # NOT USED BY ORIGINAL PPO
-                    nn.utils.clip_grad_norm_(list(self.actor.parameters()) + list(self.critic.parameters()),self.max_grad_norm)
+                if self.use_value_clip:  # NOT USED BY ORIGINAL PPO
+                    nn.utils.clip_grad_norm_(list(self.actor.parameters()) + list(self.critic.parameters()),
+                                             self.max_grad_norm)
                 self.optimizer.step()
-

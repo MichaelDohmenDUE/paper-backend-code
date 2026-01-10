@@ -1,7 +1,9 @@
 import torch
 import torch.nn.functional as F
-from torch import  nn
+from torch import nn
+
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
+
 
 class TrainProcessor:
     """
@@ -15,7 +17,7 @@ class TrainProcessor:
                  actor_target: nn.Module, critic_target_1: nn.Module, critic_target_2: nn.Module,
                  replay_buffer: ReplayBuffer, max_action: float, learning_rate: float, noise_clip: float,
                  policy_noise, start_timesteps=25000, synchro_frequency: int = 2, discount_factor: float = 0.99,
-                 device : torch.device = torch.device("cpu")):
+                 device: torch.device = torch.device("cpu")):
         self.max_action = max_action
         self.learning_rate = learning_rate
         self.noise_clip = noise_clip

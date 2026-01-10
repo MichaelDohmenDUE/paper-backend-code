@@ -4,8 +4,9 @@ from backend.CommonModels.src.Policy_VPG import PolicyVPG
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.VGD.src.TrainerVPG import VPGTrainer
 
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
 # TODO: Training is naturally unstable, keep this in mind later
 
 def main():
@@ -24,7 +25,7 @@ def main():
     observation_size, action_size, _ = env_handler.get_env_specs()
     policy = PolicyVPG(observation_size, action_size, hidden_dim=hidden_dim).to(device)
     optimizer = torch.optim.SGD(policy.parameters(), lr=learn_rate)
-    trainer = VPGTrainer(policy,env_handler, optimizer, beta, gamma, device=device)
+    trainer = VPGTrainer(policy, env_handler, optimizer, beta, gamma, device=device)
 
     for episode in range(num_episodes):
         ep_return, ep_length = trainer.train_episode()

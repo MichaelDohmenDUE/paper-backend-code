@@ -5,13 +5,14 @@ from backend.CommonModels.src.ActorPPO import ActorPPO
 from backend.CommonModels.src.CriticPPO import CriticPPO
 from backend.PPO.continuous.src.ActionHandler import ActionHandler
 from backend.PPO.continuous.src.DataCollectionProcessor import DataCollectionProcessor
-from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.PPO.continuous.src.PPOTrainerProcessor import PPOTrainerProcessor
+from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 def eval_trainer(trainer, env_handler, eval_episodes=5):
     avg_reward = 0.0
@@ -31,6 +32,7 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
     print(f"Average Reward over {eval_episodes} episodes: {avg_reward:.3f}")
     return avg_reward
 
+
 def main():
     env_name = "InvertedPendulum-v5"
     seed = 100
@@ -43,7 +45,7 @@ def main():
     gamma = 0.99
     lam = 0.95
 
-    spec = TransitionSpec(["state", "action","logp", "reward", "done","value", "bootstrap_value"])
+    spec = TransitionSpec(["state", "action", "logp", "reward", "done", "value", "bootstrap_value"])
     transition_factory = TransitionFactory(spec)
 
     env_handler = EnvironmentHandler(env_name, seed)

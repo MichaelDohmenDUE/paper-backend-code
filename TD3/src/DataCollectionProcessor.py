@@ -1,8 +1,6 @@
-
-
-from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.TD3.src.ActionHandler import ActionHandler
 from backend.Utils.src.BatchTransitioner import TransitionFactory
+from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 

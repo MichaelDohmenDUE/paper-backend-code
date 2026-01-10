@@ -121,7 +121,7 @@ class NodeLibrary:
             name="compute_dqn_target",
             function=lambda rewards, next_q_target, dones, gamma: rewards + gamma * next_q_target.max(dim=1,
                                                                                                       keepdim=True).values * (
-                                                                              1.0 - dones),
+                                                                          1.0 - dones),
             inputs=["rewards", "next_q_target", "dones", "gamma"],
             outputs=["target"],
             no_grad=True

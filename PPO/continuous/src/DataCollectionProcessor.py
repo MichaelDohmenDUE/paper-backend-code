@@ -1,7 +1,8 @@
 from backend.AbstractHandlers.AbstractActionHandler import AbstractActionHandler
 from backend.Utils.src.BatchTransitioner import TransitionFactory
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
+from backend.Utils.src.ReplayBuffer import ReplayBuffer
+
 
 class DataCollectionProcessor:
     def __init__(self, env_handler: EnvironmentHandler, transition_factory: TransitionFactory,
@@ -34,9 +35,10 @@ class DataCollectionProcessor:
             state = next_state
 
             if done:
-                #print(f"Rollout: {episode_timesteps}")
+                # print(f"Rollout: {episode_timesteps}")
                 state = self.env_handler.reset()
                 episode_timesteps = 0
 
         _, _, last_value = self.policy.select_action(state)
-        self.replay_buffer.buffer[-1].bootstrap_value = last_value  # overwrite last transition Bootsrap value that gets later extracted for GAE
+        self.replay_buffer.buffer[
+            -1].bootstrap_value = last_value  # overwrite last transition Bootsrap value that gets later extracted for GAE

@@ -1,7 +1,6 @@
 import unittest
 from unittest.mock import MagicMock
 
-import numpy as np
 import torch
 
 from backend.CommonModels.src.Actor import Actor
@@ -21,7 +20,8 @@ class TestTD3Trainer(unittest.TestCase):
         self.batch_size = 32
 
         self.trainer = TD3Trainer(
-            actor= Actor(action_size=self.action_size, state_size=self.state_size, max_action=self.max_action ,hidden_size=self.hidden_size),
+            actor=Actor(action_size=self.action_size, state_size=self.state_size, max_action=self.max_action,
+                        hidden_size=self.hidden_size),
             state_size=self.state_size,
             action_size=self.action_size,
             hidden_size=self.hidden_size,

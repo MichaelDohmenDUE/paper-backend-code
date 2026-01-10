@@ -7,8 +7,9 @@ from torch.nn import functional as F
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.utils import gae, discounted_cumulative_reward, temporal_difference_residuals
 
-""" 
-PPO is based on the policy gradient theorem and can handle both
+# TODO: OLD CODE DELETE LATER
+
+""" PPO is based on the policy gradient theorem and can handle both
 discrete and continuous action spaces. It can be applied to low and high dimensional observation spaces. 
 In case of a a high dimensional observation space, the observation space's dimensionality is reduced by
 the use of convolutional networks.

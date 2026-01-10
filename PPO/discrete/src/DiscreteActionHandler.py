@@ -1,7 +1,9 @@
-from backend.AbstractHandlers.AbstractActionHandler import AbstractActionHandler
 import numpy as np
 import torch
 from torch import nn
+
+from backend.AbstractHandlers.AbstractActionHandler import AbstractActionHandler
+
 
 class ActionHandler(AbstractActionHandler):
     def __init__(self, actor: nn.Module, critic: nn.Module, device: torch.device):
@@ -19,4 +21,3 @@ class ActionHandler(AbstractActionHandler):
             value = self.critic(state_t).squeeze(-1)
 
         return int(action.cpu().numpy().item()), float(logp.cpu().numpy().item()), float(value.cpu().numpy().item())
-

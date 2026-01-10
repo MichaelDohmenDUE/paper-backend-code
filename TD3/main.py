@@ -1,13 +1,12 @@
 import copy
 
+import torch
 from torch import optim
 
-from backend.CommonModels.src.Critic import Critic
-from backend.TD3.src.DataCollectionProcessor import DataCollectionProcessor
-import torch
-
 from backend.CommonModels.src.Actor import Actor
+from backend.CommonModels.src.Critic import Critic
 from backend.TD3.src.ActionHandler import ActionHandler
+from backend.TD3.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.TD3.src.TD3TrainerProcessor import TrainProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
@@ -16,6 +15,7 @@ from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 def main():
     env_name = "HalfCheetah-v5"
@@ -54,7 +54,7 @@ def main():
     optimizer_critic_1 = optim.Adam(critic_1.parameters(), lr=learning_rate)
     optimizer_critic_2 = optim.Adam(critic_2.parameters(), lr=learning_rate)
 
-    action_handler = ActionHandler(actor, action_size, max_action, expl_noise, start_timesteps,device)
+    action_handler = ActionHandler(actor, action_size, max_action, expl_noise, start_timesteps, device)
     replay_buffer = ReplayBuffer(spec=spec, max_buffer_size=buffer_size, batch_size=batch_size)
 
     trainer = TrainProcessor(
