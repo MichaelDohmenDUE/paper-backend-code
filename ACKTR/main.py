@@ -3,9 +3,9 @@ from torch import optim
 
 from backend.CommonModels.src.ActorPPO import ActorPPO
 from backend.CommonModels.src.CriticPPO import CriticPPO
-from backend.ACTER.src.ActionHandler import ActionHandler
-from backend.ACTER.src.DataCollectionProcessor import DataCollectionProcessor
-from backend.ACTER.src.ACTRTrainerProcessor import ACKTRTrainerProcessor
+from backend.ACKTR.src.ActionHandler import ActionHandler
+from backend.ACKTR.src.DataCollectionProcessor import DataCollectionProcessor
+from backend.ACKTR.src.ACTRTrainerProcessor import ACKTRTrainerProcessor
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
@@ -53,13 +53,14 @@ def main():
 
     actor = ActorPPO(state_dim, action_dim, hidden_dim).to(device)
     critic = CriticPPO(state_dim, hidden_dim).to(device)
-    optimizer = optim.Adam(list(actor.parameters()) + list(critic.parameters()), lr=lr)
+    optimizer_actor = optim.Adam(actor.parameters(), lr=lr)
+    optimizer_critic = optim.Adam(critic.parameters(), lr=lr)
 
     action_handler = ActionHandler(actor, critic, device)
 
     replay_buffer = ReplayBuffer(spec, max_buffer_size=rollout_size, batch_size=batch_size)
 
-    trainer = ACKTRTrainerProcessor(actor, critic, optimizer, replay_buffer, batch_size, epochs, gamma=gamma, lam=lam)
+    trainer = ACKTRTrainerProcessor(actor, critic, optimizer_actor, optimizer_critic, replay_buffer, batch_size, epochs, gamma=gamma, lam=lam)
 
     data_collector = DataCollectionProcessor(env_handler, transition_factory, replay_buffer, rollout_size,
                                              action_handler)
