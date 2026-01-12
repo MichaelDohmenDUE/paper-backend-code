@@ -33,8 +33,6 @@ class ACKTRTrainerProcessor:
         advantages = torch.as_tensor(advantages, dtype=torch.float32, device=self.device)
         returns = torch.as_tensor(returns, dtype=torch.float32, device=self.device)
 
-        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-
         dist = self.actor(states)
         logp = dist.log_prob(actions).sum(-1)
         entropy = dist.entropy().sum(-1).mean()
