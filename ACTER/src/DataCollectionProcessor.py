@@ -20,7 +20,8 @@ class DataCollectionProcessor:
         state = self.env_handler.reset()
         for step in range(self.rollout_size):
             episode_timesteps += 1
-            action, logp, value = self.policy.select_action(state)
+
+            action, logp, entropy, value = self.policy.select_action(state)
             next_state, reward, done, done_bool = self.env_handler.step(action, episode_timesteps)
             transition = self.transition_factory.create(
                 state=state,
@@ -29,6 +30,7 @@ class DataCollectionProcessor:
                 reward=reward,
                 done=done_bool,
                 value=value,
+                entropy=entropy,
                 bootstrap_value=None
             )
             self.replay_buffer.append(transition)
@@ -39,6 +41,6 @@ class DataCollectionProcessor:
                 state = self.env_handler.reset()
                 episode_timesteps = 0
 
-        _, _, last_value = self.policy.select_action(state)
+        _, _, _, last_value = self.policy.select_action(state)
         self.replay_buffer.buffer[
             -1].bootstrap_value = last_value  # overwrite last Bootstrap value that gets later extracted for GAE

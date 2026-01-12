@@ -45,7 +45,7 @@ def main():
     gamma = 0.99
     lam = 0.95
 
-    spec = TransitionSpec(["state", "action", "logp", "reward", "done", "value", "bootstrap_value"])
+    spec = TransitionSpec(["state", "action", "logp", "reward", "done", "value", "entropy", "bootstrap_value"])
     transition_factory = TransitionFactory(spec)
 
     env_handler = EnvironmentHandler(env_name, seed)

@@ -6,7 +6,7 @@ from backend.AbstractHandlers.AbstractActionHandler import AbstractActionHandler
 
 
 class ActionHandler(AbstractActionHandler):
-    def __init__(self, actor: nn.Module, critic: nn.Module, device: torch.device):
+    def __init__(self, actor, critic, device):
         self.actor = actor
         self.critic = critic
         self.device = device
@@ -18,5 +18,6 @@ class ActionHandler(AbstractActionHandler):
             dist = self.actor(state_t)
             action = dist.sample()
             logp = dist.log_prob(action).sum(-1)
+            entropy = dist.entropy().sum(-1)
             value = self.critic(state_t).squeeze(-1)
-        return action.cpu().numpy().squeeze(0), float(logp.cpu().numpy()), float(value.cpu().numpy())
+        return action.cpu().numpy().squeeze(0), float(logp.cpu().numpy()), float(entropy.cpu().numpy()), float(value.cpu().numpy())
