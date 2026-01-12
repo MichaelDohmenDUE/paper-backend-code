@@ -7,7 +7,7 @@ from backend.Utils.src.utils import compute_gae
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class PPOTrainerProcessor:
+class ACKTRTrainerProcessor:
     def __init__(self, actor, critic, optimizer, replay_buffer, batch_size: int = 64, epochs: int = 10,
                  clip_eps=0.2, vf_coef=1.0, ent_coef=0.01, max_grad_norm=0.5, gamma=0.99, lam=0.95):
         self.actor = actor

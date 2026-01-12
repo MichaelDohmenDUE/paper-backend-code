@@ -5,7 +5,7 @@ from backend.CommonModels.src.ActorPPO import ActorPPO
 from backend.CommonModels.src.CriticPPO import CriticPPO
 from backend.ACTER.src.ActionHandler import ActionHandler
 from backend.ACTER.src.DataCollectionProcessor import DataCollectionProcessor
-from backend.ACTER.src.PPOTrainerProcessor import PPOTrainerProcessor
+from backend.ACTER.src.ACTRTrainerProcessor import ACKTRTrainerProcessor
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
@@ -59,7 +59,7 @@ def main():
 
     replay_buffer = ReplayBuffer(spec, max_buffer_size=rollout_size, batch_size=batch_size)
 
-    trainer = PPOTrainerProcessor(actor, critic, optimizer, replay_buffer, batch_size, epochs, gamma=gamma, lam=lam)
+    trainer = ACKTRTrainerProcessor(actor, critic, optimizer, replay_buffer, batch_size, epochs, gamma=gamma, lam=lam)
 
     data_collector = DataCollectionProcessor(env_handler, transition_factory, replay_buffer, rollout_size,
                                              action_handler)
