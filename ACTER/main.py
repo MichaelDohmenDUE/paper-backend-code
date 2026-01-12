@@ -1,11 +1,11 @@
 import torch
 from torch import optim
 
+from backend.CommonModels.src.ActorPPO import ActorPPO
 from backend.CommonModels.src.CriticPPO import CriticPPO
-from backend.CommonModels.src.DiscreteActorPPO import DiscreteActorPPO
-from backend.PPO.continuous.src.DataCollectionProcessor import DataCollectionProcessor
-from backend.PPO.discrete.src.DiscreteActionHandler import ActionHandler
-from backend.PPO.discrete.src.PPOTrainerProcessor import PPOTrainerProcessor
+from backend.ACTER.src.ActionHandler import ActionHandler
+from backend.ACTER.src.DataCollectionProcessor import DataCollectionProcessor
+from backend.ACTER.src.PPOTrainerProcessor import PPOTrainerProcessor
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
@@ -23,18 +23,18 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
             state_t = torch.FloatTensor(state.reshape(1, -1)).to(trainer.device)
             with torch.no_grad():
                 dist = trainer.actor(state_t)
-                action = dist.probs.argmax(dim=-1).item()
+                action = dist.mean.cpu().numpy().flatten()
+
             next_state, reward, done, _ = env_handler.step(action, 0)
             avg_reward += reward
             state = next_state
-
     avg_reward /= eval_episodes
     print(f"Average Reward over {eval_episodes} episodes: {avg_reward:.3f}")
     return avg_reward
 
 
 def main():
-    env_name = "Acrobot-v1"
+    env_name = "InvertedPendulum-v5"
     seed = 100
     rollout_size = 2048
     batch_size = 64
@@ -51,7 +51,7 @@ def main():
     env_handler = EnvironmentHandler(env_name, seed)
     state_dim, action_dim, _ = env_handler.get_env_specs()
 
-    actor = DiscreteActorPPO(state_dim, action_dim, hidden_dim).to(device)
+    actor = ActorPPO(state_dim, action_dim, hidden_dim).to(device)
     critic = CriticPPO(state_dim, hidden_dim).to(device)
     optimizer = optim.Adam(list(actor.parameters()) + list(critic.parameters()), lr=lr)
 
