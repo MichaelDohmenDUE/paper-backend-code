@@ -1,5 +1,5 @@
 import torch
-from torch import optim
+from backend.ACKTR.src.KFAC import KFACOptimizer
 
 from backend.CommonModels.src.ActorPPO import ActorPPO
 from backend.CommonModels.src.CriticPPO import CriticPPO
@@ -53,8 +53,8 @@ def main():
 
     actor = ActorPPO(state_dim, action_dim, hidden_dim).to(device)
     critic = CriticPPO(state_dim, hidden_dim).to(device)
-    optimizer_actor = optim.Adam(actor.parameters(), lr=lr)
-    optimizer_critic = optim.Adam(critic.parameters(), lr=lr)
+    optimizer_actor = KFACOptimizer(actor)
+    optimizer_critic = KFACOptimizer(critic)
 
     action_handler = ActionHandler(actor, critic, device)
 
