@@ -29,7 +29,7 @@ class Node:
 
 class Graph:
     def __init__(self, nodes):
-        self.nodes = nodes
+        self.nodes: list[Node] = nodes
 
     def run(self, context: dict):
         queue = deque(self.nodes)
@@ -43,3 +43,37 @@ class Graph:
             else:
                 queue.append(current_node)
         return context
+
+    def validate(self, start_context: dict) -> bool:
+        produced = set(start_context.keys())
+        all_outputs = set()
+
+        # Check for Duplicate Node Outputs
+        for node in self.nodes:
+            for output in node.outputs:
+                #if output in all_outputs:
+                #    print(f"Warning: '{output}' overwritten by node {node.name}")
+                all_outputs.add(output)
+        # Check for missing inputs
+        for node in self.nodes:
+            for input in node.inputs:
+                if input not in produced and input not in all_outputs:
+                    raise ValueError(f"Input '{input}' for node '{node.name}' is never produced")
+
+        remaining = set(self.nodes)
+        resolved = set(produced)
+        # LOOP detection
+        progress: bool = True
+        while progress and remaining:
+            progress = False
+            for node in list(remaining):
+                if all(input_ in resolved for input_ in node.inputs):
+                    resolved.update(node.outputs)
+                    remaining.remove(node)
+                    progress = True
+
+        if remaining:
+            names = [node.name for node in remaining]
+            raise ValueError(f"Cycle or unresolved inputs: {names}")
+
+        return True

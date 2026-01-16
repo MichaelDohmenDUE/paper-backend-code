@@ -21,4 +21,5 @@ class TrainProcessor:
             "device": self.device,
         }
 
-        self.graph.run(context)
+        if self.graph.validate(context):
+            self.graph.run(context)
