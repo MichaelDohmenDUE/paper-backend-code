@@ -1,3 +1,5 @@
+from collections import deque
+
 import torch
 
 
@@ -29,7 +31,15 @@ class Graph:
     def __init__(self, nodes):
         self.nodes = nodes
 
-    def run(self, ctx: dict):
-        for node in self.nodes:
-            node(ctx)
-        return ctx
+    def run(self, context: dict):
+        queue = deque(self.nodes)
+        executed_notes = set()
+        while len(queue) > 0:
+            current_node = queue.popleft()
+
+            if all(input_ in context for input_ in current_node.inputs):
+                current_node(context)
+                executed_notes.add(current_node)
+            else:
+                queue.append(current_node)
+        return context
