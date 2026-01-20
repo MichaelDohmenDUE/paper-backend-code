@@ -9,6 +9,7 @@ from backend.RainbowDQN.src.TrainProcessor import TrainProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.PrioReplayBuffer import PrioReplayBuffer
+from backend.Utils.src.StepBuffer import StepBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -39,9 +40,11 @@ def main():
 
     optimizer = torch.optim.Adam(behavior_net.parameters(), lr)
 
+    step_buffer = StepBuffer(factory, lookahead_n=3, gamma=gamma)
     buffer = PrioReplayBuffer(spec, max_buffer_size, batch_size)
 
-    collector = DataCollectionProcessor(behavior_net, env, buffer, EpsilonGreedyPolicy(epsilon), factory, device)
+    collector = DataCollectionProcessor(behavior_net, env, buffer, step_buffer, EpsilonGreedyPolicy(epsilon), factory,
+                                        device)
 
     train_process = TrainProcessor(buffer, behavior_net, target_net, optimizer, gamma, device, max_grad_norm)
 

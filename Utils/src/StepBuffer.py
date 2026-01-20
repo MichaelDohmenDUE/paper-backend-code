@@ -46,10 +46,11 @@ class StepBuffer(object):
     def flush_transitions(self) -> List[TransitionSpec]:
         out = []
         while len(self.buffer) > 0:
-            transition = self.push(self.buffer[0])
+            transition = self.push(self.buffer.popleft())
 
             if transition is not None:
                 out.append(transition)
             else:
                 self.buffer.popleft()
+        self.buffer.clear()
         return out
