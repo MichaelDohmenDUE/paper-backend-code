@@ -50,7 +50,7 @@ class PrioReplayBuffer:
                 raise ValueError(f"Transition missing field: {f}")
 
         idx = self.idx
-        self.idx = (self.idx + 1) % len(self.sum_tree.tree)
+        self.idx = (self.idx + 1) % self.max_buffer_size
         if len(self.buffer) < self.max_buffer_size:
             self.buffer.append(x)
         else:

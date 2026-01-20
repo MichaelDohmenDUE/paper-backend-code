@@ -2,11 +2,12 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+from backend.Utils.src.PrioReplayBuffer import PrioReplayBuffer
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
 class TrainProcessor:
-    def __init__(self, buffer: ReplayBuffer, behavior_net: nn.Module, target_net: nn.Module,
+    def __init__(self, buffer: PrioReplayBuffer, behavior_net: nn.Module, target_net: nn.Module,
                  optimizer: torch.optim.Optimizer, gamma: float,
                  device: torch.device, max_grad_norm: float = 10.0):
         self.buffer = buffer
@@ -22,12 +23,15 @@ class TrainProcessor:
             return
 
         batch = self.buffer.sample_batch()
+        tensors = batch["BatchTensor"]
+        indices = batch["Indices"]
+        weights = batch["Weights"].to(self.device)
 
-        states = batch["state"].to(self.device)
-        actions = batch["action"].long().to(self.device)
-        rewards = batch["reward"].to(self.device)
-        next_states = batch["next_state"].to(self.device)
-        dones = batch["done"].to(self.device)
+        states = tensors["state"].to(self.device)
+        actions = tensors["action"].long().to(self.device)
+        rewards = tensors["reward"].to(self.device)
+        next_states = tensors["next_state"].to(self.device)
+        dones = tensors["done"].to(self.device)
 
         qsa_behavior = self.behavior_net(states).gather(1, actions)
 
@@ -36,7 +40,8 @@ class TrainProcessor:
             q_next = self.target_net(next_states).gather(1, next_actions)
             target = rewards + self.gamma * q_next * (1.0 - dones)
 
-        loss = F.mse_loss(qsa_behavior, target)
+        td_error = qsa_behavior - targetd
+        loss = (weights.unsqueeze(1) * (td_error ** 2)).mean()
 
         self.optimizer.zero_grad()
         loss.backward()
@@ -44,3 +49,6 @@ class TrainProcessor:
         torch.nn.utils.clip_grad_norm_(self.behavior_net.parameters(), self.max_grad_norm)
 
         self.optimizer.step()
+        # Update Prios
+        new_priorities = td_error.detach().abs().cpu().numpy().flatten()
+        self.buffer.update_priorities(indices, new_priorities)
