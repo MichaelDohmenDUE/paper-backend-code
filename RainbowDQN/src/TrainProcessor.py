@@ -1,9 +1,7 @@
 import torch
-import torch.nn.functional as F
 from torch import nn
 
 from backend.Utils.src.PrioReplayBuffer import PrioReplayBuffer
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
 class TrainProcessor:

@@ -4,7 +4,7 @@ import torch
 
 from backend.CommonModels.src.DuellingDQN import DuellingDQN
 from backend.DQN.src.ActionHandler import EpsilonGreedyPolicy
-from backend.DQN.src.DataCollectionProcessor import DataCollectionProcessor
+from backend.RainbowDQN.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.RainbowDQN.src.TrainProcessor import TrainProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
