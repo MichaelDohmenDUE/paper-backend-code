@@ -40,7 +40,7 @@ class TrainProcessor:
             q_next = self.target_net(next_states).gather(1, next_actions)
             target = rewards + self.gamma * q_next * (1.0 - dones)
 
-        td_error = qsa_behavior - targetd
+        td_error = qsa_behavior - target
         loss = (weights.unsqueeze(1) * (td_error ** 2)).mean()
 
         self.optimizer.zero_grad()
