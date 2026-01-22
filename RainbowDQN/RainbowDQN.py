@@ -3,7 +3,7 @@ from copy import deepcopy
 import torch
 
 from backend.CommonModels.src.RainbowDuellingDQN import RainbowDuellingDQN
-from backend.DQN.src.ActionHandler import EpsilonGreedyPolicy
+from backend.RainbowDQN.src.ActionHandler import GreedyPolicy
 from backend.RainbowDQN.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.RainbowDQN.src.TrainProcessor import TrainProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
@@ -46,7 +46,7 @@ def main():
     step_buffer = StepBuffer(factory, lookahead_n=3, gamma=gamma)
     buffer = PrioReplayBuffer(spec, max_buffer_size, batch_size)
 
-    collector = DataCollectionProcessor(behavior_net, env, buffer, step_buffer, EpsilonGreedyPolicy(epsilon), factory,
+    collector = DataCollectionProcessor(behavior_net, env, buffer, step_buffer, GreedyPolicy(), factory,
                                         device, v_min, v_max, atoms_size)
 
     train_process = TrainProcessor(buffer, behavior_net, target_net, optimizer, gamma, device, v_min, v_max, atoms_size,

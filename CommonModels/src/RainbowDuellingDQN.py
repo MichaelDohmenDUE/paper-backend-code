@@ -36,5 +36,5 @@ class RainbowDuellingDQN(nn.Module):
 
     def reset_noise(self):
         for module in self.modules():
-            if hasattr(module, "reset_noise"):
+            if isinstance(module, NoisyLinearLayer):
                 module.reset_noise()

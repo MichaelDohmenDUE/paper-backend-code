@@ -82,6 +82,9 @@ class TrainProcessor:
         torch.nn.utils.clip_grad_norm_(self.behavior_net.parameters(), self.max_grad_norm)
 
         self.optimizer.step()
+        self.behavior_net.reset_noise()
+        self.target_net.reset_noise()
+
         # Update Prios
         new_priorities = loss_per_sample.detach().abs().cpu().numpy().flatten()
         self.buffer.update_priorities(indices, new_priorities)

@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from backend.DQN.src.ActionHandler import EpsilonGreedyPolicy
+from backend.RainbowDQN.src.ActionHandler import GreedyPolicy
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.PrioReplayBuffer import PrioReplayBuffer
@@ -10,7 +10,7 @@ from backend.Utils.src.StepBuffer import StepBuffer
 
 class DataCollectionProcessor:
     def __init__(self, policy: nn.Module, env: EnvironmentHandler, buffer: PrioReplayBuffer, step_buffer: StepBuffer,
-                 action_selector: EpsilonGreedyPolicy, transition_factory: TransitionFactory, device: torch.device,
+                 action_selector: GreedyPolicy, transition_factory: TransitionFactory, device: torch.device,
                  v_min: float, v_max: float, atoms: int) -> None:
         self.policy = policy
         self.env = env
@@ -44,6 +44,7 @@ class DataCollectionProcessor:
             self.episode_steps = 0
         with torch.no_grad():
             state_tensor = torch.tensor(self.state, dtype=torch.float32, device=self.device).unsqueeze(0)
+            self.policy.reset_noise()
             logits = self.policy(state_tensor)
             probs = torch.softmax(logits, dim=-1)
             support = torch.linspace(self.v_min, self.v_max, self.atoms, device=self.device)
