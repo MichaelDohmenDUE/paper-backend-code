@@ -2,6 +2,7 @@
 # which adapted from: https://github.com/openai/baselines/blob/master/baselines/common/segment_tree.py
 import numpy as np
 
+
 class SumSegmentTree:
     def __init__(self, capacity):
         self.capacity = capacity
@@ -33,6 +34,7 @@ class SumSegmentTree:
                 value -= self.tree[left]
                 idx = right
         return idx - (self.capacity - 1)
+
 
 class MinSegmentTree:
     def __init__(self, capacity):

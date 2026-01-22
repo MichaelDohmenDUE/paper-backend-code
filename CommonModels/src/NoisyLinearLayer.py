@@ -1,4 +1,3 @@
-
 """
 NoisyLinear Layer as in
 https://arxiv.org/pdf/1706.10295
@@ -8,6 +7,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
 
 class NoisyLinearLayer(nn.Module):
     def __init__(self, input_size: int, output_size: int):

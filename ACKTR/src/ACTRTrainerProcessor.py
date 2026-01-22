@@ -1,6 +1,4 @@
 import torch
-from torch import nn
-import numpy as np
 
 from backend.Utils.src.utils import compute_gae
 

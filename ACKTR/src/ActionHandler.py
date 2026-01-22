@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-from torch import nn
 
 from backend.AbstractHandlers.AbstractActionHandler import AbstractActionHandler
 
@@ -20,4 +19,5 @@ class ActionHandler(AbstractActionHandler):
             logp = dist.log_prob(action).sum(-1)
             entropy = dist.entropy().sum(-1)
             value = self.critic(state_t).squeeze(-1)
-        return action.cpu().numpy().squeeze(0), float(logp.cpu().numpy()), float(entropy.cpu().numpy()), float(value.cpu().numpy())
+        return action.cpu().numpy().squeeze(0), float(logp.cpu().numpy()), float(entropy.cpu().numpy()), float(
+            value.cpu().numpy())

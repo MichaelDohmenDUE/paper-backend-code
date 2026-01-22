@@ -1,4 +1,5 @@
 import torch.nn as nn
+
 from backend.CommonModels.src.NoisyLinearLayer import NoisyLinearLayer
 
 
@@ -7,7 +8,7 @@ class RainbowDuellingDQN(nn.Module):
     https://arxiv.org/abs/1710.02298
     """
 
-    def __init__(self, observation_size: int, hidden_size: int, action_size: int, atoms_size:int):
+    def __init__(self, observation_size: int, hidden_size: int, action_size: int, atoms_size: int):
         self.atoms_size = atoms_size
         self.action_size = action_size
         super(RainbowDuellingDQN, self).__init__()

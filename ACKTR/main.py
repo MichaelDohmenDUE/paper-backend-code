@@ -1,11 +1,11 @@
 import torch
-from backend.ACKTR.src.KFAC import KFACOptimizer
 
-from backend.CommonModels.src.ActorPPO import ActorPPO
-from backend.CommonModels.src.CriticPPO import CriticPPO
+from backend.ACKTR.src.ACTRTrainerProcessor import ACKTRTrainerProcessor
 from backend.ACKTR.src.ActionHandler import ActionHandler
 from backend.ACKTR.src.DataCollectionProcessor import DataCollectionProcessor
-from backend.ACKTR.src.ACTRTrainerProcessor import ACKTRTrainerProcessor
+from backend.ACKTR.src.KFAC import KFACOptimizer
+from backend.CommonModels.src.ActorPPO import ActorPPO
+from backend.CommonModels.src.CriticPPO import CriticPPO
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
@@ -60,7 +60,8 @@ def main():
 
     replay_buffer = ReplayBuffer(spec, max_buffer_size=rollout_size, batch_size=batch_size)
 
-    trainer = ACKTRTrainerProcessor(actor, critic, optimizer_actor, optimizer_critic, replay_buffer, batch_size, epochs, gamma=gamma, lam=lam)
+    trainer = ACKTRTrainerProcessor(actor, critic, optimizer_actor, optimizer_critic, replay_buffer, batch_size, epochs,
+                                    gamma=gamma, lam=lam)
 
     data_collector = DataCollectionProcessor(env_handler, transition_factory, replay_buffer, rollout_size,
                                              action_handler)

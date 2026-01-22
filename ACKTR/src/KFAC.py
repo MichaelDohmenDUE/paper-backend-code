@@ -2,7 +2,8 @@ import torch
 from torch.optim import Optimizer
 
 
-class KFACOptimizer(Optimizer): #TODO: implement or import this, importing is more difficult than expected on a modern python system
+class KFACOptimizer(
+    Optimizer):  # TODO: implement or import this, importing is more difficult than expected on a modern python system
     def __init__(self, model, lr=1e-3):
         defaults = dict(lr=lr)
         super().__init__(model.parameters(), defaults)

@@ -3,7 +3,6 @@ from collections import deque
 from typing import Any, Iterable
 
 import torch
-from torch.fft import Tensor
 
 from backend.Utils.src.BatchTransitioner import TransitionBatch, TransitionSpec
 from backend.Utils.src.SumSegmentTree import SumSegmentTree, MinSegmentTree
