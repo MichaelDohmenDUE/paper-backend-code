@@ -8,6 +8,7 @@ class OUNoise:
         self.sigma = sigma
         self.device = device
         self.action_dim = action_dim
+        self.state = torch.zeros(self.action_dim, device=self.device)
         self.reset()
 
     def reset(self):

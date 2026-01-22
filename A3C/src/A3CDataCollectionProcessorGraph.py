@@ -15,8 +15,12 @@ class A3CDataCollectionProcessor:
         self.gamma = gamma
 
         self.beta = 0.99
+        self.state = self.env.reset()
+        self.done = False
         self.avg_reward = 0.0
         self.episode_count = 0
+        self.episode_reward = 0.0
+        self.episode_timesteps = 0
 
         self.graph = Graph(build_a3c_rollout_graph())
 

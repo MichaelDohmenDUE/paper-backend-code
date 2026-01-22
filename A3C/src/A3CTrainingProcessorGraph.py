@@ -23,7 +23,7 @@ class A3CTrainingProcessor:
 
     def run(self, rollout):
         if len(rollout) == 0:
-            return
+            return None
 
         last_tr = rollout[-1]
 
