@@ -19,7 +19,7 @@ class TrainProcessor:
         self.v_min = v_min
         self.v_max = v_max
         self.atoms_size = atoms_size
-        self.delta_z = (v_max - v_max) / (atoms_size - 1)
+        self.delta_z = (v_max - v_min) / (atoms_size - 1)
         self.support = torch.linspace(v_min, v_max, atoms_size).to(device)
 
     def run(self):

@@ -45,7 +45,6 @@ class DataCollectionProcessor:
         with torch.no_grad():
             state_tensor = torch.tensor(self.state, dtype=torch.float32, device=self.device).unsqueeze(0)
             logits = self.policy(state_tensor)
-            logits = logits - logits.max(dim=-1, keepdim=True).values # Subtract max or Rollouts become unstable for a v_max of 500
             probs = torch.softmax(logits, dim=-1)
             support = torch.linspace(self.v_min, self.v_max, self.atoms, device=self.device)
             q_values = (probs * support).sum(dim=-1).squeeze(0)
