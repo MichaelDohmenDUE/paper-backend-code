@@ -5,13 +5,13 @@ from backend.DQN.src.ActionHandler import EpsilonGreedyPolicy
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.PrioReplayBuffer import PrioReplayBuffer
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.StepBuffer import StepBuffer
 
 
 class DataCollectionProcessor:
     def __init__(self, policy: nn.Module, env: EnvironmentHandler, buffer: PrioReplayBuffer, step_buffer: StepBuffer,
-                 action_selector: EpsilonGreedyPolicy, transition_factory: TransitionFactory, device: torch.device):
+                 action_selector: EpsilonGreedyPolicy, transition_factory: TransitionFactory, device: torch.device,
+                 v_min: float, v_max: float, atoms: int) -> None:
         self.policy = policy
         self.env = env
         self.step_buffer = step_buffer
@@ -21,6 +21,9 @@ class DataCollectionProcessor:
         self.action_selector = action_selector
         self.transition_factory = transition_factory
         self.device = device
+        self.v_min = v_min
+        self.v_max = v_max
+        self.atoms = atoms
 
         self.episode_count = 0
         self.episode_reward = 0.0
@@ -42,8 +45,9 @@ class DataCollectionProcessor:
         with torch.no_grad():
             state_tensor = torch.tensor(self.state, dtype=torch.float32, device=self.device).unsqueeze(0)
             logits = self.policy(state_tensor)
+            logits = logits - logits.max(dim=-1, keepdim=True).values # Subtract max or Rollouts become unstable for a v_max of 500
             probs = torch.softmax(logits, dim=-1)
-            support = torch.linspace(-10, 10, 51, device=self.device)
+            support = torch.linspace(self.v_min, self.v_max, self.atoms, device=self.device)
             q_values = (probs * support).sum(dim=-1).squeeze(0)
         action = self.action_selector.select_action(q_values=q_values)
         next_state, reward, done, done_bool = self.env.step(action.item(), self.episode_steps)

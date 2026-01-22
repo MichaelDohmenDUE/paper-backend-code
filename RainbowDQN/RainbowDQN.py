@@ -2,7 +2,6 @@ from copy import deepcopy
 
 import torch
 
-from backend.CommonModels.src.DuellingDQN import DuellingDQN
 from backend.CommonModels.src.RainbowDuellingDQN import RainbowDuellingDQN
 from backend.DQN.src.ActionHandler import EpsilonGreedyPolicy
 from backend.RainbowDQN.src.DataCollectionProcessor import DataCollectionProcessor
@@ -30,6 +29,8 @@ def main():
     seed = 42
     lr = 5e-4
     max_grad_norm = 10.0
+    v_min = 0  # TODO: Change this specific value later for stuff outside CartPole
+    v_max = 500  # Change this specific value later for stuff outside CartPole
 
     spec = TransitionSpec(["state", "action", "reward", "next_state", "done"])
     factory = TransitionFactory(spec)
@@ -46,15 +47,16 @@ def main():
     buffer = PrioReplayBuffer(spec, max_buffer_size, batch_size)
 
     collector = DataCollectionProcessor(behavior_net, env, buffer, step_buffer, EpsilonGreedyPolicy(epsilon), factory,
-                                        device)
+                                        device, v_min, v_max, atoms_size)
 
-    train_process = TrainProcessor(buffer, behavior_net, target_net, optimizer, gamma, device, max_grad_norm)
+    train_process = TrainProcessor(buffer, behavior_net, target_net, optimizer, gamma, device, v_min, v_max, atoms_size,
+                                   max_grad_norm)
 
     sync_process = SyncProcessor(behavior_net, target_net, tau, sync_freq)
 
     for step in range(max_steps):
         collector.run()
-        train_process.run()
+        #train_process.run()
         sync_process.run()
 
 

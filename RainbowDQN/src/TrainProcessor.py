@@ -7,7 +7,8 @@ from backend.Utils.src.PrioReplayBuffer import PrioReplayBuffer
 class TrainProcessor:
     def __init__(self, buffer: PrioReplayBuffer, behavior_net: nn.Module, target_net: nn.Module,
                  optimizer: torch.optim.Optimizer, gamma: float,
-                 device: torch.device, max_grad_norm: float = 10.0):
+                 device: torch.device,
+                 v_min: float, v_max: float, atoms_size: int, max_grad_norm: float = 10.0):
         self.buffer = buffer
         self.behavior_net = behavior_net
         self.target_net = target_net
@@ -15,8 +16,11 @@ class TrainProcessor:
         self.gamma = gamma
         self.device = device
         self.max_grad_norm = max_grad_norm
-        self.delta_z = (10 - (-10)) / (51 - 1)
-        self.support = torch.linspace(-10, 10, 51).to(device)
+        self.v_min = v_min
+        self.v_max = v_max
+        self.atoms_size = atoms_size
+        self.delta_z = (v_max - v_max) / (atoms_size - 1)
+        self.support = torch.linspace(v_min, v_max, atoms_size).to(device)
 
     def run(self):
         if len(self.buffer) < self.buffer.batch_size:
@@ -36,7 +40,7 @@ class TrainProcessor:
         logits = self.behavior_net(states)
         log_probs = torch.log_softmax(logits, dim=-1)
 
-        actions_expanded = actions.unsqueeze(-1).expand(-1, 1, 51)
+        actions_expanded = actions.unsqueeze(-1).expand(-1, 1, self.atoms_size)
         log_probs_a = log_probs.gather(1, actions_expanded).squeeze(1)
 
         with torch.no_grad():
@@ -47,18 +51,18 @@ class TrainProcessor:
 
             target_logits = self.target_net(next_states)
             target_probs = torch.softmax(target_logits, dim=-1)
-            next_actions_expanded = next_actions.unsqueeze(-1).expand(-1, 1, 51)
+            next_actions_expanded = next_actions.unsqueeze(-1).expand(-1, 1, self.atoms_size)
             target_dist = target_probs.gather(1, next_actions_expanded).squeeze(1)
 
             Tz = rewards + (1 - dones) * self.gamma * self.support.view(1, -1)
-            Tz = Tz.clamp(-10, 10)
+            Tz = Tz.clamp(self.v_min, self.v_max)
 
-            b = (Tz - (-10)) / self.delta_z
+            b = (Tz - self.v_min) / self.delta_z
             l = b.floor().long()
             u = b.ceil().long()
 
-            l = l.clamp(0, 51 - 1)
-            u = u.clamp(0, 51 - 1)
+            l = l.clamp(0, self.atoms_size - 1)
+            u = u.clamp(0, self.atoms_size - 1)
 
             proj_dist = torch.zeros_like(target_dist)
 
