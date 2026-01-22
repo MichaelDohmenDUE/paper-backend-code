@@ -54,7 +54,7 @@ def main():
 
     for step in range(max_steps):
         collector.run()
-        #train_process.run()
+        train_process.run()
         sync_process.run()
 
 

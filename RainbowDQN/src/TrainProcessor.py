@@ -15,6 +15,8 @@ class TrainProcessor:
         self.gamma = gamma
         self.device = device
         self.max_grad_norm = max_grad_norm
+        self.delta_z = (10 - (-10)) / (51 - 1)
+        self.support = torch.linspace(-10, 10, 51).to(device)
 
     def run(self):
         if len(self.buffer) < self.buffer.batch_size:
@@ -31,15 +33,44 @@ class TrainProcessor:
         next_states = tensors["next_state"].to(self.device)
         dones = tensors["done"].to(self.device)
 
-        qsa_behavior = self.behavior_net(states).gather(1, actions)
+        logits = self.behavior_net(states)
+        log_probs = torch.log_softmax(logits, dim=-1)
+
+        actions_expanded = actions.unsqueeze(-1).expand(-1, 1, 51)
+        log_probs_a = log_probs.gather(1, actions_expanded).squeeze(1)
 
         with torch.no_grad():
-            next_actions = self.behavior_net(next_states).argmax(dim=1, keepdim=True)
-            q_next = self.target_net(next_states).gather(1, next_actions)
-            target = rewards + self.gamma * q_next * (1.0 - dones)
+            next_logits = self.behavior_net(next_states)
+            next_probs = torch.softmax(next_logits, dim=-1)
+            q_next = (next_probs * self.support).sum(dim=-1)
+            next_actions = q_next.argmax(dim=1, keepdim=True)
 
-        td_error = qsa_behavior - target
-        loss = (weights.unsqueeze(1) * (td_error ** 2)).mean()
+            target_logits = self.target_net(next_states)
+            target_probs = torch.softmax(target_logits, dim=-1)
+            next_actions_expanded = next_actions.unsqueeze(-1).expand(-1, 1, 51)
+            target_dist = target_probs.gather(1, next_actions_expanded).squeeze(1)
+
+            Tz = rewards + (1 - dones) * self.gamma * self.support.view(1, -1)
+            Tz = Tz.clamp(-10, 10)
+
+            b = (Tz - (-10)) / self.delta_z
+            l = b.floor().long()
+            u = b.ceil().long()
+
+            l = l.clamp(0, 51 - 1)
+            u = u.clamp(0, 51 - 1)
+
+            proj_dist = torch.zeros_like(target_dist)
+
+            offset = (u.float() - b)
+            proj_dist.scatter_add_(1, l, target_dist * offset)
+
+            offset = (b - l.float())
+            proj_dist.scatter_add_(1, u, target_dist * offset)
+
+        proj_dist = proj_dist.clamp(min=1e-6)
+        loss_per_sample = -(proj_dist * log_probs_a).sum(dim=-1)
+        loss = (weights * loss_per_sample).mean()
 
         self.optimizer.zero_grad()
         loss.backward()
@@ -48,5 +79,5 @@ class TrainProcessor:
 
         self.optimizer.step()
         # Update Prios
-        new_priorities = td_error.detach().abs().cpu().numpy().flatten()
+        new_priorities = loss_per_sample.detach().abs().cpu().numpy().flatten()
         self.buffer.update_priorities(indices, new_priorities)
