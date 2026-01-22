@@ -41,7 +41,10 @@ class DataCollectionProcessor:
             self.episode_steps = 0
         with torch.no_grad():
             state_tensor = torch.tensor(self.state, dtype=torch.float32, device=self.device).unsqueeze(0)
-            q_values = self.policy(state_tensor).squeeze(0)
+            logits = self.policy(state_tensor)
+            probs = torch.softmax(logits, dim=-1)
+            support = torch.linspace(-10, 10, 51, device=self.device)
+            q_values = (probs * support).sum(dim=-1).squeeze(0)
         action = self.action_selector.select_action(q_values=q_values)
         next_state, reward, done, done_bool = self.env.step(action.item(), self.episode_steps)
         self.done = done
