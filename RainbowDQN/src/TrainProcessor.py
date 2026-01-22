@@ -27,9 +27,10 @@ class TrainProcessor:
             return
 
         batch = self.buffer.sample_batch()
-        tensors = batch["BatchTensor"]
-        indices = batch["Indices"]
-        weights = batch["Weights"].to(self.device)
+        tensors: dict= batch["BatchTensor"]
+        indices: torch.Tensor = batch["Indices"]
+        weight: torch.Tensor = batch["Weights"]
+        weights = weight.to(self.device)
 
         states = tensors["state"].to(self.device)
         actions = tensors["action"].long().to(self.device)

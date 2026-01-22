@@ -3,6 +3,7 @@ from collections import deque
 from typing import Any, Iterable
 
 import torch
+from torch.fft import Tensor
 
 from backend.Utils.src.BatchTransitioner import TransitionBatch, TransitionSpec
 from backend.Utils.src.SumSegmentTree import SumSegmentTree, MinSegmentTree
@@ -77,14 +78,14 @@ class PrioReplayBuffer:
 
         return transitions, indices
 
-    def sample_batch(self) -> dict[str, torch.Tensor]:
+    def sample_batch(self) -> dict[str, dict | torch.Tensor]:
         transitions, indices = self.sample()
 
         total = self.sum_tree.total()
         probs = torch.tensor([self.sum_tree.tree[idx + self.sum_tree.capacity - 1] / total for idx in indices],
                              dtype=torch.float32)
 
-        weights = (len(self.buffer) * probs) ** (-self.beta)
+        weights: torch.Tensor = (len(self.buffer) * probs) ** (-self.beta)
         weights /= weights.max()
 
         self.beta = min(1.0, self.beta + self.beta_increment)
