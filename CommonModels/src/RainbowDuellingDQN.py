@@ -1,4 +1,5 @@
 import torch.nn as nn
+from backend.CommonModels.src.NoisyLinearLayer import NoisyLinearLayer
 
 
 class RainbowDuellingDQN(nn.Module):
@@ -11,18 +12,18 @@ class RainbowDuellingDQN(nn.Module):
         self.action_size = action_size
         super(RainbowDuellingDQN, self).__init__()
         self.common = nn.Sequential(
-            nn.Linear(observation_size, hidden_size),
+            NoisyLinearLayer(observation_size, hidden_size),
             nn.ReLU()
         )
         self.state_value = nn.Sequential(
-            nn.Linear(hidden_size, hidden_size),
+            NoisyLinearLayer(hidden_size, hidden_size),
             nn.ReLU(),
-            nn.Linear(hidden_size, atoms_size)
+            NoisyLinearLayer(hidden_size, atoms_size)
         )
         self.advantage = nn.Sequential(
-            nn.Linear(hidden_size, hidden_size),
+            NoisyLinearLayer(hidden_size, hidden_size),
             nn.ReLU(),
-            nn.Linear(hidden_size, action_size * atoms_size)
+            NoisyLinearLayer(hidden_size, action_size * atoms_size)
         )
 
     def forward(self, x):
@@ -32,3 +33,8 @@ class RainbowDuellingDQN(nn.Module):
         advantage = self.advantage(x).view(batch_size, self.action_size, self.atoms_size)
         q_values = value + advantage - advantage.mean(dim=1, keepdim=True)
         return q_values
+
+    def reset_noise(self):
+        for module in self.modules():
+            if hasattr(module, "reset_noise"):
+                module.reset_noise()
