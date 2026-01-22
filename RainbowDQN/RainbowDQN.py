@@ -3,6 +3,7 @@ from copy import deepcopy
 import torch
 
 from backend.CommonModels.src.DuellingDQN import DuellingDQN
+from backend.CommonModels.src.RainbowDuellingDQN import RainbowDuellingDQN
 from backend.DQN.src.ActionHandler import EpsilonGreedyPolicy
 from backend.RainbowDQN.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.RainbowDQN.src.TrainProcessor import TrainProcessor
@@ -21,6 +22,7 @@ def main():
     sync_freq = 40
     hidden_size = 128
     batch_size = 64
+    atoms_size = 51
     max_buffer_size = 1000000
     tau = 1.0
     gamma = 0.99
@@ -35,7 +37,7 @@ def main():
     env = EnvironmentHandler(env_name, seed)
     obs_size, action_size, _ = env.get_env_specs()
 
-    behavior_net = DuellingDQN(obs_size, hidden_size, action_size).to(device)
+    behavior_net = RainbowDuellingDQN(obs_size, hidden_size, action_size, atoms_size).to(device)
     target_net = deepcopy(behavior_net).to(device)
 
     optimizer = torch.optim.Adam(behavior_net.parameters(), lr)
