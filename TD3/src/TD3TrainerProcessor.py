@@ -38,6 +38,11 @@ class TrainProcessor:
         self.replay_buffer = replay_buffer
         self.device = device
 
+    def bellman(self, target_Q1, target_Q2, reward, valid_transition):
+        target_Q = torch.min(target_Q1, target_Q2)
+        target_Q = reward + valid_transition * self.discount_factor * target_Q
+        return target_Q
+
     def run(self):
         if self.global_timestep >= self.start_timesteps:
             self.train()
@@ -59,8 +64,7 @@ class TrainProcessor:
             target_Q1 = self.critic_target_1(next_state, next_action)
             target_Q2 = self.critic_target_2(next_state, next_action)
 
-            target_Q = torch.min(target_Q1, target_Q2)
-            target_Q = reward + valid_transition * self.discount_factor * target_Q
+            target_Q = self.bellman(target_Q1, target_Q2, reward, valid_transition)
 
         current_Q1 = self.critic_1(state, action)
         current_Q2 = self.critic_2(state, action)
