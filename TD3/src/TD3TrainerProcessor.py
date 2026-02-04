@@ -54,7 +54,7 @@ class TrainProcessor:
     def run(self):
         if self.global_timestep >= self.start_timesteps:
             self.train()
-        self.global_timestep += 1
+        self.global_timestep += 1 # TODO: Double Check this, this looks wrong still
 
     def train(self):
         batch = self.replay_buffer.sample_batch()
