@@ -51,8 +51,8 @@ class Graph:
         # Check for Duplicate Node Outputs
         for node in self.nodes:
             for output in node.outputs:
-                if output in all_outputs:
-                    print(f"Warning: '{output}' overwritten by node {node.name}")
+                #if output in all_outputs:
+                #   print(f"Warning: '{output}' overwritten by node {node.name}")
                 all_outputs.add(output)
         # Check for missing inputs
         for node in self.nodes:

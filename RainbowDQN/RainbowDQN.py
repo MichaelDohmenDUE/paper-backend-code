@@ -16,7 +16,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def main():
-    env_name = "MountainCar-v0"
+    env_name = "CartPole-v1"
     sync_freq = 40
     hidden_size = 128
     batch_size = 64
@@ -28,8 +28,8 @@ def main():
     seed = 42
     lr = 5e-4
     max_grad_norm = 10.0
-    v_min: int = -200  # dependent on used environment, so be careful
-    v_max: int = 0
+    v_min: int = 0  # dependent on used environment, so be careful
+    v_max: int = 500
 
     spec = TransitionSpec(["state", "action", "reward", "next_state", "done"])
     factory = TransitionFactory(spec)

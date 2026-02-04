@@ -54,7 +54,7 @@ def main():
     optimizer_critic_1 = optim.Adam(critic_1.parameters(), lr=learning_rate)
     optimizer_critic_2 = optim.Adam(critic_2.parameters(), lr=learning_rate)
 
-    action_handler = ActionHandler(actor, action_size, max_action, expl_noise, start_timesteps, device)
+    action_handler = ActionHandler(actor, action_size, max_action, expl_noise, noise_clip, start_timesteps, device)
     replay_buffer = ReplayBuffer(spec=spec, max_buffer_size=buffer_size, batch_size=batch_size)
 
     trainer = TrainProcessor(
