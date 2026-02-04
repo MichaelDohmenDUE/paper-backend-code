@@ -38,10 +38,18 @@ class TrainProcessor:
         self.replay_buffer = replay_buffer
         self.device = device
 
-    def bellman(self, target_Q1, target_Q2, reward, valid_transition):
+    def bellman(self, target_Q1: torch.Tensor, target_Q2: torch.Tensor, reward: torch.Tensor,
+                valid_transition: torch.Tensor):
         target_Q = torch.min(target_Q1, target_Q2)
         target_Q = reward + valid_transition * self.discount_factor * target_Q
         return target_Q
+
+    def update_actor(self, state)-> None:
+        if self.global_timestep % self.syncro_frequency == 0:
+            actor_loss = -self.critic_1(state, self.actor(state)).mean()
+            self.optimizer_actor.zero_grad()
+            actor_loss.backward()
+            self.optimizer_actor.step()
 
     def run(self):
         if self.global_timestep >= self.start_timesteps:
@@ -80,9 +88,4 @@ class TrainProcessor:
         critic_loss_2.backward()
         self.optimizer_critic_2.step()
 
-        if self.global_timestep % self.syncro_frequency == 0:
-            actor_loss = -self.critic_1(state, self.actor(state)).mean()
-
-            self.optimizer_actor.zero_grad()
-            actor_loss.backward()
-            self.optimizer_actor.step()
+        self.update_actor(state)
