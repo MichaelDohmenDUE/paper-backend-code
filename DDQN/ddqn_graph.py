@@ -14,5 +14,5 @@ def build_ddqn_graph():
         NL.compute_qsa_target(),
         NL.compute_ddqn_target(),
         NL.compute_mse_loss(),
-        NL.optimizer_step(),
+        NL.optimizer_update(),
     ]

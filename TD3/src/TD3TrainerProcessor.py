@@ -2,8 +2,10 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+from backend.Utils.src.NodeLib.NodeLibrary import *
+from backend.Utils.src.NodeLib.NodeLibrary import bellman
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
-from backend.Utils.src.NodeLib.NodeLibrary import NodeLibrary
+
 
 class TrainProcessor:
     """
@@ -38,17 +40,15 @@ class TrainProcessor:
         self.replay_buffer = replay_buffer
         self.device = device
 
-    def update_actor(self, state) -> None:
+    def update_actor(self, state: torch.Tensor) -> None:
         if self.global_timestep % self.syncro_frequency == 0:
             actor_loss = -self.critic_1(state, self.actor(state)).mean()
-            self.optimizer_actor.zero_grad()
-            actor_loss.backward()
-            self.optimizer_actor.step()
+            optimizer_update(optimizer=self.optimizer_critic_1, loss=actor_loss)
 
     def run(self):
         if self.global_timestep >= self.start_timesteps:
             self.train()
-        self.global_timestep += 1 # TODO: Double Check this, this looks wrong still
+        self.global_timestep += 1  # TODO: Double Check this, this looks wrong still
 
     def train(self):
         batch = self.replay_buffer.sample_batch()
@@ -66,7 +66,7 @@ class TrainProcessor:
             target_Q2 = self.critic_target_2(next_state, next_action)
 
             target_Q = torch.min(target_Q1, target_Q2)
-            target_Q = NodeLibrary.bellman(target_Q, reward, done, self.discount_factor)
+            target_Q = bellman(target_Q, reward, done, self.discount_factor)
 
         current_Q1 = self.critic_1(state, action)
         current_Q2 = self.critic_2(state, action)
@@ -74,12 +74,7 @@ class TrainProcessor:
         critic_loss_1 = F.mse_loss(current_Q1, target_Q)
         critic_loss_2 = F.mse_loss(current_Q2, target_Q)
 
-        self.optimizer_critic_1.zero_grad()
-        critic_loss_1.backward()
-        self.optimizer_critic_1.step()
-
-        self.optimizer_critic_2.zero_grad()
-        critic_loss_2.backward()
-        self.optimizer_critic_2.step()
+        optimizer_update(optimizer=self.optimizer_critic_1, loss=critic_loss_1)
+        optimizer_update(optimizer=self.optimizer_critic_2, loss=critic_loss_2)
 
         self.update_actor(state)

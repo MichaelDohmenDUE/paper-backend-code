@@ -17,5 +17,5 @@ def build_dueling_ddqn_graph():
         NL.compute_ddqn_target(),
 
         NL.compute_huber_loss(),
-        NL.optimizer_step(),
+        NL.optimizer_update(),
     ]

@@ -9,6 +9,14 @@ def bellman(target_Q: torch.Tensor, reward: torch.Tensor, done: torch.Tensor, di
     target_Q = reward + valid_transition * discount_factor * target_Q
     return target_Q
 
+def optimizer_update(optimizer: torch.optim.Optimizer, loss: torch.Tensor) -> torch.Tensor:
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+    return loss
+
+
+
 class NodeLibrary:
 
     @staticmethod
@@ -152,10 +160,10 @@ class NodeLibrary:
         )
 
     @staticmethod
-    def optimizer_step():
+    def optimizer_update():
         return Node(
-            name="optimizer_step",
-            function=lambda optimizer, loss: (optimizer.zero_grad(), loss.backward(), optimizer.step(), loss)[-1],
+            name="optimizer_update",
+            function=optimizer_update,
             inputs=["optimizer", "loss"],
             outputs=["loss"]
         )
