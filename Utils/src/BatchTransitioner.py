@@ -32,7 +32,7 @@ class TransitionBatch:
     def __init__(self, transitions, spec: TransitionSpec):
         self.fields = spec.fields
         self.data = {
-            f: [getattr(t, f) for t in transitions]
+            f: self.preprocess([getattr(t, f) for t in transitions])
             for f in self.fields
         }
 
@@ -65,5 +65,10 @@ class TransitionBatch:
     def to_tensors(self):
         return {k: self.preprocess(v) for k, v in self.data.items()}
 
+    def to(self, device):
+        for idx in self.data:
+            self.data[idx] = self.data[idx].to(device)
+        return self
+
     def unpack(self):
-        return tuple(self.to_tensors()[field] for field in self.fields)
+        return tuple(self.data[field] for field in self.fields)
