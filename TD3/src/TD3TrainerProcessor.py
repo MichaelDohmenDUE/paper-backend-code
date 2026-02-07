@@ -43,7 +43,7 @@ class TrainProcessor:
     def update_actor(self, state: torch.Tensor) -> None:
         if self.global_timestep % self.syncro_frequency == 0:
             actor_loss = -self.critic_1(state, self.actor(state)).mean()
-            optimizer_update(optimizer=self.optimizer_critic_1, loss=actor_loss)
+            optimizer_update(optimizer=self.optimizer_actor, loss=actor_loss)
 
     def run(self):
         if self.global_timestep >= self.start_timesteps:
