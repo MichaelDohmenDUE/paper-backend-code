@@ -11,6 +11,7 @@ from backend.TD3.src.TD3TrainerProcessor import TrainProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.EvaluationHelper import eval_trainer
+from backend.Utils.src.GlobalCounter import GlobalCounter
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
 
@@ -58,6 +59,8 @@ def main():
     action_handler = ActionHandler(actor, action_size, max_action, expl_noise, noise_clip, start_timesteps, device)
     replay_buffer = ReplayBuffer(spec=spec, max_buffer_size=buffer_size, batch_size=batch_size)
 
+    gl_counter = GlobalCounter()
+
     trainer = TrainProcessor(
         actor=actor,
         actor_target=actor_target,
@@ -69,6 +72,7 @@ def main():
         optimizer_critic_2=optimizer_critic_2,
         optimizer_actor=optimizer_actor,
         replay_buffer=replay_buffer,
+        global_counter=gl_counter,
         max_action=max_action,
         learning_rate=learning_rate,
         start_timesteps=start_timesteps,
@@ -78,11 +82,11 @@ def main():
         device=device,
     )
 
-    datacollector = DataCollectionProcessor(env_handler, action_handler, transition_factory, replay_buffer)
+    datacollector = DataCollectionProcessor(env_handler, action_handler, transition_factory, replay_buffer, gl_counter)
 
-    sync_process_critic_1 = SyncProcessor(critic_1, critic_target_1, tau, sync_freq)
-    sync_process_critic_2 = SyncProcessor(critic_2, critic_target_2, tau, sync_freq)
-    sync_process_actor = SyncProcessor(actor, actor_target, tau, sync_freq)
+    sync_process_critic_1 = SyncProcessor(critic_1, critic_target_1, tau, sync_freq, gl_counter)
+    sync_process_critic_2 = SyncProcessor(critic_2, critic_target_2, tau, sync_freq, gl_counter)
+    sync_process_actor = SyncProcessor(actor, actor_target, tau, sync_freq, gl_counter)
 
     evaluations = [eval_trainer(trainer, env_handler)]
 

@@ -1,12 +1,14 @@
 from backend.TD3.src.ActionHandler import ActionHandler
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
+from backend.Utils.src.GlobalCounter import GlobalCounter
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
 class DataCollectionProcessor:
     def __init__(self, env_handler: EnvironmentHandler, action_handler: ActionHandler,
-                 transition_factory: TransitionFactory, replay_buffer: ReplayBuffer):
+                 transition_factory: TransitionFactory, replay_buffer: ReplayBuffer,
+                 global_counter: GlobalCounter):
         self.env = env_handler
         self.action_handler = action_handler
         self.factory = transition_factory
@@ -16,10 +18,10 @@ class DataCollectionProcessor:
         self.episode_reward = 0
         self.episode_timesteps = 0
         self.episode_num = 0
-        self.global_timestep = 0
+        self.global_counter = global_counter
 
     def run(self):
-        action = self.action_handler.select_action(self.state, self.global_timestep)
+        action = self.action_handler.select_action(self.state, self.global_counter.get())
         self.episode_timesteps += 1
         next_state, reward, done_env, done_bool = self.env.step(action, episode_timesteps=self.episode_timesteps)
 
@@ -41,6 +43,6 @@ class DataCollectionProcessor:
             self.episode_timesteps = 0
             self.episode_num += 1
 
-        self.global_timestep += 1
+        self.global_counter.set(self.global_counter.get() + 1)
 
         return transition

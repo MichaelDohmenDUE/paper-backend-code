@@ -1,22 +1,26 @@
+from backend.Utils.src.GlobalCounter import GlobalCounter
 import torch
 from torch import nn
 
 
 class SyncProcessor:
-    def __init__(self, from_net: nn.Module, to_net: nn.Module, tau: float, sync_freq: int):
+    def __init__(self, from_net: nn.Module, to_net: nn.Module, tau: float, sync_freq: int, gl_counter = None):
         self.from_net = from_net
         self.to_net = to_net
         self.tau = tau
-        self.counter = 0
+        self.local_counter = 0
         self.sync_freq = sync_freq
+        self.gl_counter = gl_counter
 
     def run(self) -> None:
-        if self.counter % self.sync_freq == 0:
+        counter = self.gl_counter.get() if self.gl_counter is not None else self.local_counter
+        if counter % self.sync_freq == 0:
             if self.tau == 1.0:
                 self.hard_sync()
             else:
                 self.soft_sync()
-        self.counter += 1
+        if self.gl_counter is None:
+            self.local_counter += 1
 
     def hard_sync(self):
         self.to_net.load_state_dict(self.from_net.state_dict())

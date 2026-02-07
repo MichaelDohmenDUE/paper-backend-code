@@ -1,3 +1,4 @@
+from backend.Utils.src.GlobalCounter import GlobalCounter
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -17,7 +18,8 @@ class TrainProcessor:
                  optimizer_critic_1: torch.optim.Optimizer, optimizer_critic_2: torch.optim.Optimizer,
                  optimizer_actor: torch.optim.Optimizer,
                  actor_target: nn.Module, critic_target_1: nn.Module, critic_target_2: nn.Module,
-                 replay_buffer: ReplayBuffer, max_action: float, learning_rate: float, noise_clip: float,
+                 replay_buffer: ReplayBuffer, global_counter: GlobalCounter, max_action: float, learning_rate: float,
+                 noise_clip: float,
                  policy_noise, start_timesteps=25000, synchro_frequency: int = 2, discount_factor: float = 0.99,
                  device: torch.device = torch.device("cpu")):
         self.max_action = max_action
@@ -26,7 +28,7 @@ class TrainProcessor:
         self.policy_noise = policy_noise
         self.syncro_frequency = synchro_frequency
         self.discount_factor = discount_factor
-        self.global_timestep = 0
+        self.global_counter = global_counter
         self.start_timesteps = start_timesteps
         self.actor = actor
         self.critic_1 = critic_1
@@ -41,14 +43,13 @@ class TrainProcessor:
         self.device = device
 
     def update_actor(self, state: torch.Tensor) -> None:
-        if self.global_timestep % self.syncro_frequency == 0:
+        if self.global_counter.get() % self.syncro_frequency == 0:
             actor_loss = -self.critic_1(state, self.actor(state)).mean()
             optimizer_update(optimizer=self.optimizer_actor, loss=actor_loss)
 
     def run(self):
-        if self.global_timestep >= self.start_timesteps:
+        if self.global_counter.get() >= self.start_timesteps:
             self.train()
-        self.global_timestep += 1  # TODO: Double Check this, this looks wrong still
 
     def train(self):
         batch = self.replay_buffer.sample_batch()
