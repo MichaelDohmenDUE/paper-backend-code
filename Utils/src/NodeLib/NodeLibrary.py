@@ -4,6 +4,11 @@ import torch.nn.functional as F
 from backend.Utils.src.NodeLib.Node import Node
 
 
+def bellman(target_Q: torch.Tensor, reward: torch.Tensor, done: torch.Tensor, discount_factor: float):
+    valid_transition = 1.0 - done
+    target_Q = reward + valid_transition * discount_factor * target_Q
+    return target_Q
+
 class NodeLibrary:
 
     @staticmethod
@@ -156,8 +161,10 @@ class NodeLibrary:
         )
 
     @staticmethod
-    def bellman(target_Q: torch.Tensor, reward: torch.Tensor, done: torch.Tensor, discount_factor: float):
-        valid_transition = 1.0 - done
-        target_Q = reward + valid_transition * discount_factor * target_Q
-        return target_Q
-
+    def bellman():
+        return Node(
+            name="bellman",
+            function=bellman,
+            inputs=["target_q", "reward", "done", "discount_factor"],
+            outputs=["target_q"]
+        )
