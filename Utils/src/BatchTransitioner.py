@@ -64,3 +64,6 @@ class TransitionBatch:
 
     def to_tensors(self):
         return {k: self.preprocess(v) for k, v in self.data.items()}
+
+    def unpack(self):
+        return tuple(self.to_tensors()[field] for field in self.fields)
