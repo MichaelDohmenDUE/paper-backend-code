@@ -5,7 +5,7 @@ from torch import nn
 
 from backend.DQN.src.ActionHandler import EpsilonGreedyPolicy
 from backend.DQN.src.DataCollectionProcessor import DataCollectionProcessor
-from backend.DQN.src.TrainProcessor import TrainProcessor
+#from backend.DQN.src.TrainProcessor import TrainProcessor
 from backend.DQN.src.TrainProcessorGraph import TrainProcessor
 from backend.DQN.src.dqn_graph import build_dqn_graph
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
