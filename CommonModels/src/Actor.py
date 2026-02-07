@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class Actor(nn.Module):
-    def __init__(self, state_size: int, action_size: int, max_action: float, hidden_size: int):
+    def __init__(self, state_size: int, action_size: int, max_action: float | None, hidden_size: int):
         super(Actor, self).__init__()
 
         self.fc1 = nn.Linear(state_size, hidden_size)

@@ -4,11 +4,15 @@ from torch import nn
 
 
 class ActionHandler:
-    def __init__(self, actor: nn.Module, action_size: int, max_action: float, expl_noise: float, noise_clip: float,
+    def __init__(self, actor: nn.Module, action_size: int, max_action: float | None, expl_noise: float,
+                 noise_clip: float,
                  start_timesteps: int,
                  device: torch.device):
         self.actor = actor
-        self.max_action = max_action
+        if max_action is None:
+            self.max_action = 1.0
+        else:
+            self.max_action = max_action
         self.expl_noise = expl_noise
         self.noise_clip = noise_clip
         self.start_timesteps = start_timesteps

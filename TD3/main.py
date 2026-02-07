@@ -36,7 +36,8 @@ def main():
 
     env_handler = EnvironmentHandler(env_name, seed)
     observation_size, action_size, max_action = env_handler.get_env_specs()
-
+    if max_action is None:
+        max_action = 1
     spec = TransitionSpec(["state", "action", "reward", "next_state", "done"])
 
     transition_factory = TransitionFactory(spec)
