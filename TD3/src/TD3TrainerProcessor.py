@@ -3,7 +3,7 @@ import torch.nn.functional as F
 from torch import nn
 
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
-
+from backend.Utils.src.NodeLib.NodeLibrary import NodeLibrary
 
 class TrainProcessor:
     """
@@ -38,13 +38,7 @@ class TrainProcessor:
         self.replay_buffer = replay_buffer
         self.device = device
 
-    def bellman(self, target_Q1: torch.Tensor, target_Q2: torch.Tensor, reward: torch.Tensor,
-                valid_transition: torch.Tensor):
-        target_Q = torch.min(target_Q1, target_Q2)
-        target_Q = reward + valid_transition * self.discount_factor * target_Q
-        return target_Q
-
-    def update_actor(self, state)-> None:
+    def update_actor(self, state) -> None:
         if self.global_timestep % self.syncro_frequency == 0:
             actor_loss = -self.critic_1(state, self.actor(state)).mean()
             self.optimizer_actor.zero_grad()
@@ -63,7 +57,6 @@ class TrainProcessor:
         reward = batch["reward"].to(self.device)
         next_state = batch["next_state"].to(self.device)
         done = batch["done"].to(self.device)
-        valid_transition = 1.0 - done
 
         with torch.no_grad():
             noise = (torch.randn_like(action) * self.policy_noise).clamp(-self.noise_clip, self.noise_clip)
@@ -72,7 +65,8 @@ class TrainProcessor:
             target_Q1 = self.critic_target_1(next_state, next_action)
             target_Q2 = self.critic_target_2(next_state, next_action)
 
-            target_Q = self.bellman(target_Q1, target_Q2, reward, valid_transition)
+            target_Q = torch.min(target_Q1, target_Q2)
+            target_Q = NodeLibrary.bellman(target_Q, reward, done, self.discount_factor)
 
         current_Q1 = self.critic_1(state, action)
         current_Q2 = self.critic_2(state, action)
