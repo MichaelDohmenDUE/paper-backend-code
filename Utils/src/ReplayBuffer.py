@@ -38,11 +38,12 @@ class ReplayBuffer:
     def sample(self) -> list[Any]:
         return random.sample(self.buffer, self.batch_size)
 
-    def sample_batch(self) -> TransitionBatch:
+    def sample_batch(self) -> dict[str, torch.Tensor]:
         transitions = self.sample()
-        return TransitionBatch(transitions, self.spec)
+        batch = TransitionBatch(transitions, self.spec)
+        return batch.to_tensors()
 
-    def sample_sequence_batch(self, seq_len: int, batch_size: int) -> TransitionBatch:
+    def sample_sequence_batch(self, seq_len: int, batch_size: int):
         length_buffer = len(self.buffer)
         if seq_len > length_buffer:
             raise BufferError(f"Buffer (Size {length_buffer}) is not long enough to allow a {seq_len}")
@@ -51,10 +52,13 @@ class ReplayBuffer:
         for idx in indices:
             seq = [self.buffer[idx + t] for t in range(seq_len)]
             sequences.append(seq)
-        flat = [t for seq in sequences for t in seq]
-        return TransitionBatch(flat, self.spec)
+        batched = {}
+        for field in self.spec.fields:
+            field_values = [[getattr(t, field) for t in seq] for seq in sequences]
+            batched[field] = TransitionBatch.preprocess(field_values)
+        return batched
 
-    def choice(self, indices: list[int]) -> TransitionBatch:
+    def choice(self, indices: list[int]):
         transitions = [self.buffer[idx] for idx in indices]
-        return TransitionBatch(transitions, self.spec)
-
+        batch = TransitionBatch(transitions, self.spec)
+        return batch.to_tensors()

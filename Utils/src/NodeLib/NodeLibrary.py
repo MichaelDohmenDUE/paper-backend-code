@@ -1,7 +1,6 @@
 import torch
 import torch.nn.functional as F
 
-from backend.Utils.src.BatchTransitioner import TransitionSpec
 from backend.Utils.src.NodeLib.Node import Node
 
 
@@ -48,12 +47,18 @@ class NodeLibrary:
         )
 
     @staticmethod
-    def unpack_batch(spec: TransitionSpec):
+    def unpack_batch():
         return Node(
             name="unpack_batch",
-            function=lambda batch: batch.unpack(),
+            function=lambda batch: (
+                batch["state"],
+                batch["action"],
+                batch["reward"],
+                batch["next_state"],
+                batch["done"],
+            ),
             inputs=["batch"],
-            outputs=spec.fields
+            outputs=["states", "actions", "rewards", "next_states", "dones"]
         )
 
     @staticmethod
