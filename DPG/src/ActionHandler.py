@@ -1,37 +1,25 @@
+import numpy as np
 import torch
+from torch import nn
 
 
-class OUNoise:
-    def __init__(self, action_dim, mu=0.0, theta=0.15, sigma=0.2, device="cpu"):
-        self.mu = mu
-        self.theta = theta
-        self.sigma = sigma
-        self.device = device
-        self.action_dim = action_dim
-        self.state = torch.zeros(self.action_dim, device=self.device)
-        self.reset()
-
-    def reset(self):
-        self.state = torch.zeros(self.action_dim, device=self.device)
-
-    def sample(self):
-        dx = self.theta * (self.mu - self.state) + self.sigma * torch.randn(self.action_dim, device=self.device)
-        self.state = self.state + dx
-        return self.state
-
-
-class DeterministicPolicyWithNoise:
-    def __init__(self, actor, noise_process, max_action, device):
+class ActionHandler:
+    def __init__(self, actor: nn.Module, action_size: int, max_action: float | None, expl_noise: float,
+                 device: torch.device):
         self.actor = actor
-        self.noise = noise_process
-        self.max_action = max_action
+        if max_action is None:
+            self.max_action = 1.0
+        else:
+            self.max_action = max_action
+        self.expl_noise = expl_noise
         self.device = device
+        self.action_size = action_size
 
-    def select_action(self, state_tensor):
+    def select_action(self, state):
+        state = torch.as_tensor(state, dtype=torch.float32, device=self.device).reshape(1, -1)
         with torch.no_grad():
-            action = self.actor(state_tensor)
+            action = self.actor(state).cpu().numpy().flatten()
+        noise = np.random.normal(0, self.expl_noise, size=self.action_size)
+        action = np.clip(action + noise, -self.max_action, self.max_action)
 
-        noise = self.noise.sample()
-        action = action + noise
-        action = action.clamp(-self.max_action, self.max_action)
-        return action
+        return torch.as_tensor(action, dtype=torch.float32, device=self.device)

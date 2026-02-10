@@ -2,7 +2,7 @@ import torch
 
 from backend.CommonModels.src.Actor import Actor
 from backend.CommonModels.src.Critic import Critic
-from backend.DPG.src.ActionHandler import OUNoise, DeterministicPolicyWithNoise
+from backend.DPG.src.ActionHandler import ActionHandler
 from backend.DPG.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.DPG.src.TrainProcessor import TrainProcess
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
@@ -22,11 +22,15 @@ def main():
     batch_size = 64
     max_buffer_size = 10000
     gamma = 0.99
+    expl_coefficient = 0.2
     seed = 42
 
     env = EnvironmentHandler(env_name, seed)
     observation_size, action_size, max_action = env.get_env_specs()
-
+    if max_action is not None:
+        expl_noise = float(expl_coefficient * max_action)
+    else:
+        expl_noise = expl_coefficient
     # Networks
     actor = Actor(observation_size, action_size, max_action, hidden_size).to(device)
     actor_optimizer = torch.optim.Adam(actor.parameters(), lr=lr_actor)
@@ -38,13 +42,13 @@ def main():
     factory = TransitionFactory(spec)
     buffer = ReplayBuffer(spec, max_buffer_size, batch_size)
 
-    noise = OUNoise(action_size, theta=0.15, sigma=0.2, device=device)
-    policy = DeterministicPolicyWithNoise(actor, noise, max_action, device)
+    policy = ActionHandler(actor=actor, action_size=action_size, max_action=max_action, expl_noise=expl_noise,
+                           device=device)
 
     gl_counter = GlobalCounter()
 
     data_collection_process = DataCollectionProcessor(env, policy, buffer, factory, gl_counter, device)
-    train_process = TrainProcess(buffer, actor, critic, actor_optimizer, critic_optimizer,gamma, device)
+    train_process = TrainProcess(buffer, actor, critic, actor_optimizer, critic_optimizer, gamma, device)
     for t in range(max_timesteps):
         data_collection_process.run()
         train_process.run()

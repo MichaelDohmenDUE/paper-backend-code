@@ -18,7 +18,7 @@ class DataCollectionProcessor:
         self.state = self.env.reset()
         self.done = False
         self.episode_timesteps = 0
-        self.episode_idx =0
+        self.episode_idx = 0
 
     def run(self):
         state_tensor = torch.as_tensor(self.state, dtype=torch.float32, device=self.device)
@@ -52,6 +52,5 @@ class DataCollectionProcessor:
             self.episode_reward = 0
             self.episode_timesteps = 0
 
-            self.policy.noise.reset()
         self.global_counter.set(self.global_counter.get() + 1)
         return transition
