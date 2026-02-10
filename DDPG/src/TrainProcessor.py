@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+from backend.Utils.src.NodeLib.NodeLibrary import bellman, optimizer_update
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
@@ -35,16 +36,11 @@ class TrainProcess:
         with torch.no_grad():
             next_actions = self.actor_target(next_states)
             target_q = self.critic_target(next_states, next_actions)
-            target = rewards + self.gamma * target_q * (1.0 - dones)
+            target = bellman(target_Q=target_q, reward=rewards, done=dones, discount_factor=self.gamma)
         current_q = self.critic(states, actions)
         critic_loss = F.mse_loss(current_q, target)
-
-        self.critic_opt.zero_grad()
-        critic_loss.backward()
-        self.critic_opt.step()
+        optimizer_update(optimizer=self.critic_opt, loss=critic_loss)
         # Actor update
-        self.actor_opt.zero_grad()
         actor_loss = -self.critic(states, self.actor(states)).mean()
-        actor_loss.backward()
-        self.actor_opt.step()
+        optimizer_update(optimizer=self.actor_opt, loss=actor_loss)
         return actor_loss, critic_loss
