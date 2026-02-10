@@ -9,6 +9,7 @@ from backend.DDPG.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.DDPG.src.TrainProcessor import TrainProcess
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
+from backend.Utils.src.GlobalCounter import GlobalCounter
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
 
@@ -18,7 +19,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def main():
     lr_actor = 1e-4
     lr_critic = 1e-3
-    num_episodes = 1000
+    max_timesteps = 20000
     env_name = "InvertedPendulum-v5"
     sync_freq = 1
     hidden_size = 32
@@ -47,34 +48,21 @@ def main():
     noise = OUNoise(action_size, theta=0.15, sigma=0.2, device=device)
     policy = DeterministicPolicyWithNoise(actor, noise, max_action, device)
 
-    data_collection_process = DataCollectionProcessor(env, policy, buffer, factory, device)
+    gl_counter = GlobalCounter()
 
+    data_collection_process = DataCollectionProcessor(env, policy, buffer, factory, gl_counter, device)
     train_process = TrainProcess(buffer, actor, actor_target, critic, critic_target, actor_optimizer, critic_optimizer,
                                  gamma, device)
 
-    sync_process_actor = SyncProcessor(actor, actor_target, tau, sync_freq)
-    sync_process_critic = SyncProcessor(critic, critic_target, tau, sync_freq)
+    sync_process_actor = SyncProcessor(actor, actor_target, tau, sync_freq, gl_counter)
+    sync_process_critic = SyncProcessor(critic, critic_target, tau, sync_freq, gl_counter)
 
-    for episode in range(num_episodes):
-        done = False
-        episode_reward = 0.0
-        actor_loss, critic_loss = None, None
 
-        while not done:
-            transition = data_collection_process.run()
-            actor_loss, critic_loss = train_process.run()
-            done = transition.done
-            episode_reward += transition.reward
-
-            sync_process_actor.run()
-            sync_process_critic.run()
-
-        if episode % 10 == 9 and actor_loss is not None:
-            print(
-                f"Episode: {episode + 1}, Reward: {episode_reward:.2f}, "
-                f"actor_loss: {actor_loss.mean():.3f}, critic_loss: {critic_loss:.3f}"
-            )
-
+    for t in range(max_timesteps):
+        data_collection_process.run()
+        actor_loss, critic_loss = train_process.run()
+        sync_process_actor.run()
+        sync_process_critic.run()
 
 if __name__ == "__main__":
     main()

@@ -1,19 +1,20 @@
 import torch
 
-from backend.Utils.src import ReplayBuffer
+from backend.Utils.src import ReplayBuffer, GlobalCounter
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 
 
 class DataCollectionProcessor:
     def __init__(self, env: EnvironmentHandler, policy, buffer: ReplayBuffer, transition_factory: TransitionFactory,
-                 device: torch.device):
+                 global_counter: GlobalCounter, device: torch.device):
         self.env = env
         self.policy = policy
         self.buffer = buffer
         self.transition_factory = transition_factory
         self.device = device
-
+        self.global_counter = global_counter
+        self.episode_reward = 0
         self.state = self.env.reset()
         self.done = False
         self.episode_timesteps = 0
@@ -28,6 +29,7 @@ class DataCollectionProcessor:
         next_state, reward, done, done_bool = self.env.step(
             action_np, episode_timesteps=self.episode_timesteps
         )
+        self.episode_reward += reward
 
         transition = self.transition_factory.create(
             state=self.state,
@@ -41,10 +43,12 @@ class DataCollectionProcessor:
         self.state = next_state
         self.done = done_bool
 
-        if self.done:
+        if done:
+            print(f" — Reward: {self.episode_reward:.2f}")
             self.state = self.env.reset()
-            self.done = False
+            self.episode_reward = 0
             self.episode_timesteps = 0
-            self.policy.noise.reset()
 
+            self.policy.noise.reset()
+        self.global_counter.set(self.global_counter.get() + 1)
         return transition
