@@ -2,6 +2,8 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+from backend.Utils.src.NodeLib.NodeLibrary import bellman
+from backend.Utils.src.NodeLib.NodeLibrary import optimizer_update
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
@@ -43,10 +45,8 @@ class TrainProcessor:
             next_q_target = self.target_net(next_states_tensor)
             qsa_target = next_q_target.gather(1, next_actions)
 
-            target = rewards_tensor + self.gamma * qsa_target * (1.0 - dones_tensor)
+            target = bellman(target_Q=qsa_target, reward=rewards_tensor, done=dones_tensor, discount_factor=self.gamma)
 
-        # Optimize
-        self.optimizer.zero_grad()
         loss = F.mse_loss(qsa_behavior, target)
-        loss.backward()
-        self.optimizer.step()
+        # Optimize
+        optimizer_update(optimizer=self.optimizer, loss=loss)
