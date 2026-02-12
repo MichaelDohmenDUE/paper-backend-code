@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+from backend.Utils.src.NodeLib.NodeLibrary import bellman
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
@@ -34,13 +35,11 @@ class TrainProcessor:
         with torch.no_grad():
             next_actions = self.behavior_net(next_states).argmax(dim=1, keepdim=True)
             q_next = self.target_net(next_states).gather(1, next_actions)
-            target = rewards + self.gamma * q_next * (1.0 - dones)
+            target = bellman(target_Q=q_next, reward=rewards, done=dones, discount_factor=self.gamma)
 
         loss = F.mse_loss(qsa_behavior, target)
 
         self.optimizer.zero_grad()
         loss.backward()
-
-        torch.nn.utils.clip_grad_norm_(self.behavior_net.parameters(), self.max_grad_norm)
-
+        torch.nn.utils.clip_grad_norm_(self.behavior_net.parameters(), self.max_grad_norm) # TODO: I can't abstract here becuase of Clipping, think about the structure again
         self.optimizer.step()
