@@ -1,3 +1,5 @@
+from backend.Utils.src.NodeLib.NodeLibrary import optimizer_update
+from backend.Utils.src.NodeLib.NodeLibrary import bellman
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -37,9 +39,7 @@ class TrainProcessor:
         with torch.no_grad():
             qs_target = self.target_net(next_states_tensor)  # batch_size x action_dim
             qsa_target = qs_target.max(dim=1, keepdim=True).values
-            target = rewards_tensor + self.gamma * qsa_target * (1.0 - dones_tensor)
-
-        self.optimizer.zero_grad()
+            target = bellman(target_Q=qsa_target, reward=rewards_tensor, done=dones_tensor, discount_factor=self.gamma)
         loss = F.mse_loss(qsa_behavior, target)
-        loss.backward()
-        self.optimizer.step()
+
+        optimizer_update(optimizer=self.optimizer, loss=loss)
