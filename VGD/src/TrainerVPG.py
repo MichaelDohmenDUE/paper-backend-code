@@ -1,8 +1,7 @@
-import numpy as np
 import torch
 
 from backend.CommonModels.src.Policy_VPG import PolicyVPG
-from backend.Utils.src import EnviromentHandler, ReplayBuffer
+from backend.Utils.src import ReplayBuffer
 from backend.Utils.src.utils import discounted_cumulative_reward
 from backend.VGD.src import ActionHandler
 
@@ -10,7 +9,7 @@ from backend.VGD.src import ActionHandler
 class VPGTrainer:
     def __init__(self,
                  policy: PolicyVPG,
-                 replay_buffer:ReplayBuffer.ReplayBuffer,
+                 replay_buffer: ReplayBuffer.ReplayBuffer,
                  action_handler: ActionHandler.ActionHandler,
                  optimizer,
                  beta: float = 0.01,
