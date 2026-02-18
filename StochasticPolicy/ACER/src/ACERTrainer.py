@@ -210,27 +210,30 @@ class ACERTrainer:
             advantage_t = (q_ret_t - v_t).detach()
 
             pg_loss_t = self._policy_gradient(s_t, a_t, rho_bar_t, advantage_t)
-            bc_loss_t = self._bias_correction(s_t, mu_means[:, t, :], mu_log_stds[:, t, :], v_t)
+            #bc_loss_t = self._bias_correction(s_t, mu_means[:, t, :], mu_log_stds[:, t, :], v_t)
 
-            actor_loss = actor_loss + pg_loss_t + bc_loss_t
+            actor_loss = actor_loss + pg_loss_t #+ bc_loss_t
 
         policy_mean, policy_std = self.actor(flat_states)
-        entropy = self._entropy_correction(policy_mean, policy_std)
-        actor_loss += -self.beta * entropy
-
+        #entropy = self._entropy_correction(policy_mean, policy_std)
+        #actor_loss += -self.beta * entropy
+        """
         ref_mean, ref_std = self.trust_region_actor(flat_states)
         kl = self._compute_kl(policy_mean, policy_std, ref_mean, ref_std).view(B, T)
         kl = (kl * not_dones).mean()
         kl_grad = torch.autograd.grad(kl, self.actor.parameters(), retain_graph=True)
-
-        self._update_actor(actor_loss, kl_grad)
+        """
+        self.actor_optimizer.zero_grad()
+        actor_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=10.0)
+        self.actor_optimizer.step()
 
         if torch.rand(1).item() < 0.001:
             print(
                 f"critic_loss={critic_loss.item():.3f}, "
                 f"actor_loss={actor_loss.item():.3f}, "
-                f"entropy={entropy.item():.3f}, "
+                #f"entropy={entropy.item():.3f}, "
                 f"mean_rho={rho.mean().item():.3f}, "
-                f"mean_c={c.mean().item():.3f}, "
-                f"mean_kl={kl.item():.5f}")
+                f"mean_c={c.mean().item():.3f}, ")
+                #f"mean_kl={kl.item():.5f}")
         synchronize(self.actor, self.trust_region_actor, tau=self.tau)

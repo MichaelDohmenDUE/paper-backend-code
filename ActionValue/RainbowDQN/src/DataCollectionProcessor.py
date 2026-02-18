@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from backend.CommonModels.RainbowDQN.src.ActionHandler import GreedyPolicy
+from backend.ActionValue.RainbowDQN.src.ActionHandler import GreedyPolicy
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.PrioReplayBuffer import PrioReplayBuffer
