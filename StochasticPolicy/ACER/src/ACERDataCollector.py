@@ -21,6 +21,17 @@ class ACERDataCollector:
         self.episode_timesteps = 0
         self.episode_count = 0
 
+        self.reward_mean = 0.0
+        self.reward_var = 1.0
+        self.reward_count = 1
+
+    def normalize_reward(self, r):
+        self.reward_count += 1
+        old_mean = self.reward_mean
+        self.reward_mean += (r - self.reward_mean) / self.reward_count
+        self.reward_var += (r - old_mean) * (r - self.reward_mean)
+        return (r - self.reward_mean) / ((self.reward_var / self.reward_count) ** 0.5 + 1e-8)
+
     def run(self):
         if self.done:
             print(f"Episode {self.episode_count} Reward: {self.episode_reward}")
@@ -43,7 +54,7 @@ class ACERDataCollector:
         transition = self.factory.create(
             state=self.state,
             action=action,
-            reward=reward,
+            reward=self.normalize_reward(reward),
             next_state=next_state,
             mask=1.0 - done_bool,
             mu_logp=mu_logp,

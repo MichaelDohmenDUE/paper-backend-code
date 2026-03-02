@@ -17,18 +17,18 @@ class ACERTrainer:
         self.actor = Actor(state_size, action_size, hidden_size).to(device)
         self.trust_region_actor = copy.deepcopy(self.actor).to(device)
         self.critic = Critic(state_size, action_size, hidden_size).to(device)
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=learning_rate)
-        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=learning_rate)
+        self.actor_optimizer = torch.optim.RMSprop(self.actor.parameters(), lr=7e-4, alpha=0.99, eps=1e-5)
+        self.critic_optimizer = torch.optim.RMSprop(self.critic.parameters(), lr=7e-4, alpha=0.99, eps=1e-5)
+
 
         self.state_dim = state_size
         self.action_dim = action_size
         self.gamma = gamma
-        self.tau = tau
-        self.delta = trust_region_delta
-        self.rho_bar = 1.0
+        self.tau = 0.01
+        self.delta = 0.1
+        self.rho_bar = 5.0
         self.c_bar = 1.0
-        self.seq_len = 10
-        self.beta = 0.1
+        self.seq_len = 20
         self.retrace_lambda = 1.0
 
     def _prepare_batch(self, replay_buffer, batch_size, on_policy):
@@ -68,9 +68,10 @@ class ACERTrainer:
         return self.critic(states, pi_actions)
 
     def _compute_importance_weights(self, policy_logp, mu_logps):
-        rho = torch.exp(policy_logp - mu_logps)
-        rho_bar = torch.clamp(rho, max=self.rho_bar)
-        c = torch.clamp(rho, max=self.c_bar)
+        log_ratio = (policy_logp - mu_logps).clamp(-10, 10)
+        rho = torch.exp(log_ratio)
+        rho_bar = rho.clamp(max=self.rho_bar)
+        c = rho.clamp(max=self.c_bar)
         return rho, rho_bar, c
 
     def _compute_bootstrap_value(self, next_states, not_dones):
@@ -90,9 +91,22 @@ class ACERTrainer:
             nd_t = not_dones[:, t]
             c_t = c[:, t]
             delta_t = r_t + nd_t * self.gamma * v_tp1_t - q_t
+            delta_t = delta_t.clamp(-10.0, 10.0)
             G = q_t + c_t * (delta_t + nd_t * self.gamma * self.retrace_lambda * (G - v_tp1_t))
+            G = G.clamp(-100.0, 100.0)
             retrace_targets.insert(0, G)
         return torch.stack(retrace_targets, dim=1)
+
+    def _compute_q_opc(self, rewards, not_dones, v_vals):
+        B, T = rewards.shape
+        Q_opc = torch.zeros_like(rewards, device=device)
+        G = v_vals[:, -1].clone()
+        for t in reversed(range(T)):
+            r_t = rewards[:, t]
+            nd_t = not_dones[:, t]
+            G = r_t + nd_t * self.gamma * G
+            Q_opc[:, t] = G
+        return Q_opc
 
     def _critic_loss_function(self, q_vals, target_q):
         return ((q_vals - target_q.detach()) ** 2).mean()
@@ -111,38 +125,24 @@ class ACERTrainer:
     def _bias_correction(self, s_t, mu_mean_t, mu_log_std_t, v_t):
         with torch.no_grad():
             a_bc, logp_bc = self.actor.sample_action(s_t)
-            # NOT IN ACER PSEUDOCODE — clamp log_std for stability
-            mu_log_std_t = mu_log_std_t.clamp(-5.0, 2.0)
-            mu_std_t = mu_log_std_t.exp().clamp(1e-3, 10.0)
-
-            a_bc_clamped = a_bc.clamp(-0.999, 0.999)
-            raw_a_bc = 0.5 * torch.log((1 + a_bc_clamped) / (1 - a_bc_clamped + 1e-6))
+            mu_std_t = mu_log_std_t.exp()
             mu_dist = torch.distributions.Normal(mu_mean_t, mu_std_t)
-            gaussian_log_mu_bc = mu_dist.log_prob(raw_a_bc).sum(dim=-1)
-            log_det_jacobian_mu = torch.log(1 - a_bc_clamped.pow(2) + 1e-6).sum(dim=-1)
-            log_mu_bc = gaussian_log_mu_bc - log_det_jacobian_mu
-            # NOT IN ACER PSEUDOCODE — clamp log-ratio to avoid exp overflow
-            log_ratio_bc = (logp_bc - log_mu_bc).clamp(-20.0, 20.0)
-            rho_bc = torch.exp(log_ratio_bc).clamp(0.0, 10.0)
+            logp_mu = mu_dist.log_prob(a_bc).sum(dim=-1)
+            log_ratio_bc = (logp_bc - logp_mu).clamp(-20, 20)
+            rho_bc = torch.exp(log_ratio_bc).clamp(0.0, self.rho_bar)
             q_pi_bc_t = self.critic(s_t, a_bc).squeeze(-1)
             bias_adv_t = (q_pi_bc_t - v_t).detach()
         return -((rho_bc - self.rho_bar).clamp(min=0) * bias_adv_t).mean()
 
-    def _entropy_correction(self, policy_mean, policy_std):
-        # NOT IN ACER PSEUDOCODE
-        policy_std = policy_std.clamp(1e-3, 10.0)
-        dist = torch.distributions.Normal(policy_mean, policy_std)
-        return dist.entropy().sum(dim=-1).mean()
-
     def _compute_kl(self, policy_mean, policy_std, ref_mean, ref_std):
-        # NOT IN ACER PSEUDOCODE — clamp std for stability
         policy_std = policy_std.clamp(1e-3, 10.0)
         ref_std = ref_std.clamp(1e-3, 10.0)
-        kl = torch.log(ref_std / policy_std) + \
-             (policy_std ** 2 + (policy_mean - ref_mean) ** 2) / (2 * ref_std ** 2) - 0.5
+        mean_diff = (policy_mean - ref_mean).clamp(-10.0, 10.0)
+        kl = torch.log(ref_std / policy_std) + (policy_std ** 2 + mean_diff ** 2) / (2 * ref_std ** 2) - 0.5
         return kl.sum(dim=-1)
 
     def _trust_region_projection(self, kl_grad):
+        kl_grad = [torch.clamp(g, -1.0, 1.0) for g in kl_grad]
         g = [p.grad for p in self.actor.parameters()]
         k_dot_g = sum((kg * gg).sum() for kg, gg in zip(kl_grad, g))
         k_norm_sq = sum((kg * kg).sum() for kg in kl_grad) + 1e-8
@@ -155,7 +155,7 @@ class ACERTrainer:
     def _update_actor(self, actor_loss, kl_grad):
         self.actor_optimizer.zero_grad()
         actor_loss.backward(retain_graph=True)
-        self._trust_region_projection(kl_grad)
+        #self._trust_region_projection(kl_grad)
         # NOT IN ACER PSEUDOCODE — gradient clipping
         torch.nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=10.0)
         self.actor_optimizer.step()
@@ -199,41 +199,37 @@ class ACERTrainer:
         critic_loss = self._critic_loss_function(q_vals, target_q)
         self._update_critic(critic_loss)
 
+        Q_opc = self._compute_q_opc(rewards, not_dones, v_vals)
         actor_loss = 0.0
         for t in range(T):
             s_t = states[:, t, :]
             a_t = actions[:, t, :]
             rho_bar_t = rho_bar[:, t]
 
-            q_ret_t = target_q[:, t]
+            q_opc_t = Q_opc[:, t]
             v_t = v_vals[:, t]
-            advantage_t = (q_ret_t - v_t).detach()
+            advantage_t = (q_opc_t - v_t).detach()
+            advantage_t = torch.clamp(advantage_t, -10.0, 10.0)
 
             pg_loss_t = self._policy_gradient(s_t, a_t, rho_bar_t, advantage_t)
-            #bc_loss_t = self._bias_correction(s_t, mu_means[:, t, :], mu_log_stds[:, t, :], v_t)
+            bc_loss_t = self._bias_correction(s_t, mu_means[:, t, :], mu_log_stds[:, t, :], v_t)
 
-            actor_loss = actor_loss + pg_loss_t #+ bc_loss_t
+            actor_loss = actor_loss + pg_loss_t + bc_loss_t
 
-        policy_mean, policy_std = self.actor(flat_states)
-        #entropy = self._entropy_correction(policy_mean, policy_std)
-        #actor_loss += -self.beta * entropy
-        """
-        ref_mean, ref_std = self.trust_region_actor(flat_states)
+        policy_mean, policy_std,_ = self.actor(flat_states)
+
+        ref_mean, ref_std, _ = self.trust_region_actor(flat_states)
         kl = self._compute_kl(policy_mean, policy_std, ref_mean, ref_std).view(B, T)
         kl = (kl * not_dones).mean()
         kl_grad = torch.autograd.grad(kl, self.actor.parameters(), retain_graph=True)
-        """
-        self.actor_optimizer.zero_grad()
-        actor_loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=10.0)
-        self.actor_optimizer.step()
 
+        self._update_actor(actor_loss, kl_grad=kl_grad)
+        synchronize(self.actor, self.trust_region_actor, tau=self.tau)
         if torch.rand(1).item() < 0.001:
             print(
                 f"critic_loss={critic_loss.item():.3f}, "
                 f"actor_loss={actor_loss.item():.3f}, "
-                #f"entropy={entropy.item():.3f}, "
+                # f"entropy={entropy.item():.3f}, "
                 f"mean_rho={rho.mean().item():.3f}, "
                 f"mean_c={c.mean().item():.3f}, ")
-                #f"mean_kl={kl.item():.5f}")
-        synchronize(self.actor, self.trust_region_actor, tau=self.tau)
+               # f"mean_kl={kl.item():.5f}")

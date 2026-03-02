@@ -16,14 +16,14 @@ def main():
     max_timesteps = 1000000
     batch_size = 32
     learning_rate = 3e-4
-    hidden_dim = 128
+    hidden_dim = 200
     tau = 0.005
     buffer_size = int(1e6)
     seq_len = 10
     replay_ratio = 4
     trust_region_delta = 0.001
     gamma = 0.99
-    reward_scale = 0.1
+    reward_scale = 1.0
 
     env_handler = EnvironmentHandler(env_name, seed, reward_scale=reward_scale)
 
