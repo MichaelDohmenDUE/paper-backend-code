@@ -19,4 +19,5 @@ class ActionHandler(AbstractActionHandler):
             action = dist.sample()
             logp = dist.log_prob(action).sum(-1)
             value = self.critic(state_t).squeeze(-1)
-        return action.cpu().numpy().squeeze(0), float(logp.cpu().numpy()), float(value.cpu().numpy())
+        return (action.cpu().numpy().squeeze(0), logp.item(), value.item())
+
