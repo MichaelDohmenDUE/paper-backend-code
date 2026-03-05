@@ -155,7 +155,7 @@ class ACERTrainer:
     def _update_actor(self, actor_loss, kl_grad):
         self.actor_optimizer.zero_grad()
         actor_loss.backward(retain_graph=True)
-        #self._trust_region_projection(kl_grad)
+        self._trust_region_projection(kl_grad)
         # NOT IN ACER PSEUDOCODE — gradient clipping
         torch.nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=10.0)
         self.actor_optimizer.step()
@@ -231,5 +231,5 @@ class ACERTrainer:
                 f"actor_loss={actor_loss.item():.3f}, "
                 # f"entropy={entropy.item():.3f}, "
                 f"mean_rho={rho.mean().item():.3f}, "
-                f"mean_c={c.mean().item():.3f}, ")
-               # f"mean_kl={kl.item():.5f}")
+                f"mean_c={c.mean().item():.3f},"
+                f"mean_kl={kl.item():.5f}")
