@@ -224,7 +224,7 @@ class ACERTrainer:
             q_opc_t = Q_opc[:, t]
             v_t = v_vals[:, t]
             advantage_t = (q_opc_t - v_t).detach()
-            advantage_t = torch.clamp(advantage_t, -10.0, 10.0)
+            advantage_t = torch.clamp(advantage_t, -5.0, 5.0)
 
             pg_loss_t = self._policy_gradient(s_t, a_t, rho_bar_t, advantage_t)
 
@@ -241,8 +241,8 @@ class ACERTrainer:
         synchronize(self.actor, self.trust_region_actor, tau=self.tau)
         if torch.rand(1).item() < 0.01:
             print(
-                f"critic_loss={critic_loss.item():.3f}, "
-                f"actor_loss={actor_loss.item():.3f}, "
+                f"critic_loss={critic_loss.item()/ T :.3f}, "
+                f"actor_loss={actor_loss.item()/ T:.3f}, "
                 f"mean_rho={rho.mean().item():.3f}, "
                 f"mean_c={c.mean().item():.3f},"
                 f"mean_kl={kl.item():.5f}")
