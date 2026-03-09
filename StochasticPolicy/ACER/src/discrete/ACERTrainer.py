@@ -145,7 +145,8 @@ class ACERTrainer:
         k = [torch.clamp(p.grad.clone(), -1.0, 1.0) for p in self.actor.parameters()]
         k_dot_g = sum((kg * gg).sum() for kg, gg in zip(k, g))
         k_norm_sq = sum((kg * kg).sum() for kg in k) + 1e-8
-        alpha = torch.clamp((k_dot_g - self.delta) / k_norm_sq, min=0.0)
+        alpha = (k_dot_g - self.delta) / k_norm_sq
+        alpha = torch.clamp(alpha, min=0.0, max=10.0)
         self.actor_optimizer.zero_grad()
         for p, gg, kg in zip(self.actor.parameters(), g, k):
             p.grad = gg - alpha * kg
@@ -182,7 +183,7 @@ class ACERTrainer:
             v_vals = self._compute_v_values(flat_states).view(B, T)
 
         # PI(a|s)
-        pi_logits = self.actor(flat_states)
+        pi_logits = torch.clamp(self.actor(flat_states), -20, 20)
         pi_dist = torch.distributions.Categorical(logits=pi_logits)
         pi_probs = pi_dist.probs
 
@@ -195,6 +196,7 @@ class ACERTrainer:
         q_all = self.critic(flat_states).detach()
         v_flat = v_vals.view(-1)
         adv_all = q_all - v_flat.unsqueeze(-1)
+        adv_all = torch.clamp(adv_all, -20.0, 20.0)
         rho_excess = torch.clamp(rho_all - self.c_bar, min=0.0)
 
         bias_term = (pi_probs * rho_excess * adv_all).sum(dim=-1)
