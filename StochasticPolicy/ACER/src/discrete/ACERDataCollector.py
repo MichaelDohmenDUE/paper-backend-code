@@ -1,6 +1,6 @@
 import torch
 
-from backend.StochasticPolicy.ACER.src.continuos.ACERTrainer import ACERTrainer
+from backend.StochasticPolicy.ACER.src.discrete.ACERTrainer import ACERTrainer
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
@@ -43,7 +43,7 @@ class ACERDataCollector:
 
         self.episode_timesteps += 1
 
-        action, mu_logp, mu_mean, mu_log_std = self.trainer.select_action(
+        action, mu_logp, logtis = self.trainer.select_action(
             self.state, return_params=True
         )
 
@@ -58,8 +58,7 @@ class ACERDataCollector:
             next_state=next_state,
             mask=1.0 - done_bool,
             mu_logp=mu_logp,
-            mu_mean=mu_mean,
-            mu_log_std=mu_log_std
+            mu_logits=logtis
         )
 
         self.buffer.append(transition)

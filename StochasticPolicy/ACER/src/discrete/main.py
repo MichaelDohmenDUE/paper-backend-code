@@ -1,8 +1,8 @@
 import torch
 
-from backend.StochasticPolicy.ACER.src.continuos.ACERDataCollector import ACERDataCollector
-from backend.StochasticPolicy.ACER.src.continuos.ACERTrainProcessor import ACERTrainProcessor
-from backend.StochasticPolicy.ACER.src.continuos.ACERTrainer import ACERTrainer
+from backend.StochasticPolicy.ACER.src.discrete.ACERDataCollector import ACERDataCollector
+from backend.StochasticPolicy.ACER.src.discrete.ACERTrainProcessor import ACERTrainProcessor
+from backend.StochasticPolicy.ACER.src.discrete.ACERTrainer import ACERTrainer
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
@@ -11,7 +11,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def main():
-    env_name = "MountainCarContinuous-v0"
+    env_name = "MountainCar-v0"
     seed = 100
     max_timesteps = 1000000
     batch_size = 32
@@ -28,7 +28,7 @@ def main():
     env_handler = EnvironmentHandler(env_name, seed, reward_scale=reward_scale)
 
     # Transition spec for ACER
-    spec = TransitionSpec(["state", "action", "reward", "next_state", "mask", "mu_logp", "mu_mean", "mu_log_std"])
+    spec = TransitionSpec(["state", "action", "reward", "next_state", "mask", "mu_logp", "mu_logits"])
     factory = TransitionFactory(spec)
 
     # Trainer
