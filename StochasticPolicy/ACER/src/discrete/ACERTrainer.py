@@ -128,40 +128,25 @@ class ACERTrainer:
         logp_t = self.actor.log_prob(s_t, a_t).squeeze(-1)
         return -(rho_bar_t * logp_t * advantage_t).mean()
 
-    def _bias_correction(self, s_t, mu_mean_t, mu_log_std_t, v_t):
-        return 0
-        with torch.no_grad():
-            a_bc, logp_bc = self.actor.sample_action(s_t)
-            mu_std_t = mu_log_std_t.exp()
-            mu_dist = torch.distributions.Normal(mu_mean_t, mu_std_t)
-            logp_mu = mu_dist.log_prob(a_bc).sum(dim=-1)
-            log_ratio_bc = (logp_bc - logp_mu).clamp(-20, 20)
-            rho_bc = torch.exp(log_ratio_bc).clamp(0.0, self.rho_bar)
-            q_pi_bc_t = self.critic(s_t, a_bc).squeeze(-1)
-            bias_adv_t = (q_pi_bc_t - v_t).detach()
-        return -((rho_bc - self.rho_bar).clamp(min=0) * bias_adv_t).mean()
-
     def _compute_kl(self, logits, ref_logits):
         p = torch.softmax(logits, dim=-1)
         q = torch.softmax(ref_logits, dim=-1)
         return (p * (p.log() - q.log())).sum(dim=-1)
 
-    def _trust_region_projection(self, kl_grad):
-        kl_grad = [torch.clamp(g, -1.0, 1.0) for g in kl_grad]
-        g = [p.grad for p in self.actor.parameters()]
-        k_dot_g = sum((kg * gg).sum() for kg, gg in zip(kl_grad, g))
-        k_norm_sq = sum((kg * kg).sum() for kg in kl_grad) + 1e-8
-        alpha = torch.clamp((k_dot_g - self.delta) / k_norm_sq, min=0.0)
-
-        for p, kg in zip(self.actor.parameters(), kl_grad):
-            if p.grad is not None:
-                p.grad -= alpha * kg
-
-    def _update_actor(self, actor_loss, kl_grad):
+    def _update_actor_with_trust_region(self, actor_loss, kl):
         self.actor_optimizer.zero_grad()
+
         actor_loss.backward(retain_graph=True)
-        self._trust_region_projection(kl_grad)
-        # NOT IN ACER PSEUDOCODE — gradient clipping
+        g = [p.grad.clone() for p in self.actor.parameters()]
+        self.actor_optimizer.zero_grad()
+        kl.backward()
+        k = [p.grad.clone() for p in self.actor.parameters()]
+        k_dot_g = sum((kg * gg).sum() for kg, gg in zip(k, g))
+        k_norm_sq = sum((kg * kg).sum() for kg in k) + 1e-8
+        alpha = torch.clamp((k_dot_g - self.delta) / k_norm_sq, min=0.0)
+        self.actor_optimizer.zero_grad()
+        for p, gg, kg in zip(self.actor.parameters(), g, k):
+            p.grad = gg - alpha * kg
         torch.nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=10.0)
         self.actor_optimizer.step()
 
@@ -193,6 +178,24 @@ class ACERTrainer:
         with torch.no_grad():
             v_vals = self._compute_v_values(flat_states).view(B, T)
 
+        # PI(a|s)
+        pi_logits = self.actor(flat_states)
+        pi_dist = torch.distributions.Categorical(logits=pi_logits)
+        pi_probs = pi_dist.probs
+
+        # mu(a|s)
+        mu_logits_flat = mu_logits.view(-1, self.action_dim)
+        mu_dist = torch.distributions.Categorical(logits=mu_logits_flat)
+        mu_probs = mu_dist.probs
+
+        rho_all = pi_probs / (mu_probs + 1e-8)
+        q_all = self.critic(flat_states).detach()
+        v_flat = v_vals.view(-1)
+        adv_all = q_all - v_flat.unsqueeze(-1)
+        rho_excess = torch.clamp(rho_all - self.c_bar, min=0.0)
+
+        bias_term = (pi_probs * rho_excess * adv_all).sum(dim=-1)
+
         policy_logp = self.actor.log_prob(flat_states, flat_actions).view(B, T)
         rho, rho_bar, c = self._compute_importance_weights(policy_logp, mu_logps)
 
@@ -219,17 +222,17 @@ class ACERTrainer:
             advantage_t = torch.clamp(advantage_t, -10.0, 10.0)
 
             pg_loss_t = self._policy_gradient(s_t, a_t, rho_bar_t, advantage_t)
-            bc_loss_t = 0 #self._bias_correction(s_t, mu_means[:, t, :], mu_log_stds[:, t, :], v_t)
 
+            start = t * B
+            end = (t + 1) * B
+            bc_loss_t = -bias_term[start:end].mean()
             actor_loss = actor_loss + pg_loss_t + bc_loss_t
 
         logits = self.actor(flat_states)
         ref_logits = self.trust_region_actor(flat_states)
         kl = self._compute_kl(logits, ref_logits).view(B, T)
-        kl = (kl * not_dones).mean()  # scalar
-        kl_grad = torch.autograd.grad(kl, self.actor.parameters(), retain_graph=True)
-
-        self._update_actor(actor_loss, kl_grad=kl_grad)
+        kl = (kl * not_dones).mean()
+        self._update_actor_with_trust_region(actor_loss, kl)
         synchronize(self.actor, self.trust_region_actor, tau=self.tau)
         if torch.rand(1).item() < 0.001:
             print(
