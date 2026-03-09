@@ -24,7 +24,7 @@ class ACERTrainer:
         self.action_dim = action_size
         self.gamma = gamma
         self.tau = 0.1
-        self.delta = 0.1
+        self.delta = 0.001
         self.rho_bar = 5.0
         self.c_bar = 1.0
         self.seq_len = 20
@@ -146,7 +146,9 @@ class ACERTrainer:
         k_dot_g = sum((kg * gg).sum() for kg, gg in zip(k, g))
         k_norm_sq = sum((kg * kg).sum() for kg in k) + 1e-8
         alpha = (k_dot_g - self.delta) / k_norm_sq
-        alpha = torch.clamp(alpha, min=0.0, max=10.0)
+        if k_dot_g <= 0:
+            alpha = 0.0
+        alpha = max(0.0, min(alpha, 1.0))
         self.actor_optimizer.zero_grad()
         for p, gg, kg in zip(self.actor.parameters(), g, k):
             p.grad = gg - alpha * kg
@@ -178,9 +180,10 @@ class ACERTrainer:
         flat_actions = actions.view(-1).long()
 
         q_vals = self._compute_q_values(flat_states, flat_actions).view(B, T)
-
+        q_vals = torch.clamp(q_vals, -10, 10)
         with torch.no_grad():
             v_vals = self._compute_v_values(flat_states).view(B, T)
+            v_vals = torch.clamp(v_vals, -10, 10)
 
         # PI(a|s)
         pi_logits = torch.clamp(self.actor(flat_states), -20, 20)
@@ -194,6 +197,7 @@ class ACERTrainer:
 
         rho_all = pi_probs / (mu_probs + 1e-8)
         q_all = self.critic(flat_states).detach()
+        q_all = torch.clamp(q_all, -10, 10)
         v_flat = v_vals.view(-1)
         adv_all = q_all - v_flat.unsqueeze(-1)
         adv_all = torch.clamp(adv_all, -20.0, 20.0)
@@ -232,7 +236,7 @@ class ACERTrainer:
             end = (t + 1) * B
             bc_loss_t = -bias_term[start:end].mean()
             actor_loss = actor_loss + pg_loss_t + bc_loss_t
-
+        actor_loss = actor_loss / T
         logits = torch.clamp(self.actor(flat_states), -20, 20)
         ref_logits = torch.clamp(self.trust_region_actor(flat_states), -20, 20)
         kl = self._compute_kl(logits, ref_logits).view(B, T)
@@ -241,8 +245,8 @@ class ACERTrainer:
         synchronize(self.actor, self.trust_region_actor, tau=self.tau)
         if torch.rand(1).item() < 0.01:
             print(
-                f"critic_loss={critic_loss.item()/ T :.3f}, "
-                f"actor_loss={actor_loss.item()/ T:.3f}, "
+                f"critic_loss={critic_loss.item():.3f}, "
+                f"actor_loss={actor_loss.item():.3f}, "
                 f"mean_rho={rho.mean().item():.3f}, "
                 f"mean_c={c.mean().item():.3f},"
                 f"mean_kl={kl.item():.5f}")

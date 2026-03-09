@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 
 from backend.StochasticPolicy.ACER.src.discrete.ACERTrainer import ACERTrainer
@@ -47,7 +48,7 @@ class ACERDataCollector:
         transition = self.factory.create(
             state=self.state,
             action=action,
-            reward=reward,
+            reward=np.clip(reward, -1, 1),
             next_state=next_state,
             mask=1.0 - done_bool,
             mu_logp=mu_logp,
