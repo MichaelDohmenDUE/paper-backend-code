@@ -11,17 +11,17 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def main():
-    env_name = "MountainCar-v0"
+    env_name = "CartPole-v1"
     seed = 100
     max_timesteps = 1000000
     batch_size = 32
     learning_rate = 3e-4
     hidden_dim = 200
-    tau = 0.005
+    tau = 0.01
     buffer_size = int(1e6)
     seq_len = 10
-    replay_ratio = 4
-    trust_region_delta = 0.001
+    replay_ratio = 2
+    trust_region_delta = 0.1
     gamma = 0.99
     reward_scale = 1.0
 

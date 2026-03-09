@@ -23,7 +23,7 @@ class ACERTrainer:
         self.state_dim = state_size
         self.action_dim = action_size
         self.gamma = gamma
-        self.tau = 0.01
+        self.tau = 0.1
         self.delta = 0.1
         self.rho_bar = 5.0
         self.c_bar = 1.0
@@ -63,7 +63,8 @@ class ACERTrainer:
         return q_sa
 
     def _compute_v_values(self, states):
-        logits = self.actor(states)  # [B*T, action_dim]
+        logits = self.actor(states)
+        logits = torch.clamp(logits, -20, 20)
         dist = torch.distributions.Categorical(logits=logits)
         pi = dist.probs
         q_all = self.critic(states)
@@ -80,6 +81,7 @@ class ACERTrainer:
     def _compute_bootstrap_value(self, next_states, not_dones):
         with torch.no_grad():
             logits = self.actor(next_states)
+            logits = torch.clamp(logits, -20, 20)
             dist = torch.distributions.Categorical(logits=logits)
             pi = dist.probs
             q_all = self.critic(next_states)
@@ -140,7 +142,7 @@ class ACERTrainer:
         g = [p.grad.clone() for p in self.actor.parameters()]
         self.actor_optimizer.zero_grad()
         kl.backward()
-        k = [p.grad.clone() for p in self.actor.parameters()]
+        k = [torch.clamp(p.grad.clone(), -1.0, 1.0) for p in self.actor.parameters()]
         k_dot_g = sum((kg * gg).sum() for kg, gg in zip(k, g))
         k_norm_sq = sum((kg * kg).sum() for kg in k) + 1e-8
         alpha = torch.clamp((k_dot_g - self.delta) / k_norm_sq, min=0.0)
@@ -153,6 +155,7 @@ class ACERTrainer:
     def select_action(self, state, return_params=False):
         state_t = torch.FloatTensor(state).unsqueeze(0).to(device)
         logits = self.actor(state_t)
+        logits = torch.clamp(logits, -20, 20)
         dist = torch.distributions.Categorical(logits=logits)
         action = dist.sample()
         logp = dist.log_prob(action)
@@ -228,13 +231,13 @@ class ACERTrainer:
             bc_loss_t = -bias_term[start:end].mean()
             actor_loss = actor_loss + pg_loss_t + bc_loss_t
 
-        logits = self.actor(flat_states)
-        ref_logits = self.trust_region_actor(flat_states)
+        logits = torch.clamp(self.actor(flat_states), -20, 20)
+        ref_logits = torch.clamp(self.trust_region_actor(flat_states), -20, 20)
         kl = self._compute_kl(logits, ref_logits).view(B, T)
         kl = (kl * not_dones).mean()
         self._update_actor_with_trust_region(actor_loss, kl)
         synchronize(self.actor, self.trust_region_actor, tau=self.tau)
-        if torch.rand(1).item() < 0.001:
+        if torch.rand(1).item() < 0.01:
             print(
                 f"critic_loss={critic_loss.item():.3f}, "
                 f"actor_loss={actor_loss.item():.3f}, "

@@ -11,12 +11,12 @@ class ACERTrainProcessor:
         self.tau = tau
 
     def run(self):
-        warmup = 20000
+        warmup = 1000
         if len(self.buffer) < max(self.seq_len, warmup):
             return
 
         self.trainer.train(self.buffer, batch_size=1, on_policy=True)
-        #synchronize(self.trainer.actor, self.trainer.trust_region_actor, tau=self.tau)
+        synchronize(self.trainer.actor, self.trainer.trust_region_actor, tau=self.tau)
         for _ in range(self.replay_ratio):
             self.trainer.train(self.buffer, batch_size=self.batch_size, on_policy=False)
-            #synchronize(self.trainer.actor, self.trainer.trust_region_actor, tau=self.tau)
+            synchronize(self.trainer.actor, self.trainer.trust_region_actor, tau=self.tau)
