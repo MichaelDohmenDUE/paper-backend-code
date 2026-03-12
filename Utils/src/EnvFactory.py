@@ -26,6 +26,10 @@ class AtariEnvFactory(EnvFactory):
 
     def create(self):
         env = gym.make(self.env_name, frameskip=1)
-        env = AtariPreprocessing(env, grayscale_obs=True, scale_obs=True, screen_size=84)
+
+        env = AtariPreprocessing(
+            env,grayscale_obs=True, scale_obs=True, screen_size=84,
+            terminal_on_life_loss=False, noop_max=30, frame_skip=4
+        )
         env = FrameStack(env, self.frames)
         return env
