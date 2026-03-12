@@ -1,0 +1,10 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.11"
+dependencies = [
+    "autorom[accept-rom-license]>=0.6.1",
+    "gymnasium[atari,mujoco]==0.29.1",
+    "torch>=2.10.0",
+]

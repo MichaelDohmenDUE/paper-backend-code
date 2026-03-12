@@ -19,7 +19,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def main():
-    env_name = "HalfCheetah-v5"
+    env_name = "HalfCheetah-v4"
     seed = 100
     max_timesteps = 1000000
     start_timesteps = 25000
