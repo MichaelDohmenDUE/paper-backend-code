@@ -4,14 +4,16 @@ from backend.StochasticPolicy.ACER.src.discrete.ACERDataCollector import ACERDat
 from backend.StochasticPolicy.ACER.src.discrete.ACERTrainProcessor import ACERTrainProcessor
 from backend.StochasticPolicy.ACER.src.discrete.ACERTrainer import ACERTrainer
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
+from backend.Utils.src.EnvFactory import AtariEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
+import gymnasium as gym
+from gymnasium.wrappers import AtariPreprocessing, FrameStack
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
 def main():
-    env_name = "CartPole-v1"
+    env_name = "ALE/SpaceInvaders-v5"
     seed = 100
     max_timesteps = 1000000
     batch_size = 32
@@ -25,7 +27,8 @@ def main():
     gamma = 0.99
     reward_scale = 1.0
 
-    env_handler = EnvironmentHandler(env_name, seed, reward_scale=reward_scale)
+    factory = AtariEnvFactory(env_name)
+    env_handler = EnvironmentHandler(factory, seed, reward_scale=reward_scale)
 
     # Transition spec for ACER
     spec = TransitionSpec(["state", "action", "reward", "next_state", "mask", "mu_logp", "mu_logits"])

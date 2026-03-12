@@ -2,10 +2,13 @@ import gymnasium as gym
 import numpy as np
 import torch
 
+from backend.Utils.src.EnvFactory import EnvFactory
+
 
 class EnvironmentHandler:
-    def __init__(self, env_name: str, seed: int, reward_scale: float = 1.0):
-        self.env = gym.make(env_name)
+    def __init__(self, factory: EnvFactory, seed: int, reward_scale: float = 1.0):
+        self.env = factory.create()
+
         self.env.action_space.seed(seed)
         torch.manual_seed(seed)
         if torch.cuda.is_available():
@@ -13,8 +16,10 @@ class EnvironmentHandler:
         np.random.seed(seed)
         self.reward_scale: float = reward_scale
 
-        self.state_dim: int = self.env.observation_space.shape[0]
+        self.reward_scale = reward_scale
 
+        obs_space = self.env.observation_space
+        self.state_dim = obs_space.shape if hasattr(obs_space, "shape") else obs_space.n
         if isinstance(self.env.action_space, gym.spaces.Discrete):
             self.action_dim: int = self.env.action_space.n
             self.max_action = None
