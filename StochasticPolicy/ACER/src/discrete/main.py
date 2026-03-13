@@ -22,7 +22,7 @@ def main():
     tau = 0.01
     buffer_size = int(1e6)
     seq_len = 20
-    replay_ratio = 2
+    replay_ratio = 4
     trust_region_delta = 0.1
     gamma = 0.99
     reward_scale = 1.0

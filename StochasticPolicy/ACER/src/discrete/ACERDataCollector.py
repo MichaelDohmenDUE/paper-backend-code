@@ -18,7 +18,7 @@ class ACERDataCollector:
         self.seq_len = seq_len
 
         self.rollout = []
-        self.state = env.reset()
+        self.state = np.array(env.reset(), dtype=np.float32)
         self.done = False
         self.episode_reward = 0
         self.episode_timesteps = 0
@@ -40,6 +40,7 @@ class ACERDataCollector:
         )
 
         next_state, reward, done, done_bool = self.env.step(action, self.episode_timesteps)
+        next_state = np.array(next_state, dtype=np.float32)
 
         clipped_reward = np.clip(reward, -1, 1)
 

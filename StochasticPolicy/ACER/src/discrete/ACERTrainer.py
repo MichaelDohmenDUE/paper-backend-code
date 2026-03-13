@@ -25,7 +25,7 @@ class ACERTrainer:
         self.gamma = gamma
         self.tau = 0.1
         self.delta = 0.001
-        self.rho_bar = 5.0
+        self.rho_bar = 10.0
         self.c_bar = 1.0
         self.seq_len = 20
         self.retrace_lambda = 1.0
@@ -156,7 +156,7 @@ class ACERTrainer:
         self.actor_optimizer.step()
 
     def select_action(self, state, return_params=False):
-        state_t = torch.FloatTensor(state).unsqueeze(0).to(device)
+        state_t = torch.from_numpy(state).unsqueeze(0).float().to(device)
         logits = self.actor(state_t)
         logits = torch.clamp(logits, -20, 20)
         dist = torch.distributions.Categorical(logits=logits)
