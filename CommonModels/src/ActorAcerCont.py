@@ -1,26 +1,26 @@
-import torch
 import torch.nn as nn
-
-import torch
-import torch.nn as nn
+import torch.nn.functional as F
 from torch.distributions import Categorical
 
 
-class DiscreteActor(nn.Module):
-    def __init__(self, state_dim, action_dim, hidden_dim):
+class AtariActor(nn.Module):
+    def __init__(self, action_dim):
         super().__init__()
-        self.fc1 = nn.Linear(state_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
-        self.logits_layer = nn.Linear(hidden_dim, action_dim)
 
-        nn.init.orthogonal_(self.fc1.weight, gain=1.0)
-        nn.init.orthogonal_(self.fc2.weight, gain=1.0)
-        nn.init.orthogonal_(self.logits_layer.weight, gain=0.01)
+        self.conv = nn.Sequential(
+            nn.Conv2d(4, 32, 8, stride=4), nn.ReLU(),
+            nn.Conv2d(32, 64, 4, stride=2), nn.ReLU(),
+            nn.Conv2d(64, 64, 3, stride=1), nn.ReLU()
+        )
+
+        self.fc1 = nn.Linear(64 * 7 * 7, 512)
+        self.fc2 = nn.Linear(512, action_dim)
 
     def forward(self, state):
-        x = torch.relu(self.fc1(state))
-        x = torch.relu(self.fc2(x))
-        logits = self.logits_layer(x)
+        x = self.conv(state)
+        x = x.view(x.size(0), -1)
+        x = F.relu(self.fc1(x))
+        logits = self.fc2(x)
         return logits
 
     def sample_action(self, state):

@@ -21,7 +21,7 @@ def main():
     hidden_dim = 200
     tau = 0.01
     buffer_size = int(1e6)
-    seq_len = 10
+    seq_len = 20
     replay_ratio = 2
     trust_region_delta = 0.1
     gamma = 0.99
@@ -48,7 +48,7 @@ def main():
     buffer = ReplayBuffer(spec, buffer_size, batch_size)
 
     # Processors
-    collector = ACERDataCollector(trainer, env_handler, buffer, factory, device)
+    collector = ACERDataCollector(trainer, env_handler, buffer, factory, device, seq_len)
     train_process = ACERTrainProcessor(trainer, buffer, seq_len, replay_ratio, batch_size, tau)
     # sync_process = SyncProcessor(trainer.actor, trainer.trust_region_actor, tau, sync_freq=1)
 

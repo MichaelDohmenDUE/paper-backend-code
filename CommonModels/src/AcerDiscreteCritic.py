@@ -3,19 +3,20 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class DiscreteCritic(nn.Module):
-    def __init__(self, state_size: int, action_size: int, hidden_size: int):
+    def __init__(self, action_dim):
         super().__init__()
 
-        self.fc1 = nn.Linear(state_size, hidden_size)
-        self.fc2 = nn.Linear(hidden_size, hidden_size)
-        self.fc3 = nn.Linear(hidden_size, action_size)  # one Q per action
+        self.conv = nn.Sequential(
+            nn.Conv2d(4, 32, 8, stride=4), nn.ReLU(),
+            nn.Conv2d(32, 64, 4, stride=2), nn.ReLU(),
+            nn.Conv2d(64, 64, 3, stride=1), nn.ReLU()
+        )
+
+        self.fc1 = nn.Linear(64 * 7 * 7, 512)
+        self.fc2 = nn.Linear(512, action_dim)
 
     def forward(self, state):
-        x = F.relu(self.fc1(state))
-        x = F.relu(self.fc2(x))
-        q_values = self.fc3(x)  # shape [batch, action_dim]
-        return q_values
-
-    def q_value(self, state, action):
-        q_all = self.forward(state)
-        return q_all.gather(1, action.long().unsqueeze(-1)).squeeze(-1)
+        x = self.conv(state)
+        x = x.view(x.size(0), -1)
+        x = F.relu(self.fc1(x))
+        return self.fc2(x)

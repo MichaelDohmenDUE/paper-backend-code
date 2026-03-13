@@ -11,8 +11,7 @@ class ACERTrainProcessor:
         self.tau = tau
 
     def run(self):
-        warmup = 10000
-        if len(self.buffer) < max(self.seq_len, warmup):
+        if len(self.buffer) < self.seq_len:
             return
 
         self.trainer.train(self.buffer, batch_size=1, on_policy=True)
