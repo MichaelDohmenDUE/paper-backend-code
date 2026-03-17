@@ -27,7 +27,7 @@ class ACERDataCollector:
     def run(self):
         if self.done:
             print(f"Episode {self.episode_count} Reward: {self.episode_reward}")
-            self.state = self.env.reset()
+            self.state = np.array(self.env.reset(), dtype=np.float32)
             self.done = False
             self.episode_reward = 0
             self.episode_timesteps = 0
@@ -42,12 +42,12 @@ class ACERDataCollector:
         next_state, reward, done, done_bool = self.env.step(action, self.episode_timesteps)
         next_state = np.array(next_state, dtype=np.float32)
 
-        clipped_reward = np.clip(reward, -1, 1)
+        #slipped_reward = np.clip(reward, -1, 1)
 
         transition = self.factory.create(
             state=self.state,
             action=action,
-            reward=clipped_reward,
+            reward=reward,
             next_state=next_state,
             mask=1.0 - done_bool,
             mu_logp=mu_logp,
@@ -61,5 +61,6 @@ class ACERDataCollector:
 
         if len(self.rollout) == self.seq_len:
             for tr in self.rollout:
+                #print(tr)
                 self.buffer.append(tr)
             self.rollout = []

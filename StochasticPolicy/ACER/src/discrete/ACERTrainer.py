@@ -23,10 +23,10 @@ class ACERTrainer:
         self.state_dim = state_size
         self.action_dim = action_size
         self.gamma = gamma
-        self.tau = 0.1
-        self.delta = 0.001
+        self.tau = 1.0
+        self.delta = 1.0
         self.rho_bar = 10.0
-        self.c_bar = 1.0
+        self.c_bar = 10.0
         self.seq_len = 20
         self.retrace_lambda = 1.0
 
@@ -142,7 +142,7 @@ class ACERTrainer:
         g = [p.grad.clone() for p in self.actor.parameters()]
         self.actor_optimizer.zero_grad()
         kl.backward()
-        k = [torch.clamp(p.grad.clone(), -1.0, 1.0) for p in self.actor.parameters()]
+        k = [p.grad.clone() for p in self.actor.parameters()]
         k_dot_g = sum((kg * gg).sum() for kg, gg in zip(k, g))
         k_norm_sq = sum((kg * kg).sum() for kg in k) + 1e-8
         alpha = (k_dot_g - self.delta) / k_norm_sq
@@ -205,6 +205,7 @@ class ACERTrainer:
         rho_excess = torch.clamp(rho_all - self.c_bar, min=0.0)
 
         bias_term = (pi_probs * rho_excess * adv_all).sum(dim=-1)
+        bias_term = torch.clamp(bias_term, -10.0, 10.0)
 
         policy_logp = self.actor.log_prob(flat_states, flat_actions).view(B, T)
         rho, rho_bar, c = self._compute_importance_weights(policy_logp, mu_logps)
