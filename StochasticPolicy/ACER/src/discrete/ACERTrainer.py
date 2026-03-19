@@ -179,6 +179,7 @@ class ACERTrainer:
             return action_np, mu_logp_np
 
     def train(self, replay_buffer, batch_size=256, on_policy=False):
+        self.trust_region_actor.load_state_dict(self.actor.state_dict())
         states, actions, rewards, not_dones, mu_logps, next_states, mu_logits = self._prepare_batch(
             replay_buffer, batch_size, on_policy)
 
@@ -249,14 +250,18 @@ class ACERTrainer:
         actor_loss = actor_loss / T
         logits = torch.clamp(self.actor(flat_states), -20, 20)
         ref_logits = torch.clamp(self.trust_region_actor(flat_states), -20, 20)
-        kl = self._compute_kl(logits, ref_logits).view(B, T)
-        kl = (kl * not_dones).mean()
-        self._update_actor_with_trust_region(actor_loss, kl)
-        synchronize(self.actor, self.trust_region_actor, tau=self.tau)
+        kl_for_grad = self._compute_kl(logits, ref_logits).view(B, T)
+        kl_for_grad = (kl_for_grad * not_dones).mean()
+        self._update_actor_with_trust_region(actor_loss, kl_for_grad)
+
+        with torch.no_grad():
+            logits_after = torch.clamp(self.actor(flat_states), -20, 20)
+            kl_value = self._compute_kl(logits_after, ref_logits).view(B, T)
+            kl_value = (kl_value * not_dones).mean()
         if torch.rand(1).item() < 0.01:
             print(
                 f"critic_loss={critic_loss.item():.3f}, "
                 f"actor_loss={actor_loss.item():.3f}, "
                 f"mean_rho={rho.mean().item():.3f}, "
                 f"mean_c={c.mean().item():.3f},"
-                f"mean_kl={kl.item():.9f}")
+                f"mean_kl={kl_value.item()}")
