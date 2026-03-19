@@ -23,8 +23,8 @@ class ACERTrainer:
         self.state_dim = state_size
         self.action_dim = action_size
         self.gamma = gamma
-        self.tau = 1.0
-        self.delta = 1.0
+        self.tau = tau
+        self.delta = trust_region_delta
         self.rho_bar = 10.0
         self.c_bar = 10.0
         self.seq_len = 20
@@ -32,15 +32,23 @@ class ACERTrainer:
 
     def _prepare_batch(self, replay_buffer, batch_size, on_policy):
         if on_policy:
-            seq = list(replay_buffer.buffer)[-self.seq_len:]
+            rollouts = replay_buffer  # list of B rollouts, each length T
 
-            states = torch.tensor(np.array([[tr.state for tr in seq]]), dtype=torch.float32, device=device)
-            actions = torch.tensor(np.array([[tr.action for tr in seq]]), dtype=torch.long, device=device)
-            rewards = torch.tensor(np.array([[tr.reward for tr in seq]]), dtype=torch.float32, device=device)
-            not_dones = torch.tensor(np.array([[tr.mask for tr in seq]]), dtype=torch.float32, device=device)
-            next_states = torch.tensor(np.array([[tr.next_state for tr in seq]]), dtype=torch.float32, device=device)
-            mu_logps = torch.tensor(np.array([[tr.mu_logp for tr in seq]]), dtype=torch.float32, device=device)
-            mu_logits = torch.tensor(np.array([[tr.mu_logits for tr in seq]]), dtype=torch.float32, device=device)
+            # Convert nested lists to NumPy arrays first (fast)
+            states_np = np.array([[tr.state for tr in rollout] for rollout in rollouts], dtype=np.float32)
+            actions_np = np.array([[tr.action for tr in rollout] for rollout in rollouts], dtype=np.int64)
+            rewards_np = np.array([[tr.reward for tr in rollout] for rollout in rollouts], dtype=np.float32)
+            not_dones_np = np.array([[tr.mask for tr in rollout] for rollout in rollouts], dtype=np.float32)
+            next_states_np = np.array([[tr.next_state for tr in rollout] for rollout in rollouts], dtype=np.float32)
+            mu_logps_np = np.array([[tr.mu_logp for tr in rollout] for rollout in rollouts], dtype=np.float32)
+            mu_logits_np = np.array([[tr.mu_logits for tr in rollout] for rollout in rollouts], dtype=np.float32)
+            states = torch.tensor(states_np, device=device)
+            actions = torch.tensor(actions_np, device=device)
+            rewards = torch.tensor(rewards_np, device=device)
+            not_dones = torch.tensor(not_dones_np, device=device)
+            next_states = torch.tensor(next_states_np, device=device)
+            mu_logps = torch.tensor(mu_logps_np, device=device)
+            mu_logits = torch.tensor(mu_logits_np, device=device)
 
             return states, actions, rewards, not_dones, mu_logps, next_states, mu_logits
 
@@ -251,4 +259,4 @@ class ACERTrainer:
                 f"actor_loss={actor_loss.item():.3f}, "
                 f"mean_rho={rho.mean().item():.3f}, "
                 f"mean_c={c.mean().item():.3f},"
-                f"mean_kl={kl.item():.5f}")
+                f"mean_kl={kl.item():.9f}")

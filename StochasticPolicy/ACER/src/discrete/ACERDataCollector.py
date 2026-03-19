@@ -26,7 +26,7 @@ class ACERDataCollector:
 
     def run(self):
         if self.done:
-            print(f"Episode {self.episode_count} Reward: {self.episode_reward}")
+            #print(f"Episode {self.episode_count} Reward: {self.episode_reward}")
             self.state = np.array(self.env.reset(), dtype=np.float32)
             self.done = False
             self.episode_reward = 0
@@ -63,4 +63,6 @@ class ACERDataCollector:
             for tr in self.rollout:
                 #print(tr)
                 self.buffer.append(tr)
+            rollout = self.rollout
             self.rollout = []
+            return rollout

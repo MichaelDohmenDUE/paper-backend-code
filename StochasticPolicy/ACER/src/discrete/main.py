@@ -1,5 +1,5 @@
-import random
 
+import random
 import numpy as np
 import torch
 
@@ -10,24 +10,21 @@ from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactor
 from backend.Utils.src.EnvFactory import AtariEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
-import gymnasium as gym
-from gymnasium.wrappers import AtariPreprocessing, FrameStack
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 def acer_evaluate(trainer, env_factory, episodes=100):
     scores = []
-
     for _ in range(episodes):
-        env = env_factory.make_env()  # fresh evaluation env
-        state = env.reset()
+        env = env_factory.create()
+        state, _ = env.reset()
         state = np.array(state, dtype=np.float32)
         noops = random.randint(0, 30)
         for _ in range(noops):
-            state, _, done, _ = env.step(0)
+            state, _, terminated, truncated, _ = env.step(0)
+            done = terminated or truncated
             state = np.array(state, dtype=np.float32)
             if done:
-                state = env.reset()
+                state, _ = env.reset()
                 state = np.array(state, dtype=np.float32)
 
         done = False
@@ -36,45 +33,45 @@ def acer_evaluate(trainer, env_factory, episodes=100):
         while not done:
             state_t = torch.from_numpy(state).unsqueeze(0).float().to(device)
             logits = trainer.actor(state_t)
-            action = torch.argmax(logits, dim=-1).item()  # deterministic π
+            action = torch.argmax(logits, dim=-1).item()
 
-            next_state, reward, done, _ = env.step(action)
-            next_state = np.array(next_state, dtype=np.float32)
+            next_state, reward, terminated, truncated, _ = env.step(action)
+            done = terminated or truncated
 
-            episode_reward += reward  # raw reward
-            state = next_state
+            state = np.array(next_state, dtype=np.float32)
+            episode_reward += reward
 
         scores.append(episode_reward)
 
     return np.mean(scores)
 
-
 def main():
     env_name = "ALE/Pong-v5"
     seed = 100
     max_timesteps = 1000000
+    num_envs = 16
     batch_size = 32
     learning_rate = 3e-4
     hidden_dim = 200
-    tau = 0.01
+    tau = 1.0
     buffer_size = int(1e6)
     seq_len = 20
     replay_ratio = 4
-    trust_region_delta = 0.1
+    trust_region_delta = 1.0
     gamma = 0.99
     reward_scale = 1.0
 
     factory = AtariEnvFactory(env_name)
-    env_handler = EnvironmentHandler(factory, seed, reward_scale=reward_scale)
 
+    env_handlers = [EnvironmentHandler(factory, seed + i, reward_scale=reward_scale) for i in range(num_envs)]
     # Transition spec for ACER
     spec = TransitionSpec(["state", "action", "reward", "next_state", "mask", "mu_logp", "mu_logits"])
-    factory = TransitionFactory(spec)
+    transition_factory = TransitionFactory(spec)
 
     # Trainer
     trainer = ACERTrainer(
-        state_size=env_handler.state_dim,
-        action_size=env_handler.action_dim,
+        state_size=env_handlers[0].state_dim,
+        action_size=env_handlers[0].action_dim,
         hidden_size=hidden_dim,
         learning_rate=learning_rate,
         gamma=gamma,
@@ -84,19 +81,24 @@ def main():
 
     buffer = ReplayBuffer(spec, buffer_size, batch_size)
 
-    # Processors
-    collector = ACERDataCollector(trainer, env_handler, buffer, factory, device, seq_len)
+    collectors = [ACERDataCollector(trainer, env_handlers[i], buffer, transition_factory, device, seq_len)
+                  for i in range(num_envs)]
     train_process = ACERTrainProcessor(trainer, buffer, seq_len, replay_ratio, batch_size, tau)
     # sync_process = SyncProcessor(trainer.actor, trainer.trust_region_actor, tau, sync_freq=1)
 
-    # Main loop
     for step in range(max_timesteps):
-        collector.run()
-        train_process.run()
-        # sync_process.run() #TODO: This still gets handled on a lower level because of the on Policy off Policy rhythm
-        if step % 100000 == 0 and step > 0:
-            eval_score = acer_training_eval(trainer, factory, episodes=10)
-            print(f"[EVAL] Step {step}: Mean Score = {eval_score}")
+        on_policy_rollouts = []
+        for collector in collectors:
+            rollout = collector.run()
+            if rollout is not None:
+                on_policy_rollouts.append(rollout)
+
+        if len(on_policy_rollouts) == num_envs:
+            train_process.run(on_policy_rollouts)
+
+        if step % 1000 == 0 and step > 0:
+            score = acer_evaluate(trainer, factory, episodes=10)
+            print(f"[EVAL] Step {step}: Mean Score = {score}")
 
 
 if __name__ == "__main__":

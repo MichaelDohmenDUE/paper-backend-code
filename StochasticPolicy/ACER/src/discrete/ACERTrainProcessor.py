@@ -10,12 +10,11 @@ class ACERTrainProcessor:
         self.batch_size = batch_size
         self.tau = tau
 
-    def run(self):
-        if len(self.buffer) < self.seq_len:
+    def run(self, on_policy_rollouts):
+        if len(on_policy_rollouts) == 0:
             return
 
-        self.trainer.train(self.buffer, batch_size=1, on_policy=True)
-        synchronize(self.trainer.actor, self.trainer.trust_region_actor, tau=self.tau)
+        self.trainer.train(on_policy_rollouts, batch_size=len(on_policy_rollouts), on_policy=True)
+
         for _ in range(self.replay_ratio):
             self.trainer.train(self.buffer, batch_size=self.batch_size, on_policy=False)
-            synchronize(self.trainer.actor, self.trainer.trust_region_actor, tau=self.tau)
