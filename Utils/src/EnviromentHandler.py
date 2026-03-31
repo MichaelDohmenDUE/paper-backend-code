@@ -17,9 +17,15 @@ class EnvironmentHandler:
         self.reward_scale: float = reward_scale
 
         self.reward_scale = reward_scale
-
         obs_space = self.env.observation_space
-        self.state_dim = obs_space.shape if hasattr(obs_space, "shape") else obs_space.n
+
+        if hasattr(obs_space, "shape") and len(obs_space.shape) > 1:
+            # Image-based env (Atari)
+            self.state_dim = obs_space.shape
+        else:
+            # Vector env (Acrobot, MuJoCo, CartPole)
+            self.state_dim = obs_space.shape[0]
+
         if isinstance(self.env.action_space, gym.spaces.Discrete):
             self.action_dim: int = self.env.action_space.n
             self.max_action = None

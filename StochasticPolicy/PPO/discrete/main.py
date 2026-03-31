@@ -8,6 +8,7 @@ from backend.StochasticPolicy.PPO.discrete.src.DiscreteActionHandler import Acti
 from backend.StochasticPolicy.PPO.discrete.src.PPOTrainerProcessor import PPOTrainerProcessor
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
+from backend.Utils.src.EnvFactory import MujocoEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
@@ -34,7 +35,7 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
 
 
 def main():
-    env_name = "Acrobot-v1"
+    env_name = "CartPole-v1"
     seed = 100
     rollout_size = 2048
     batch_size = 64
@@ -47,8 +48,8 @@ def main():
 
     spec = TransitionSpec(["state", "action", "logp", "reward", "done", "value", "bootstrap_value"])
     transition_factory = TransitionFactory(spec)
-
-    env_handler = EnvironmentHandler(env_name, seed)
+    factory = MujocoEnvFactory(env_name)
+    env_handler = EnvironmentHandler(factory, seed)
     state_dim, action_dim, _ = env_handler.get_env_specs()
 
     actor = DiscreteActorPPO(state_dim, action_dim, hidden_dim).to(device)
