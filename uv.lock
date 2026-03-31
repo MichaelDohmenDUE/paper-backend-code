@@ -63,6 +63,7 @@ name = "backend"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "ale-py" },
     { name = "autorom", extra = ["accept-rom-license"] },
     { name = "gymnasium", extra = ["atari", "mujoco", "other"] },
     { name = "torch" },
@@ -70,6 +71,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "ale-py", specifier = ">=0.8.1" },
     { name = "autorom", extras = ["accept-rom-license"], specifier = ">=0.6.1" },
     { name = "gymnasium", extras = ["atari", "mujoco", "other"], specifier = "==0.29.1" },
     { name = "torch", specifier = ">=2.10.0" },

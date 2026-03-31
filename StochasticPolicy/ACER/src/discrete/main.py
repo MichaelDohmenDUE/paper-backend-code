@@ -17,15 +17,15 @@ def acer_evaluate(trainer, env_factory, episodes=100):
     for _ in range(episodes):
         env = env_factory.create()
         state, _ = env.reset()
-        state = np.array(state, dtype=np.float32)
+        state = np.asarray(state, dtype=np.float32)
         noops = random.randint(0, 30)
         for _ in range(noops):
             state, _, terminated, truncated, _ = env.step(0)
             done = terminated or truncated
-            state = np.array(state, dtype=np.float32)
+            state = np.asarray(state, dtype=np.float32)
             if done:
                 state, _ = env.reset()
-                state = np.array(state, dtype=np.float32)
+                state = np.asarray(state, dtype=np.float32)
 
         done = False
         episode_reward = 0.0
@@ -46,9 +46,9 @@ def acer_evaluate(trainer, env_factory, episodes=100):
     return np.mean(scores)
 
 def main():
-    env_name = "ALE/Pong-v5"
+    env_name = "ALE/Breakout-v5"
     seed = 100
-    max_timesteps = 1000000
+    max_timesteps = 10000000
     num_envs = 16
     batch_size = 32
     learning_rate = 3e-4

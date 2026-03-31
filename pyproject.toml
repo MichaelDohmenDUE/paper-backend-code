@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.11"
 dependencies = [
+    "ale-py>=0.8.1",
     "autorom[accept-rom-license]>=0.6.1",
     "gymnasium[atari,mujoco,other]==0.29.1",
     "torch>=2.10.0",
