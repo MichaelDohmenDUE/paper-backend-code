@@ -38,7 +38,7 @@ def acer_evaluate(trainer, env_factory, episodes=100):
             next_state, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
 
-            state = np.array(next_state, dtype=np.float32)
+            state = np.asarray(state, dtype=np.float32)
             episode_reward += reward
 
         scores.append(episode_reward)
@@ -96,8 +96,8 @@ def main():
         if len(on_policy_rollouts) == num_envs:
             train_process.run(on_policy_rollouts)
 
-        if step % 1000 == 0 and step > 0:
-            score = acer_evaluate(trainer, factory, episodes=10)
+        if step % 10000 == 0 and step > 0:
+            score = acer_evaluate(trainer, factory, episodes=5)
             print(f"[EVAL] Step {step}: Mean Score = {score}")
 
 
