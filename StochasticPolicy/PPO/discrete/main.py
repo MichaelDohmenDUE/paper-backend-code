@@ -8,7 +8,7 @@ from backend.StochasticPolicy.PPO.discrete.src.DiscreteActionHandler import Acti
 from backend.StochasticPolicy.PPO.discrete.src.PPOTrainerProcessor import PPOTrainerProcessor
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
-from backend.Utils.src.EnvFactory import MujocoEnvFactory
+from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
@@ -48,7 +48,7 @@ def main():
 
     spec = TransitionSpec(["state", "action", "logp", "reward", "done", "value", "bootstrap_value"])
     transition_factory = TransitionFactory(spec)
-    factory = MujocoEnvFactory(env_name)
+    factory = GymEnvFactory(env_name)
     env_handler = EnvironmentHandler(factory, seed)
     state_dim, action_dim, _ = env_handler.get_env_specs()
 

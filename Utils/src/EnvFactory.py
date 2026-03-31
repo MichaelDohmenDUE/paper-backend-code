@@ -9,7 +9,7 @@ class EnvFactory(ABC):
 
 
 
-class MujocoEnvFactory(EnvFactory):
+class GymEnvFactory(EnvFactory):
     def __init__(self, env_name: str):
         self.env_name = env_name
 

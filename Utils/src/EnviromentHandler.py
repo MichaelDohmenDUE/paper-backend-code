@@ -42,11 +42,16 @@ class EnvironmentHandler:
 
     def step(self, action, episode_timesteps: int):
         next_state, reward, terminated, truncated, info = self.env.step(action)
-        reward = reward * self.reward_scale
+        reward *= self.reward_scale
         if self.episode_max_steps is not None and episode_timesteps >= self.episode_max_steps:
             truncated = True
         done = terminated or truncated
-        done_bool = 0.0 if done else 1.0
+        if truncated:
+            done_bool = 0.0
+        else:
+            done_bool = float(terminated)
+
+        next_state = np.asarray(next_state, dtype=np.float32)
         return next_state, reward, done, done_bool
 
     def get_env_specs(self) -> tuple[int, int, float | None]:
