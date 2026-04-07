@@ -17,6 +17,12 @@ class ActionHandler(AbstractActionHandler):
         with torch.no_grad():
             dist = self.actor(state_t)
             action = dist.sample()
-            logp = dist.log_prob(action).sum(-1)
+            logp = dist.log_prob(action).sum(dim=-1)
             value = self.critic(state_t).squeeze(-1)
-        return action.cpu().numpy().squeeze(0), float(logp.cpu().numpy()), float(value.cpu().numpy())
+
+        action = action.cpu().numpy().squeeze(0)
+        logp = logp.item()
+        value = value.item()
+
+        return action, logp, value
+

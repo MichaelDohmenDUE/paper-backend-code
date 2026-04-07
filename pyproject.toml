@@ -8,4 +8,5 @@ dependencies = [
     "autorom[accept-rom-license]>=0.6.1",
     "gymnasium[atari,mujoco,other]==0.29.1",
     "torch>=2.10.0",
+    "wandb>=0.25.1",
 ]

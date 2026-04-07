@@ -1,4 +1,5 @@
 import torch
+import wandb
 from torch import optim
 
 from backend.CommonModels.src.CriticPPO import CriticPPO
@@ -46,6 +47,22 @@ def main():
     gamma = 0.99
     lam = 0.95
 
+    wandb.init(
+        entity="michael_dohmen-",
+        project="my-ppo-benchmarks",
+        config={
+            "env_id": env_name,
+            "exp_name": "my_ppo_cartpole",
+            "seed": seed,
+            "rollout_size": rollout_size,
+            "batch_size": batch_size,
+            "epochs": epochs,
+            "lr": lr,
+            "gamma": gamma,
+            "lam": lam,
+        }
+    )
+
     spec = TransitionSpec(["state", "action", "logp", "reward", "done", "value", "bootstrap_value"])
     transition_factory = TransitionFactory(spec)
     factory = GymEnvFactory(env_name)
@@ -70,7 +87,11 @@ def main():
         trainer.run()
 
         if update % 10 == 0:
-            eval_trainer(trainer, env_handler, eval_episodes=5)
+            eval_reward = eval_trainer(trainer, env_handler, eval_episodes=5)
+            wandb.log({
+                "charts/episodic_return": eval_reward,
+                "global_step": update * rollout_size,
+            })
 
 
 if __name__ == "__main__":
