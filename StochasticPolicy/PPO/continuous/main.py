@@ -1,4 +1,5 @@
 import torch
+import wandb
 from torch import optim
 
 from backend.CommonModels.src.ActorPPO import ActorPPO
@@ -8,6 +9,7 @@ from backend.StochasticPolicy.PPO.continuous.src.DataCollectionProcessor import 
 from backend.StochasticPolicy.PPO.continuous.src.PPOTrainerProcessor import PPOTrainerProcessor
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
+from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
@@ -34,7 +36,7 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
 
 
 def main():
-    env_name = "InvertedPendulum-v5"
+    env_name = "HalfCheetah-v4"
     seed = 100
     rollout_size = 2048
     batch_size = 64
@@ -45,10 +47,26 @@ def main():
     gamma = 0.99
     lam = 0.95
 
+    wandb.init(
+        entity="michael_dohmen-",
+        project="my-ppo-benchmarks",
+        config={
+            "env_id": env_name,
+            "exp_name": "my_HalfCheetah-v0",
+            "seed": seed,
+            "rollout_size": rollout_size,
+            "batch_size": batch_size,
+            "epochs": epochs,
+            "lr": lr,
+            "gamma": gamma,
+            "lam": lam,
+        }
+    )
+
     spec = TransitionSpec(["state", "action", "logp", "reward", "done", "value", "bootstrap_value"])
     transition_factory = TransitionFactory(spec)
-
-    env_handler = EnvironmentHandler(env_name, seed)
+    factory = GymEnvFactory(env_name)
+    env_handler = EnvironmentHandler(factory, seed)
     state_dim, action_dim, _ = env_handler.get_env_specs()
 
     actor = ActorPPO(state_dim, action_dim, hidden_dim).to(device)
@@ -69,7 +87,11 @@ def main():
         trainer.run()
 
         if update % 10 == 0:
-            eval_trainer(trainer, env_handler, eval_episodes=5)
+            eval_reward = eval_trainer(trainer, env_handler, eval_episodes=5)
+            wandb.log({
+                "charts/episodic_return": eval_reward,
+                "global_step": update * rollout_size,
+            })
 
 
 if __name__ == "__main__":
