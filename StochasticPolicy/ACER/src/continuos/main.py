@@ -4,6 +4,7 @@ from backend.StochasticPolicy.ACER.src.continuos.ACERDataCollector import ACERDa
 from backend.StochasticPolicy.ACER.src.continuos.ACERTrainProcessor import ACERTrainProcessor
 from backend.StochasticPolicy.ACER.src.continuos.ACERTrainer import ACERTrainer
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
+from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
@@ -24,8 +25,8 @@ def main():
     trust_region_delta = 0.001
     gamma = 0.99
     reward_scale = 1.0
-
-    env_handler = EnvironmentHandler(env_name, seed, reward_scale=reward_scale)
+    gym_factory = GymEnvFactory(env_name)
+    env_handler = EnvironmentHandler(gym_factory, seed, reward_scale=reward_scale)
 
     # Transition spec for ACER
     spec = TransitionSpec(["state", "action", "reward", "next_state", "mask", "mu_logp", "mu_mean", "mu_log_std"])

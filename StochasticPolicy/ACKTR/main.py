@@ -8,6 +8,7 @@ from backend.CommonModels.src.ActorPPO import ActorPPO
 from backend.CommonModels.src.CriticPPO import CriticPPO
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
+from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
@@ -34,7 +35,7 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
 
 
 def main():
-    env_name = "InvertedPendulum-v5"
+    env_name = "InvertedPendulum-v4"
     seed = 100
     rollout_size = 2048
     batch_size = 64
@@ -47,8 +48,9 @@ def main():
 
     spec = TransitionSpec(["state", "action", "logp", "reward", "done", "value", "entropy", "bootstrap_value"])
     transition_factory = TransitionFactory(spec)
+    gym_factory = GymEnvFactory(env_name)
 
-    env_handler = EnvironmentHandler(env_name, seed)
+    env_handler = EnvironmentHandler(gym_factory, seed)
     state_dim, action_dim, _ = env_handler.get_env_specs()
 
     actor = ActorPPO(state_dim, action_dim, hidden_dim).to(device)

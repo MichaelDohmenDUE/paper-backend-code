@@ -1,4 +1,5 @@
 from backend.Utils.src.BatchTransitioner import TransitionFactory, TransitionSpec
+from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.StochasticPolicy.VGD.src.ActionHandler import ActionHandler
 import torch
@@ -29,7 +30,8 @@ def main():
     transition_factory = TransitionFactory(spec)
     replay_buffer = ReplayBuffer(spec, max_buffer_size=500, batch_size=1)
 
-    env_handler = EnvironmentHandler(env_name, seed=seed)
+    gym_factory = GymEnvFactory(env_name)
+    env_handler = EnvironmentHandler(gym_factory, seed=seed)
 
     observation_size, action_size, _ = env_handler.get_env_specs()
     policy = PolicyVPG(observation_size, action_size, hidden_dim=hidden_dim).to(device)

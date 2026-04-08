@@ -8,6 +8,7 @@ from backend.StochasticPolicy.SAC.src.ActionSelector import ActionSelector
 from backend.StochasticPolicy.SAC.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.StochasticPolicy.SAC.src.TrainProcessor import TrainProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
+from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
@@ -29,7 +30,9 @@ def main():
     gamma = 0.99
     seed = 42
 
-    env = EnvironmentHandler(env_name, seed)
+    gym_factory = GymEnvFactory(env_name)
+
+    env = EnvironmentHandler(gym_factory, seed)
     observation_size, action_size, max_action = env.get_env_specs()
 
     # Networks

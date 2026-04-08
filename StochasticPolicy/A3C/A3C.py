@@ -6,6 +6,7 @@ from backend.StochasticPolicy.A3C.src.A3CDataCollectionProcessor import A3CDataC
 from backend.StochasticPolicy.A3C.src.A3CTrainingProcessor import A3CTrainingProcessor
 from backend.CommonModels.src.ActorCriticA3C import ActorCritic
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
+from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.SyncProcessor import SyncProcessor
 
@@ -86,7 +87,8 @@ def main():
     T_max = 1_000_000
 
     torch.manual_seed(seed)
-    env = EnvironmentHandler(env_name, seed)
+    gym_factory = GymEnvFactory(env_name)
+    env = EnvironmentHandler(gym_factory, seed)
     obs_dim, act_dim, _ = env.get_env_specs()
     global_net = ActorCritic(obs_dim, act_dim, hidden_size).to(device)
     global_net.share_memory()
