@@ -8,6 +8,7 @@ from backend.DeterministicPolicy.DDPG.src.ActionHandler import OUNoise, Determin
 from backend.DeterministicPolicy.DDPG.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.DeterministicPolicy.DDPG.src.TrainProcessor import TrainProcess
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
+from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.GlobalCounter import GlobalCounter
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
@@ -20,7 +21,7 @@ def main():
     lr_actor = 1e-4
     lr_critic = 1e-3
     max_timesteps = 20000
-    env_name = "InvertedPendulum-v5"
+    env_name = "InvertedPendulum-v4"
     sync_freq = 1
     hidden_size = 32
     batch_size = 64
@@ -29,7 +30,8 @@ def main():
     gamma = 0.99
     seed = 42
 
-    env = EnvironmentHandler(env_name, seed)
+    gym_factory = GymEnvFactory(env_name)
+    env = EnvironmentHandler(gym_factory, seed)
     observation_size, action_size, max_action = env.get_env_specs()
 
     # Networks
@@ -56,7 +58,6 @@ def main():
 
     sync_process_actor = SyncProcessor(actor, actor_target, tau, sync_freq, gl_counter)
     sync_process_critic = SyncProcessor(critic, critic_target, tau, sync_freq, gl_counter)
-
 
     for t in range(max_timesteps):
         data_collection_process.run()

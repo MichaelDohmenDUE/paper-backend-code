@@ -6,6 +6,7 @@ from backend.DeterministicPolicy.DPG.src.ActionHandler import ActionHandler
 from backend.DeterministicPolicy.DPG.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.DeterministicPolicy.DPG.src.TrainProcessor import TrainProcess
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
+from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.GlobalCounter import GlobalCounter
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
@@ -17,15 +18,15 @@ def main():
     lr_actor = 1e-4
     lr_critic = 1e-3
     max_timesteps = 20000
-    env_name = "InvertedPendulum-v5"
+    env_name = "InvertedPendulum-v4"
     hidden_size = 32
     batch_size = 64
     max_buffer_size = 10000
     gamma = 0.99
     expl_coefficient = 0.2
     seed = 42
-
-    env = EnvironmentHandler(env_name, seed)
+    gym_factory = GymEnvFactory(env_name)
+    env = EnvironmentHandler(gym_factory, seed)
     observation_size, action_size, max_action = env.get_env_specs()
     if max_action is not None:
         expl_noise = float(expl_coefficient * max_action)

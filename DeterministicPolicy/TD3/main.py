@@ -9,6 +9,7 @@ from backend.DeterministicPolicy.TD3.src.ActionHandler import ActionHandler
 from backend.DeterministicPolicy.TD3.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.DeterministicPolicy.TD3.src.TD3TrainerProcessor import TrainProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
+from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.EvaluationHelper import eval_trainer
 from backend.Utils.src.GlobalCounter import GlobalCounter
@@ -34,8 +35,8 @@ def main():
     policy_noise = 0.2
     hidden_dim = 256
     buffer_size = int(1e6)
-
-    env_handler = EnvironmentHandler(env_name, seed)
+    gym_factory = GymEnvFactory(env_name)
+    env_handler = EnvironmentHandler(gym_factory, seed)
     observation_size, action_size, max_action = env_handler.get_env_specs()
     if max_action is None:
         max_action = 1
