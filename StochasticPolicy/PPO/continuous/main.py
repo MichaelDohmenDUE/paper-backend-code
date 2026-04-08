@@ -37,7 +37,7 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
 
 def main():
     env_name = "HalfCheetah-v4"
-    seed = 100
+    seed = 1
     rollout_size = 2048
     batch_size = 64
     epochs = 10

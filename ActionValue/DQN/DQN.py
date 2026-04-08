@@ -9,6 +9,7 @@ from backend.ActionValue.DQN.src.TrainProcessor import TrainProcessor
 #from backend.DQN.src.TrainProcessorGraph import TrainProcessor
 from backend.ActionValue.DQN.src.dqn_graph import build_dqn_graph
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
+from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.NodeLib.Node import Graph
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
@@ -30,10 +31,11 @@ def main():
     gamma = 0.99
     max_steps = 100000
     spec = TransitionSpec(["state", "action", "reward", "next_state", "done"])
+    gym_factory = GymEnvFactory(env_name)
     factory = TransitionFactory(spec)
     seed = 42
 
-    env = EnvironmentHandler(env_name, seed)
+    env = EnvironmentHandler(gym_factory, seed)
     obs_size, action_size, max_action = env.get_env_specs()
 
     behavior_net = nn.Sequential(nn.Linear(obs_size, hidden_size), nn.ReLU(), nn.Linear(hidden_size, action_size)).to(

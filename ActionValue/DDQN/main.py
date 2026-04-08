@@ -9,6 +9,7 @@ from backend.ActionValue.DQN.src.ActionHandler import EpsilonGreedyPolicy
 from backend.ActionValue.DQN.src.DataCollectionProcessor import DataCollectionProcessor
 # from backend.DQN.src.TrainProcessorGraph import TrainProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
+from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.NodeLib.Node import Graph
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
@@ -33,7 +34,9 @@ def main():
     spec = TransitionSpec(["state", "action", "reward", "next_state", "done"])
     factory = TransitionFactory(spec)
 
-    env = EnvironmentHandler(env_name, seed)
+    gym_factory = GymEnvFactory(env_name)
+
+    env = EnvironmentHandler(gym_factory, seed)
     obs_size, action_size, _ = env.get_env_specs()
 
     behavior_net = Policy(obs_size, action_size, hidden_size).to(device)

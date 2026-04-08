@@ -7,6 +7,7 @@ from backend.ActionValue.DQN.src.ActionHandler import EpsilonGreedyPolicy
 from backend.ActionValue.DQN.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.ActionValue.DuelingDQN.src.TrainProcessor import TrainProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
+from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
@@ -30,8 +31,8 @@ def main():
 
     spec = TransitionSpec(["state", "action", "reward", "next_state", "done"])
     factory = TransitionFactory(spec)
-
-    env = EnvironmentHandler(env_name, seed)
+    gym_factory = GymEnvFactory(env_name)
+    env = EnvironmentHandler(gym_factory, seed)
     obs_size, action_size, _ = env.get_env_specs()
 
     behavior_net = DuellingDQN(obs_size, hidden_size, action_size).to(device)
