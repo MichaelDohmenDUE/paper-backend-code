@@ -24,8 +24,8 @@ class A3CWorker:
         self.global_net = global_net
         self.optimizer = optimizer
         self.counter = counter
-
-        self.env = EnvironmentHandler(env_name, seed + worker_id)
+        gym_factory = GymEnvFactory(env_name)
+        self.env = EnvironmentHandler(gym_factory, seed + worker_id)
 
         self.collector = A3CDataCollectionProcessor(
             self.local_net, self.env, t_max, factory, gamma
