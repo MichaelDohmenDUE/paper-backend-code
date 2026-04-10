@@ -41,7 +41,7 @@ def main():
     rollout_size = 2048
     batch_size = 64
     epochs = 10
-    num_updates = 1000
+    num_updates = 2000
     lr = 3e-4
     hidden_dim = 64
     gamma = 0.99
@@ -50,9 +50,10 @@ def main():
     wandb.init(
         entity="michael_dohmen-",
         project="my-ppo-benchmarks",
+        group="test_ppo_halfcheetah-v4",
         config={
             "env_id": env_name,
-            "exp_name": "my_HalfCheetah-v0",
+            "exp_name": "my_HalfCheetah-v4",
             "seed": seed,
             "rollout_size": rollout_size,
             "batch_size": batch_size,
@@ -87,7 +88,7 @@ def main():
         trainer.run()
 
         if update % 10 == 0:
-            eval_reward = eval_trainer(trainer, env_handler, eval_episodes=5)
+            eval_reward = eval_trainer(trainer, env_handler, eval_episodes=10)
             wandb.log({
                 "charts/episodic_return": eval_reward,
                 "global_step": update * rollout_size,

@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import wandb
 
 from backend.AbstractHandlers.AbstractActionHandler import AbstractActionHandler
 from backend.Utils.src.BatchTransitioner import TransitionFactory
@@ -19,11 +20,16 @@ class DataCollectionProcessor:
         np.random.seed(env_handler.seed)
         torch.manual_seed(env_handler.seed)
 
+        # Logging for cleanRL
+        self.total_steps = 0
+
     def run(self):
         self.replay_buffer.buffer.clear()
         episode_timesteps = 0
+        episodic_reward = 0
         state = self.env_handler.reset()
         for step in range(self.rollout_size):
+            self.total_steps += 1
             episode_timesteps += 1
             action, logp, value = self.policy.select_action(state)
             next_state, reward, done, done_bool = self.env_handler.step(action, episode_timesteps)
@@ -36,13 +42,19 @@ class DataCollectionProcessor:
                 value=value,
                 bootstrap_value=None
             )
+            episodic_reward += reward
             self.replay_buffer.append(transition)
             state = next_state
 
             if done:
-                # print(f"Rollout: {episode_timesteps}")
+                wandb.log({
+                    "charts/episodic_return": episodic_reward,
+                    "charts/episodic_length": episode_timesteps,
+                    "global_step": self.total_steps,
+                })
                 state = self.env_handler.reset()
                 episode_timesteps = 0
+                episodic_reward = 0
 
         _, _, last_value = self.policy.select_action(state)
         self.replay_buffer.buffer[
