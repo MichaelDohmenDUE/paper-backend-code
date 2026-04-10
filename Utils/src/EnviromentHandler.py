@@ -8,7 +8,7 @@ from backend.Utils.src.EnvFactory import EnvFactory
 class EnvironmentHandler:
     def __init__(self, factory: EnvFactory, seed: int, reward_scale: float = 1.0):
         self.env = factory.create()
-
+        self.seed = seed
         self.env.action_space.seed(seed)
         torch.manual_seed(seed)
         if torch.cuda.is_available():
@@ -37,7 +37,7 @@ class EnvironmentHandler:
                                                                                           "max_episode_steps", None)
 
     def reset(self):
-        state, _ = self.env.reset()
+        state, _ = self.env.reset(seed=self.seed)
         return np.array(state, dtype=np.float32)
 
     def step(self, action, episode_timesteps: int):

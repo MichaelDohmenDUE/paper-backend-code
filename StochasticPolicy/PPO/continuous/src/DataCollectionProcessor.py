@@ -1,3 +1,6 @@
+import numpy as np
+import torch
+
 from backend.AbstractHandlers.AbstractActionHandler import AbstractActionHandler
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
@@ -13,6 +16,8 @@ class DataCollectionProcessor:
         self.replay_buffer = replay_buffer
         self.rollout_size = rollout_size
         self.policy = action_handler
+        np.random.seed(env_handler.seed)
+        torch.manual_seed(env_handler.seed)
 
     def run(self):
         self.replay_buffer.buffer.clear()
