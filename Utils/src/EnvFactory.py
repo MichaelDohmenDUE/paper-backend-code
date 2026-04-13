@@ -42,7 +42,7 @@ class AtariEnvFactory(EnvFactory):
 
     def create(self):
         env = gym.make(self.env_name, frameskip=1)
-
+        env = FireResetEnv(env)
         env = AtariPreprocessing(
             env,
             grayscale_obs=True,
@@ -52,6 +52,5 @@ class AtariEnvFactory(EnvFactory):
             noop_max=30,
             frame_skip=4
         )
-        env = FireResetEnv(env)
         env = FrameStack(env, self.frames)
         return env
