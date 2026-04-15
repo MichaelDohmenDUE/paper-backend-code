@@ -46,7 +46,7 @@ def acer_evaluate(trainer, env_factory, episodes=100):
     return np.mean(scores)
 
 def main():
-    env_name = "ALE/Pong-v5"
+    env_name = "ALE/Breakout-v5"
     seed = 100
     max_timesteps = 100000
     num_envs = 16

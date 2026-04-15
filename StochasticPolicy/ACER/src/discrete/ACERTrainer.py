@@ -49,7 +49,19 @@ class ACERTrainer:
             next_states = torch.tensor(next_states_np, device=device)
             mu_logps = torch.tensor(mu_logps_np, device=device)
             mu_logits = torch.tensor(mu_logits_np, device=device)
-
+            # Ensure channel-first (B, T, C, H, W) DEBUGGING with Help of LLM by Uni
+            if states.ndim == 5:
+                if states.shape[2] == 4:
+                    # Already (B, T, C, H, W) → do nothing
+                    pass
+                elif states.shape[-1] == 4:  # (B, T, H, W, C)
+                    states = states.permute(0, 1, 4, 2, 3)
+                    next_states = next_states.permute(0, 1, 4, 2, 3)
+                elif states.shape[-2] == 4:  # (B, T, H, C, W)
+                    states = states.permute(0, 1, 3, 2, 4)
+                    next_states = next_states.permute(0, 1, 3, 2, 4)
+                else:
+                    raise RuntimeError(f"Cannot find channel dimension in states, shape={states.shape}")  DEBUGGING with Help of LLM by Uni
             return states, actions, rewards, not_dones, mu_logps, next_states, mu_logits
 
         else:
@@ -131,7 +143,7 @@ class ACERTrainer:
         self.critic_optimizer.zero_grad()
         loss.backward()
         # NOT IN ACER PSEUDOCODE — numerical stability
-        torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=10.0)
+        torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=5.0)
         self.critic_optimizer.step()
 
     def _policy_gradient(self, s_t, a_t, rho_bar_t, advantage_t):
@@ -186,7 +198,7 @@ class ACERTrainer:
         B, T = states.shape[0], states.shape[1]
 
         #flat_states = states.view(-1, self.state_dim)
-        flat_states = states.reshape(B * T, 4, 84, 84)
+        flat_states = states.reshape(B * T, *self.state_dim)
         flat_actions = actions.view(-1).long()
 
         q_vals = self._compute_q_values(flat_states, flat_actions).view(B, T)
@@ -219,7 +231,7 @@ class ACERTrainer:
         policy_logp = self.actor.log_prob(flat_states, flat_actions).view(B, T)
         rho, rho_bar, c = self._compute_importance_weights(policy_logp, mu_logps)
 
-        v_last = self._compute_bootstrap_value(next_states[:, -1, :], not_dones[:, -1])
+        v_last = self._compute_bootstrap_value(next_states[:, -1], not_dones[:, -1])
         v_tp1 = torch.empty(B, T, device=device)
         v_tp1[:, :-1] = v_vals[:, 1:]
         v_tp1[:, -1] = v_last
@@ -232,7 +244,7 @@ class ACERTrainer:
         Q_opc = self._compute_q_opc(rewards, not_dones, v_vals)
         actor_loss = 0.0
         for t in range(T):
-            s_t = states[:, t, :]
+            s_t = states[:, t]
             a_t = actions[:, t]
             rho_bar_t = rho_bar[:, t]
 
@@ -260,8 +272,10 @@ class ACERTrainer:
             kl_value = (kl_value * not_dones).mean()
         if torch.rand(1).item() < 0.01:
             print(
-                f"critic_loss={critic_loss.item():.3f}, "
-                f"actor_loss={actor_loss.item():.3f}, "
-                f"mean_rho={rho.mean().item():.3f}, "
-                f"mean_c={c.mean().item():.3f},"
-                f"mean_kl={kl_value.item()}")
+                f"critic_loss={critic_loss.item():.7f}, "
+                f"actor_loss={actor_loss.item():.7f}, "
+                f"mean_rho={rho.mean().item():.7f}, "
+                f"mean_c={c.mean().item():.7f},"
+                f"mean_kl={kl_value.item()}"
+                f"On Policy={on_policy}, "
+            )
