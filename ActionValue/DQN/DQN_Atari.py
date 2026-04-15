@@ -24,10 +24,10 @@ def main():
     lr = 1e-3
     epsilon = 0.2
     env_name = "BreakoutNoFrameskip-v4"
-    sync_freq = 40
+    sync_freq = 10000
     hidden_size = 32
-    batch_size = 64
-    max_buffer_size = 10000
+    batch_size =32
+    max_buffer_size = 1_000_000
     tau = 1.0
     gamma = 0.99
     max_steps = 100000

@@ -19,7 +19,7 @@ class BehaviourAtariDQN(nn.Module):
         )
 
     def forward(self, x):
-        x = x / 255.0
+        #x = x / 255.0
         x = self.conv(x)
         x = x.view(x.size(0), -1)
         return self.fc(x)
