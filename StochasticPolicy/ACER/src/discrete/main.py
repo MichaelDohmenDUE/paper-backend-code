@@ -38,7 +38,7 @@ def acer_evaluate(trainer, env_factory, episodes=100):
             next_state, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
 
-            state = np.asarray(state, dtype=np.float32)
+            state = np.asarray(next_state, dtype=np.float32)
             episode_reward += reward
 
         scores.append(episode_reward)

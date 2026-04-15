@@ -9,6 +9,7 @@ class EnvironmentHandler:
     def __init__(self, factory: EnvFactory, seed: int, reward_scale: float = 1.0):
         self.env = factory.create()
         self.seed = seed
+        self.env.reset(seed=seed)
         self.env.action_space.seed(seed)
         torch.manual_seed(seed)
         if torch.cuda.is_available():
@@ -37,7 +38,7 @@ class EnvironmentHandler:
                                                                                           "max_episode_steps", None)
 
     def reset(self):
-        state, _ = self.env.reset(seed=self.seed)
+        state, _ = self.env.reset()
         return np.array(state, dtype=np.float32)
 
     def step(self, action, episode_timesteps: int):
@@ -46,10 +47,7 @@ class EnvironmentHandler:
         if self.episode_max_steps is not None and episode_timesteps >= self.episode_max_steps:
             truncated = True
         done = terminated or truncated
-        if truncated:
-            done_bool = 0.0
-        else:
-            done_bool = float(terminated)
+        done_bool = float(done)
 
         next_state = np.asarray(next_state, dtype=np.float32)
         return next_state, reward, done, done_bool
