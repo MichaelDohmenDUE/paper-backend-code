@@ -22,7 +22,7 @@ class TrainProcessor:
         self.device = device
 
     def run(self):
-        if len(self.buffer) < self.buffer.batch_size:
+        if len(self.buffer) < 50000:
             return
 
         batch = self.buffer.sample_batch()
@@ -42,4 +42,8 @@ class TrainProcessor:
             target = bellman(target_Q=qsa_target, reward=rewards_tensor, done=dones_tensor, discount_factor=self.gamma)
         loss = F.mse_loss(qsa_behavior, target)
 
-        optimizer_update(optimizer=self.optimizer, loss=loss)
+        self.optimizer.zero_grad()
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.behavior_net.parameters(), 5)
+        self.optimizer.step()
+        return loss

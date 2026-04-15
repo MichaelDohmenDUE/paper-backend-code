@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from torch import nn
 
@@ -26,8 +27,9 @@ class DataCollectionProcessor:
 
     def run(self) -> None:
         if self.done:
-            if self.episode_count % 10 == 0:
-                print(f"Episode [{self.episode_count}] {self.episode_reward}")
+            if self.episode_count % 1000 == 0:
+                print(
+                    f"Total Steps {self.total_steps / (10 ** 7)} Episode [{self.episode_count}] {self.episode_reward}")
 
             self.episode_count += 1
             self.episode_reward = 0.0
@@ -35,13 +37,16 @@ class DataCollectionProcessor:
             self.done = False
             self.episode_steps = 0
         with torch.no_grad():
+            #TODO: Save this as uint8 not float, look at CleanrRL for inspiration
             state_tensor = torch.tensor(self.state, dtype=torch.float32, device=self.device).unsqueeze(0)
             q_values = self.policy(state_tensor).squeeze(0)
         action = self.action_selector.select_action(q_values=q_values)
-        next_state, reward, done, done_bool = self.env.step(action.item(), self.episode_steps)
+        self.action_selector.update()
+        next_state, reward, done, done_bool = self.env.step(action)
+        reward = np.sign(reward)
         self.done = done
         self.episode_steps += 1
-        transition = self.transition_factory.create(state=self.state, action=action.item(), reward=reward,
+        transition = self.transition_factory.create(state=self.state, action=action, reward=reward,
                                                     next_state=next_state, done=self.done)
 
         self.buffer.append(transition)

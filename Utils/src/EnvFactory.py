@@ -33,6 +33,9 @@ class FireResetEnv(gym.Wrapper):
         obs, _, terminated, truncated, info = self.env.step(self.fire_action)
         if terminated or truncated:
             obs, info = self.env.reset(**kwargs)
+        obs, _, terminated, truncated, info = self.env.step(self.fire_action)
+        if terminated or truncated:
+            obs, info = self.env.reset(**kwargs)
         return obs, info
 
 class AtariEnvFactory(EnvFactory):
@@ -41,16 +44,16 @@ class AtariEnvFactory(EnvFactory):
         self.frames = frames
 
     def create(self):
-        env = gym.make(self.env_name, frameskip=1)
-        env = FireResetEnv(env)
+        env = gym.make(self.env_name)
         env = AtariPreprocessing(
             env,
             grayscale_obs=True,
             scale_obs=True,
             screen_size=84,
-            terminal_on_life_loss=False,
+            terminal_on_life_loss=True,
             noop_max=30,
             frame_skip=4
         )
         env = FrameStack(env, self.frames)
+        env = FireResetEnv(env)
         return env

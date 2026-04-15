@@ -2,18 +2,21 @@ import random
 
 import torch
 
-
 class EpsilonGreedyPolicy:
-    def __init__(self, epsilon: float):
-        self.epsilon = epsilon
+    def __init__(self, epsilon_start=1.0, epsilon_final=0.05, epsilon_decay=1_000_000):
+        self.epsilon_start = epsilon_start
+        self.epsilon_final = epsilon_final
+        self.epsilon_decay = epsilon_decay
+        self.epsilon = epsilon_start
+        self.total_steps = 0
 
-    def select_action(self, q_values: torch.Tensor) -> torch.Tensor:
-        """ Epsilon-greedy policy, returns random action if random number is < epsilon, else greedy action
-                Randomly samples from max actions if there is a tie.
-             """
-        actions = torch.arange(len(q_values)).to(q_values.device)
-        max_q_value = torch.max(q_values).to(q_values.device)
-        max_idx = (q_values == max_q_value).to(torch.int64)
-        greedy_action = random.choice(actions[max_idx == 1])
+    def update(self):
+        fraction = min(self.total_steps / self.epsilon_decay, 1.0)
+        self.epsilon = self.epsilon_start - fraction * (self.epsilon_start - self.epsilon_final)
+        self.total_steps += 1
 
-        return random.choice(actions) if random.random() < self.epsilon else greedy_action
+    def select_action(self, q_values: torch.Tensor):
+        if random.random() < self.epsilon:
+            return random.randrange(q_values.shape[0])
+        else:
+            return torch.argmax(q_values).item()
