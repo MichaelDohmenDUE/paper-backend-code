@@ -35,20 +35,20 @@ class ACERTrainer:
             rollouts = replay_buffer  # list of B rollouts, each length T
 
             # Convert nested lists to NumPy arrays first (fast)
-            states_np = np.array([[tr.state for tr in rollout] for rollout in rollouts], dtype=np.float32)
-            actions_np = np.array([[tr.action for tr in rollout] for rollout in rollouts], dtype=np.int64)
-            rewards_np = np.array([[tr.reward for tr in rollout] for rollout in rollouts], dtype=np.float32)
-            not_dones_np = np.array([[tr.mask for tr in rollout] for rollout in rollouts], dtype=np.float32)
-            next_states_np = np.array([[tr.next_state for tr in rollout] for rollout in rollouts], dtype=np.float32)
-            mu_logps_np = np.array([[tr.mu_logp for tr in rollout] for rollout in rollouts], dtype=np.float32)
-            mu_logits_np = np.array([[tr.mu_logits for tr in rollout] for rollout in rollouts], dtype=np.float32)
-            states = torch.tensor(states_np, device=device)
-            actions = torch.tensor(actions_np, device=device)
-            rewards = torch.tensor(rewards_np, device=device)
-            not_dones = torch.tensor(not_dones_np, device=device)
-            next_states = torch.tensor(next_states_np, device=device)
-            mu_logps = torch.tensor(mu_logps_np, device=device)
-            mu_logits = torch.tensor(mu_logits_np, device=device)
+            states_np = np.array([[tr.state for tr in rollout] for rollout in rollouts])
+            actions_np = np.array([[tr.action for tr in rollout] for rollout in rollouts])
+            rewards_np = np.array([[tr.reward for tr in rollout] for rollout in rollouts])
+            not_dones_np = np.array([[tr.mask for tr in rollout] for rollout in rollouts])
+            next_states_np = np.array([[tr.next_state for tr in rollout] for rollout in rollouts])
+            mu_logps_np = np.array([[tr.mu_logp for tr in rollout] for rollout in rollouts])
+            mu_logits_np = np.array([[tr.mu_logits for tr in rollout] for rollout in rollouts])
+            states = torch.tensor(states_np, device=device, dtype=torch.float32)
+            actions = torch.tensor(actions_np, device=device, dtype=torch.long)
+            rewards = torch.tensor(rewards_np, device=device, dtype=torch.float32)
+            not_dones = torch.tensor(not_dones_np, device=device, dtype=torch.float32)
+            next_states = torch.tensor(next_states_np, device=device, dtype=torch.float32)
+            mu_logps = torch.tensor(mu_logps_np, device=device, dtype=torch.float32)
+            mu_logits = torch.tensor(mu_logits_np, device=device, dtype=torch.float32)
             # Ensure channel-first (B, T, C, H, W) DEBUGGING with Help of LLM by Uni
             if states.ndim == 5:
                 if states.shape[2] == 4:
@@ -61,7 +61,7 @@ class ACERTrainer:
                     states = states.permute(0, 1, 3, 2, 4)
                     next_states = next_states.permute(0, 1, 3, 2, 4)
                 else:
-                    raise RuntimeError(f"Cannot find channel dimension in states, shape={states.shape}")  DEBUGGING with Help of LLM by Uni
+                    raise RuntimeError(f"Cannot find channel dimension in states, shape={states.shape}")  #DEBUGGING with Help of LLM by Uni
             return states, actions, rewards, not_dones, mu_logps, next_states, mu_logits
 
         else:
