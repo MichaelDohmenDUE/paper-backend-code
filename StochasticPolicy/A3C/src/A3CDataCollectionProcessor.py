@@ -39,7 +39,7 @@ class A3CDataCollectionProcessor:
             dist = Categorical(probs)
             action = dist.sample()
 
-            next_state, reward, done, _ = self.env.step(action.item(), episode_timesteps=self.episode_timesteps)
+            next_state, reward, done, _ = self.env.step(action.item())
             self.episode_reward += reward
 
             transition = self.factory.create(

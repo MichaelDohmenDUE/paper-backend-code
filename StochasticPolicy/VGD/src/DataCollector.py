@@ -21,7 +21,7 @@ class DataCollectionProcessor:
 
         while not done:
             action, log_prob = self.action_handler.select_action(state)
-            next_state, reward, done, done_bool = self.env_handler.step(action, episode_timesteps)
+            next_state, reward, done, done_bool = self.env_handler.step(action)
             transition = self.transition_factory.create(
                 state=state,
                 action=action,

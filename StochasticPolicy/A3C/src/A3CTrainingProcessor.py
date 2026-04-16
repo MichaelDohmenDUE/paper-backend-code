@@ -36,7 +36,7 @@ class A3CTrainingProcessor:
                 t[k] = v.to(net_device)
 
         rewards = t["reward"]
-        values = t["value"]
+        values = t["value"] # TODO: DOuble Check with the oG algorithm if we use the old values
         log_probs = t["log_prob"]
         dones = t["done"]
         entropy = t["entropy"]

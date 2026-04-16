@@ -50,7 +50,7 @@ class DataCollectionProcessor:
             support = torch.linspace(self.v_min, self.v_max, self.atoms, device=self.device)
             q_values = (probs * support).sum(dim=-1).squeeze(0)
         action = self.action_selector.select_action(q_values=q_values)
-        next_state, reward, done, done_bool = self.env.step(action.item(), self.episode_steps)
+        next_state, reward, done, done_bool = self.env.step(action.item())
         self.done = done
         self.episode_steps += 1
         transition = self.transition_factory.create(state=self.state, action=action.item(), reward=reward,

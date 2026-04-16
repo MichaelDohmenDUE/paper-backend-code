@@ -17,10 +17,11 @@ class StepBuffer(object):
         if len(self.buffer) < self.lookahead_n:
             return None
         else:
-            return_in_n_steps = 0
+            return_in_n_steps = 0.0
             done = False
             final_next_state = None
-            for i, transition in enumerate(self.buffer):
+            for i in range(self.lookahead_n):
+                transition = self.buffer[i]
                 return_in_n_steps += (self.gamma ** i) * transition.reward
                 if transition.done:
                     done = transition.done
@@ -28,7 +29,7 @@ class StepBuffer(object):
                     break
             # Bootstrap last state in case it is  empty
             if final_next_state is None:
-                final_next_state = self.buffer[-1].next_state
+                final_next_state = self.buffer[self.lookahead_n - 1].next_state
 
             first_transition = self.buffer[0]
 
@@ -46,11 +47,33 @@ class StepBuffer(object):
     def flush_transitions(self) -> List[TransitionSpec]:
         out = []
         while len(self.buffer) > 0:
-            transition = self.push(self.buffer.popleft())
+            return_in_n_steps = 0.0
+            done = False
+            final_next_state = None
 
-            if transition is not None:
-                out.append(transition)
-            else:
-                self.buffer.popleft()
-        self.buffer.clear()
+            for i, transition in enumerate(self.buffer):
+                return_in_n_steps += (self.gamma ** i) * transition.reward
+                if transition.done:
+                    done = True
+                    final_next_state = transition.next_state
+                    break
+                if i + 1 >= self.lookahead_n:
+                    break
+
+            if final_next_state is None:
+                final_next_state = self.buffer[min(self.lookahead_n - 1, len(self.buffer) - 1)].next_state
+
+            first = self.buffer[0]
+
+            transition = self.transition_factory.create(
+                state=first.state,
+                action=first.action,
+                reward=return_in_n_steps,
+                next_state=final_next_state,
+                done=done
+            )
+
+            out.append(transition)
+            self.buffer.popleft()
+
         return out
