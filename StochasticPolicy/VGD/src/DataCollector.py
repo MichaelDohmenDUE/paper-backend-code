@@ -23,8 +23,6 @@ class DataCollectionProcessor:
             action, log_prob = self.action_handler.select_action(state)
             next_state, reward, done, done_bool = self.env_handler.step(action)
             transition = self.transition_factory.create(
-                state=state,
-                action=action,
                 logp=log_prob,
                 reward=reward,
                 done=done_bool

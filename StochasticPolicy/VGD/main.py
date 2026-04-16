@@ -26,7 +26,7 @@ def main():
     beta = 0.01
     gamma = 0.99
 
-    spec = TransitionSpec(["state", "action", "logp", "reward", "done"])
+    spec = TransitionSpec(["logp", "reward", "done"])
     transition_factory = TransitionFactory(spec)
     replay_buffer = ReplayBuffer(spec, max_buffer_size=500, batch_size=1)
 
