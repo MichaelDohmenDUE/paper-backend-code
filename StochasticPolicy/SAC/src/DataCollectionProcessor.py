@@ -20,7 +20,7 @@ class DataCollectionProcessor:
         self.episode_timesteps = 0
 
     def run(self):
-        self.done = False
+        self.done = False#TODO: Move self.done Setting into EndingHandler (align with drawings)
         state_tensor = torch.as_tensor(self.state, dtype=torch.float32, device=self.device)
 
         action_tensor = self.policy.select_action(state_tensor)
