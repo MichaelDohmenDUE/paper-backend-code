@@ -11,7 +11,7 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
             with torch.no_grad():
                 action = trainer.actor(state_t).cpu().numpy().flatten()
 
-            next_state, reward, done, _ = env_handler.step(action, 0)
+            next_state, reward, done, _ = env_handler.step(action)
             avg_reward += reward
             state = next_state
     avg_reward /= eval_episodes

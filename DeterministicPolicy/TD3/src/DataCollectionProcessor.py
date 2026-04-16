@@ -23,7 +23,7 @@ class DataCollectionProcessor:
     def run(self):
         action = self.action_handler.select_action(self.state, self.global_counter.get())
         self.episode_timesteps += 1
-        next_state, reward, done_env, done_bool = self.env.step(action, episode_timesteps=self.episode_timesteps)
+        next_state, reward, done_env, done_bool = self.env.step(action)
 
         transition = self.factory.create(
             state=self.state,

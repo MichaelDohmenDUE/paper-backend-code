@@ -96,7 +96,7 @@ def main():
         if len(on_policy_rollouts) == num_envs:
             train_process.run(on_policy_rollouts)
 
-        if step % 10000 == 0 and step > 0:
+        if step % 1000 == 0 and step > 0:
             score = acer_evaluate(trainer, factory, episodes=5)
             print(f"[EVAL] Step {step}: Mean Score = {score}")
 

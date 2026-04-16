@@ -270,6 +270,7 @@ class ACERTrainer:
             logits_after = torch.clamp(self.actor(flat_states), -20, 20)
             kl_value = self._compute_kl(logits_after, ref_logits).view(B, T)
             kl_value = (kl_value * not_dones).mean()
+        """
         if torch.rand(1).item() < 0.01:
             print(
                 f"critic_loss={critic_loss.item():.7f}, "
@@ -279,3 +280,4 @@ class ACERTrainer:
                 f"mean_kl={kl_value.item()}"
                 f"On Policy={on_policy}, "
             )
+        """
