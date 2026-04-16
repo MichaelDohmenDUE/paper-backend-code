@@ -21,7 +21,7 @@ def main():
     lr_critic = 3e-4
     lr_alpha = 3e-4
     num_episodes = 1000
-    env_name = "HalfCheetah-v5"
+    env_name = "HalfCheetah-v4"
     sync_freq = 1
     hidden_size = 256
     batch_size = 256

@@ -27,9 +27,7 @@ class DataCollectionProcessor:
         action_np = action_tensor.detach().cpu().numpy()
 
         self.episode_timesteps += 1
-        next_state, reward, done_env, done_bool = self.env.step(
-            action_np, episode_timesteps=self.episode_timesteps
-        )
+        next_state, reward, done_env, done_bool = self.env.step(action_np)
 
         transition = self.transition_factory.create(
             state=self.state,
