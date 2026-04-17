@@ -3,7 +3,7 @@ import torch.nn.functional as F
 from torch.distributions import Categorical
 
 
-class AtariActor(nn.Module):
+class Actor(nn.Module):
     def __init__(self, obs_dim, action_dim, hidden_size):
         super().__init__()
 

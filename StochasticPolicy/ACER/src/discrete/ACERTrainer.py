@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torch import optim
 import torch.distributions
-from backend.CommonModels.src.ActorAcerCont import AtariActor as Actor
+from backend.CommonModels.src.ActorAcerDisc import Actor
 from backend.CommonModels.src.AcerDiscreteCriticMujoco import Critic
 from backend.Utils.src.utils import synchronize
 
@@ -16,7 +16,7 @@ class ACERTrainer:
                  trust_region_delta=0.01):
         self.actor = Actor(state_size, action_size, hidden_size).to(device)
         self.trust_region_actor = copy.deepcopy(self.actor).to(device)
-        self.critic = Critic(state_size,action_size).to(device)
+        self.critic = Critic(state_size,action_size, hidden_size=hidden_size).to(device)
         self.actor_optimizer = torch.optim.RMSprop(self.actor.parameters(), lr=7e-4, alpha=0.99, eps=1e-5)
         self.critic_optimizer = torch.optim.RMSprop(self.critic.parameters(), lr=7e-4, alpha=0.99, eps=1e-5)
 

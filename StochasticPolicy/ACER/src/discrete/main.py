@@ -46,7 +46,7 @@ def main():
     num_envs = 16
     batch_size = 32
     learning_rate = 3e-4
-    hidden_dim = 200
+    hidden_dim = 512
     tau = 1.0
     buffer_size = int(1e6)
     seq_len = 20
