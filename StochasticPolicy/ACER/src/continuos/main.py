@@ -12,7 +12,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def main():
-    env_name = "MountainCarContinuous-v0"
+    env_name = "Pendulum-v1"
     seed = 100
     max_timesteps = 1000000
     batch_size = 32

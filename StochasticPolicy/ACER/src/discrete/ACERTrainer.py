@@ -5,7 +5,7 @@ import torch
 from torch import optim
 import torch.distributions
 from backend.CommonModels.src.ActorAcerDisc import Actor
-from backend.CommonModels.src.AcerDiscreteCriticMujoco import Critic
+from backend.CommonModels.src.Critic import Critic
 from backend.Utils.src.utils import synchronize
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -16,7 +16,7 @@ class ACERTrainer:
                  trust_region_delta=0.01):
         self.actor = Actor(state_size, action_size, hidden_size).to(device)
         self.trust_region_actor = copy.deepcopy(self.actor).to(device)
-        self.critic = Critic(state_size,action_size, hidden_size=hidden_size).to(device)
+        self.critic = Critic(state_size, action_size, hidden_size=hidden_size).to(device)
         self.actor_optimizer = torch.optim.RMSprop(self.actor.parameters(), lr=7e-4, alpha=0.99, eps=1e-5)
         self.critic_optimizer = torch.optim.RMSprop(self.critic.parameters(), lr=7e-4, alpha=0.99, eps=1e-5)
 
@@ -189,7 +189,6 @@ class ACERTrainer:
         flat_actions = actions.view(-1).long()
 
         q_vals = self._compute_q_values(flat_states, flat_actions).view(B, T)
-        q_vals = torch.clamp(q_vals, -10, 10)
         with torch.no_grad():
             v_vals = self._compute_v_values(flat_states).view(B, T)
             v_vals = torch.clamp(v_vals, -10, 10)
@@ -206,10 +205,8 @@ class ACERTrainer:
 
         rho_all = pi_probs / (mu_probs + 1e-8)
         q_all = self.critic(flat_states).detach()
-        q_all = torch.clamp(q_all, -10, 10)
         v_flat = v_vals.view(-1)
         adv_all = q_all - v_flat.unsqueeze(-1)
-        adv_all = torch.clamp(adv_all, -20.0, 20.0)
         rho_excess = torch.clamp(rho_all - self.c_bar, min=0.0)
 
         bias_term = (pi_probs * rho_excess * adv_all).sum(dim=-1)
@@ -226,6 +223,14 @@ class ACERTrainer:
         target_q = self._compute_retrace_targets(rewards, not_dones, q_vals, v_tp1, c)
 
         critic_loss = self._critic_loss_function(q_vals, target_q)
+        with torch.no_grad():
+            print("=== CRITIC DEBUG ===")
+            print("q_vals:", q_vals.shape, q_vals.min().item(), q_vals.max().item(), q_vals.mean().item())
+            print("target_q:", target_q.shape, target_q.min().item(), target_q.max().item(), target_q.mean().item())
+            print("rewards:", rewards.shape, rewards.min().item(), rewards.max().item(), rewards.mean().item())
+            print("not_dones:", not_dones.shape, not_dones.min().item(), not_dones.max().item(),
+                  not_dones.mean().item())
+
         self._update_critic(critic_loss)
 
         Q_opc = self._compute_q_opc(rewards, not_dones, v_vals)

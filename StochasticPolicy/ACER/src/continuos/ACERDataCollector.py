@@ -48,7 +48,7 @@ class ACERDataCollector:
         )
 
         next_state, reward, done, done_bool = self.env.step(
-            action, self.episode_timesteps
+            action
         )
 
         transition = self.factory.create(

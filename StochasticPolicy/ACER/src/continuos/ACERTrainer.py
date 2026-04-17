@@ -5,7 +5,7 @@ import torch
 from torch import optim
 
 from backend.CommonModels.src.Actor_ACER import Actor
-from backend.CommonModels.src.AcerDiscreteCriticMujoco import Critic
+from backend.CommonModels.src.Critic import Critic
 from backend.Utils.src.utils import synchronize
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
