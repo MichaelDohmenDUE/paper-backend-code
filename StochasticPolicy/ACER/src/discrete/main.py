@@ -19,14 +19,6 @@ def acer_evaluate(trainer, env_factory, episodes=100):
         env = env_factory.create()
         state, _ = env.reset()
         state = np.asarray(state, dtype=np.float32)
-        noops = random.randint(0, 30)
-        for _ in range(noops):
-            state, _, terminated, truncated, _ = env.step(0)
-            done = terminated or truncated
-            state = np.asarray(state, dtype=np.float32)
-            if done:
-                state, _ = env.reset()
-                state = np.asarray(state, dtype=np.float32)
 
         done = False
         episode_reward = 0.0
@@ -35,8 +27,9 @@ def acer_evaluate(trainer, env_factory, episodes=100):
             state_t = torch.from_numpy(state).unsqueeze(0).float().to(device)
             logits = trainer.actor(state_t)
             action = torch.argmax(logits, dim=-1).item()
+            torque = np.array([float(action)], dtype=np.float32)
 
-            next_state, reward, terminated, truncated, _ = env.step(action)
+            next_state, reward, terminated, truncated, _ = env.step(torque)
             done = terminated or truncated
 
             state = np.asarray(next_state, dtype=np.float32)

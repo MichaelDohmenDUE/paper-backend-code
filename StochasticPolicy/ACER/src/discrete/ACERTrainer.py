@@ -5,7 +5,7 @@ import torch
 from torch import optim
 import torch.distributions
 from backend.CommonModels.src.ActorAcerCont import AtariActor as Actor
-from backend.CommonModels.src.AcerDiscreteCritic import DiscreteCritic as Critic
+from backend.CommonModels.src.AcerDiscreteCriticMujoco import Critic
 from backend.Utils.src.utils import synchronize
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -16,7 +16,7 @@ class ACERTrainer:
                  trust_region_delta=0.01):
         self.actor = Actor(state_size, action_size, hidden_size).to(device)
         self.trust_region_actor = copy.deepcopy(self.actor).to(device)
-        self.critic = Critic(action_size).to(device)
+        self.critic = Critic(state_size,action_size).to(device)
         self.actor_optimizer = torch.optim.RMSprop(self.actor.parameters(), lr=7e-4, alpha=0.99, eps=1e-5)
         self.critic_optimizer = torch.optim.RMSprop(self.critic.parameters(), lr=7e-4, alpha=0.99, eps=1e-5)
 
@@ -49,19 +49,7 @@ class ACERTrainer:
             next_states = torch.tensor(next_states_np, device=device, dtype=torch.float32)
             mu_logps = torch.tensor(mu_logps_np, device=device, dtype=torch.float32)
             mu_logits = torch.tensor(mu_logits_np, device=device, dtype=torch.float32)
-            # Ensure channel-first (B, T, C, H, W) DEBUGGING with Help of LLM by Uni
-            if states.ndim == 5:
-                if states.shape[2] == 4:
-                    # Already (B, T, C, H, W) → do nothing
-                    pass
-                elif states.shape[-1] == 4:  # (B, T, H, W, C)
-                    states = states.permute(0, 1, 4, 2, 3)
-                    next_states = next_states.permute(0, 1, 4, 2, 3)
-                elif states.shape[-2] == 4:  # (B, T, H, C, W)
-                    states = states.permute(0, 1, 3, 2, 4)
-                    next_states = next_states.permute(0, 1, 3, 2, 4)
-                else:
-                    raise RuntimeError(f"Cannot find channel dimension in states, shape={states.shape}")  #DEBUGGING with Help of LLM by Uni
+
             return states, actions, rewards, not_dones, mu_logps, next_states, mu_logits
 
         else:
@@ -269,7 +257,6 @@ class ACERTrainer:
             logits_after = torch.clamp(self.actor(flat_states), -20, 20)
             kl_value = self._compute_kl(logits_after, ref_logits).view(B, T)
             kl_value = (kl_value * not_dones).mean()
-        """
         if torch.rand(1).item() < 0.01:
             print(
                 f"critic_loss={critic_loss.item():.7f}, "
@@ -279,4 +266,3 @@ class ACERTrainer:
                 f"mean_kl={kl_value.item()}"
                 f"On Policy={on_policy}, "
             )
-        """
