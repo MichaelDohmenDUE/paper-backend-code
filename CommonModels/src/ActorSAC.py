@@ -24,7 +24,9 @@ class ActorSAC(nn.Module):
 
     def sample(self, state):
         mean, log_std = self.forward(state)
-        log_std = torch.clamp(log_std, -20, 2)
+        LOG_SIG_MIN = -20
+        LOG_SIG_MAX = 2 # Same as https://github.com/rail-berkeley/rlkit/blob/ac45a9db24b89d97369bef302487273bcc3e3d84/rlkit/torch/sac/policies/gaussian_policy.py
+        log_std = torch.clamp(log_std, LOG_SIG_MIN, LOG_SIG_MAX)
         std = log_std.exp()
 
         noise = torch.randn_like(mean)
