@@ -3,17 +3,18 @@ import torch.nn.functional as F
 from torch.distributions import Categorical
 
 
-class AtariActor(nn.Module):
-    def __init__(self, obs_dim, action_dim, hidden_size):
+class Actor(nn.Module):
+    def __init__(self, action_dim):
         super().__init__()
 
         self.conv = nn.Sequential(
-            nn.Linear(obs_dim, hidden_size), nn.ReLU(),
-            nn.Linear(hidden_size, hidden_size), nn.ReLU()
+            nn.Conv2d(4, 32, 8, stride=4), nn.ReLU(),
+            nn.Conv2d(32, 64, 4, stride=2), nn.ReLU(),
+            nn.Conv2d(64, 64, 3, stride=1), nn.ReLU()
         )
 
-        self.fc1 = nn.Linear(hidden_size, hidden_size * 2)
-        self.fc2 = nn.Linear(hidden_size * 2, action_dim)
+        self.fc1 = nn.Linear(64 * 7 * 7, 512)
+        self.fc2 = nn.Linear(512, action_dim)
 
     def forward(self, state):
         x = self.conv(state)

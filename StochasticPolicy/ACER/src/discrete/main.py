@@ -2,12 +2,13 @@
 import random
 import numpy as np
 import torch
+from gymnasium.envs.mujoco import MujocoEnv
 
 from backend.StochasticPolicy.ACER.src.discrete.ACERDataCollector import ACERDataCollector
 from backend.StochasticPolicy.ACER.src.discrete.ACERTrainProcessor import ACERTrainProcessor
 from backend.StochasticPolicy.ACER.src.discrete.ACERTrainer import ACERTrainer
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
-from backend.Utils.src.EnvFactory import AtariEnvFactory
+from backend.Utils.src.EnvFactory import AtariEnvFactory, GymEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
@@ -46,7 +47,7 @@ def acer_evaluate(trainer, env_factory, episodes=100):
     return np.mean(scores)
 
 def main():
-    env_name = "ALE/Breakout-v5"
+    env_name = "InvertedPendulum-v4"
     seed = 100
     max_timesteps = 100000
     num_envs = 16
@@ -61,7 +62,7 @@ def main():
     gamma = 0.99
     reward_scale = 1.0
 
-    factory = AtariEnvFactory(env_name)
+    factory = GymEnvFactory(env_name)
 
     env_handlers = [EnvironmentHandler(factory, seed + i, reward_scale=reward_scale) for i in range(num_envs)]
     # Transition spec for ACER

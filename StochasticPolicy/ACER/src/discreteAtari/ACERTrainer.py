@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torch import optim
 import torch.distributions
-from backend.CommonModels.src.ActorAcerCont import AtariActor as Actor
+from backend.CommonModels.src.ActorACerMujoco import Actor
 from backend.CommonModels.src.AcerDiscreteCritic import DiscreteCritic as Critic
 from backend.Utils.src.utils import synchronize
 

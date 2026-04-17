@@ -3,9 +3,9 @@ import random
 import numpy as np
 import torch
 
-from backend.StochasticPolicy.ACER.src.discrete.ACERDataCollector import ACERDataCollector
-from backend.StochasticPolicy.ACER.src.discrete.ACERTrainProcessor import ACERTrainProcessor
-from backend.StochasticPolicy.ACER.src.discrete.ACERTrainer import ACERTrainer
+from backend.StochasticPolicy.ACER.src.discreteAtari.ACERDataCollector import ACERDataCollector
+from backend.StochasticPolicy.ACER.src.discreteAtari.ACERTrainProcessor import ACERTrainProcessor
+from backend.StochasticPolicy.ACER.src.discreteAtari.ACERTrainer import (ACERTrainer)
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnvFactory import AtariEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler

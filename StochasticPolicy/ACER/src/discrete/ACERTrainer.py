@@ -14,7 +14,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class ACERTrainer:
     def __init__(self, state_size, action_size, hidden_size, learning_rate=1e-4, gamma=0.99, tau=0.005,
                  trust_region_delta=0.01):
-        self.actor = Actor(action_size).to(device)
+        self.actor = Actor(state_size, action_size, hidden_size).to(device)
         self.trust_region_actor = copy.deepcopy(self.actor).to(device)
         self.critic = Critic(action_size).to(device)
         self.actor_optimizer = torch.optim.RMSprop(self.actor.parameters(), lr=7e-4, alpha=0.99, eps=1e-5)
@@ -197,8 +197,7 @@ class ACERTrainer:
 
         B, T = states.shape[0], states.shape[1]
 
-        #flat_states = states.view(-1, self.state_dim)
-        flat_states = states.reshape(B * T, *self.state_dim)
+        flat_states = states.view(-1, self.state_dim)
         flat_actions = actions.view(-1).long()
 
         q_vals = self._compute_q_values(flat_states, flat_actions).view(B, T)

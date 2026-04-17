@@ -37,18 +37,18 @@ class ACERDataCollector:
         action, mu_logp, logtis = self.trainer.select_action(
             self.state, return_params=True
         )
-
-        next_state, reward, done, done_bool = self.env.step(action)
+        torque = np.array([float(action)], dtype=np.float32)
+        next_state, reward, done, done_bool = self.env.step(torque)
         next_state = np.array(next_state, dtype=np.uint8)
 
         transition = self.factory.create(
             state=self.state,
-            action=np.int16(action),
-            reward=np.int8(reward),
+            action=action,
+            reward=reward,
             next_state=next_state,
-            mask=np.uint8(1 - done_bool),
-            mu_logp=np.float16(mu_logp),
-            mu_logits=logtis.astype(np.float16)
+            mask=(1 - done_bool),
+            mu_logp=mu_logp,
+            mu_logits=logtis
         )
 
         self.rollout.append(transition)
