@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from backend.StochasticPolicy.ACER.src.discrete.ACERTrainer import ACERTrainer
+from backend.StochasticPolicy.ACER.src.discreteAtari.ACERTrainer import ACERTrainer
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
@@ -18,7 +18,7 @@ class ACERDataCollector:
         self.seq_len = seq_len
 
         self.rollout = []
-        self.state = np.array(env.reset(), dtype=np.float32)
+        self.state = np.array(env.reset(), dtype=np.uint8)
         self.done = False
         self.episode_reward = 0
         self.episode_timesteps = 0
@@ -40,16 +40,11 @@ class ACERDataCollector:
 
         next_state, reward, done, done_bool = self.env.step(action)
         next_state = np.array(next_state, dtype=np.uint8)
+        clipped_reward = np.clip(reward, -1, 1)
 
-        transition = self.factory.create(
-            state=self.state,
-            action=np.int16(action),
-            reward=np.int8(reward),
-            next_state=next_state,
-            mask=np.uint8(1 - done_bool),
-            mu_logp=np.float16(mu_logp),
-            mu_logits=logtis.astype(np.float16)
-        )
+        transition = self.factory.forward(state=self.state, action=np.int16(action), reward=np.int8(clipped_reward),
+                                          next_state=next_state, mask=np.uint8(1 - done_bool),
+                                          mu_logp=np.float16(mu_logp), mu_logits=logtis.astype(np.float16))
 
         self.rollout.append(transition)
         self.state = next_state

@@ -53,8 +53,8 @@ class DataCollectionProcessor:
         next_state, reward, done, done_bool = self.env.step(action.item())
         self.done = done
         self.episode_steps += 1
-        transition = self.transition_factory.create(state=self.state, action=action.item(), reward=reward,
-                                                    next_state=next_state, done=self.done)
+        transition = self.transition_factory.forward(state=self.state, action=action.item(), reward=reward,
+                                                     next_state=next_state, done=self.done)
 
         n_step_transition = self.step_buffer.push(transition)
         if n_step_transition is not None:

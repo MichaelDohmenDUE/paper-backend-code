@@ -18,12 +18,10 @@ class TestReplayBuffer(unittest.TestCase):
             batch_size=self.batch_size
         )
 
-        self.make_transition = lambda x: self.factory.create(
-            state=np.array([x], dtype=np.float32),
-            action=int(x),
-            reward=float(x),
-            next_state=np.array([x + 1], dtype=np.float32),
-            done=False)
+        self.make_transition = lambda x: self.factory.forward(state=np.array([x], dtype=np.float32), action=int(x),
+                                                              reward=float(x),
+                                                              next_state=np.array([x + 1], dtype=np.float32),
+                                                              done=False)
 
     def test_len(self):
         self.assertEqual(len(self.buffer), 0)

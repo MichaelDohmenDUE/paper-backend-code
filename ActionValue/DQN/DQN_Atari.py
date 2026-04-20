@@ -1,14 +1,16 @@
 from copy import deepcopy
 
 import torch
+import wandb
 from torch import nn
+import time
 
 from backend.ActionValue.DQN.src.ActionHandler import EpsilonGreedyPolicy
-from backend.ActionValue.DQN.src.DataCollectionProcessor import DataCollectionProcessor
+from backend.ActionValue.DQN.src.DataCollectionProcessorAtari import DataCollectionProcessor
 from backend.ActionValue.DQN.src.TrainProcessor import TrainProcessor
 from backend.CommonModels.src import BehaviourAtariDQN
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
-from backend.Utils.src.EnvFactory import GymEnvFactory, AtariEnvFactory
+from backend.Utils.src.EnvFactory import AtariEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
@@ -29,7 +31,7 @@ def evaluate_policy(policy, env_handler, episodes=5, device="cpu"):
         steps = 0
 
         while not done:
-            state_tensor = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
+            state_tensor = torch.tensor(state, device=device).unsqueeze(0).float()
             with torch.no_grad():
                 q_values = policy(state_tensor)
                 action = torch.argmax(q_values, dim=1).item()
@@ -46,43 +48,75 @@ def evaluate_policy(policy, env_handler, episodes=5, device="cpu"):
 
 def main():
     # initialization
+    start_time = time.time()
     lr = 2.5e-4
     epsilon = 1.0
     env_name = "BreakoutNoFrameskip-v4"
-    sync_freq = 1000
-    hidden_size = 32
-    batch_size =64
-    max_buffer_size = 1000000
+    sync_freq = 10_000
+    hidden_size = 512
+    batch_size = 32
+    max_buffer_size = 300_000
     tau = 1.0
     gamma = 0.99
-    max_steps = 1000000
+    max_steps = 10_000_000
     spec = TransitionSpec(["state", "action", "reward", "next_state", "done"])
     gym_factory = AtariEnvFactory(env_name)
     factory = TransitionFactory(spec)
+    max_norm = 5
     seed = 2
+    warmup_steps = 50000
+
+    wandb.init(
+        entity="michael_dohmen-",
+        project="my-dqn-benchmarks",
+        config={
+            "env_id": env_name,
+            "exp_name": "DQN-BreakoutNoFrameskip-v4",
+            "seed": seed,
+            "max_buffer_size": max_buffer_size,
+            "batch_size": batch_size,
+            "max_steps": max_steps,
+            "lr": lr,
+            "gamma": gamma,
+            "sync_freq": sync_freq,
+            "warmup_steps": warmup_steps,
+            "max_norm": max_norm,
+            "epsilon": epsilon,
+            "tau": tau,
+        }
+    )
 
     env = EnvironmentHandler(gym_factory, seed)
     eval_env = EnvironmentHandler(gym_factory, seed + 1)
     obs_size, action_size, max_action = env.get_env_specs()
 
     behavior_net = BehaviourAtariDQN(action_size).to(device)
-    optimizer = torch.optim.Adam(behavior_net.parameters(), lr=1e-4)
+    optimizer = torch.optim.Adam(behavior_net.parameters(), lr=1e-4,
+                                 eps=1e-8)  #torch.optim.RMSprop(behavior_net.parameters(), lr=lr, momentum=0.95, eps=0.01, alpha=0.95)
 
     target_net = deepcopy(behavior_net).to(device)
 
     buffer = ReplayBuffer(spec, max_buffer_size, batch_size)
-    collector = DataCollectionProcessor(behavior_net, env, buffer, EpsilonGreedyPolicy(epsilon), factory, device)
-    train_process = TrainProcessor(buffer, behavior_net, target_net, optimizer, gamma, device)
+
+    eps_greedy =EpsilonGreedyPolicy(epsilon_start=epsilon, epsilon_final=0.1, epsilon_decay=1_000_000)
+    collector = DataCollectionProcessor(behavior_net, env, buffer, eps_greedy, factory, device)
+    train_process = TrainProcessor(buffer, behavior_net, target_net, optimizer, gamma, max_norm, warmup_steps, device)
     sync_process = SyncProcessor(behavior_net, target_net, tau, sync_freq)
 
     for step in range(max_steps):
         collector.run()
+        metrics = None
         if step % 4 == 0:
-            train_process.run()
+            metrics = train_process.run()
         sync_process.run()
-        if step % 10_000 == 0 and step > 50_000:
+
+        if metrics and step % 400 == 0:
+            metrics["charts/SPS"] = int(step / (time.time() - start_time))
+            metrics["charts/epsilon"] = collector.action_selector.epsilon
+            wandb.log(metrics, step=step)
+        if step % 10_000 == 0 and step > warmup_steps:
             avg_score = evaluate_policy(behavior_net, eval_env, episodes=5, device=device)
-            print(f"[Eval @ step {step}] Average score: {avg_score}")
+            wandb.log({"charts/eval_avg_score": avg_score}, step=step)
 
 if __name__ == '__main__':
     main()

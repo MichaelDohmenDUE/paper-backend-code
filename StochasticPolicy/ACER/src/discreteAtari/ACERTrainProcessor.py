@@ -15,6 +15,7 @@ class ACERTrainProcessor:
             return
 
         self.trainer.train(on_policy_rollouts, batch_size=len(on_policy_rollouts), on_policy=True)
-
+        synchronize(from_network=self.trainer.model, to_network= self.trainer.trust_region_model, tau=self.tau )
         for _ in range(self.replay_ratio):
             self.trainer.train(self.buffer, batch_size=self.batch_size, on_policy=False)
+            synchronize(from_network=self.trainer.model, to_network=self.trainer.trust_region_model, tau=self.tau)

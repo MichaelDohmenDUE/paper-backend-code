@@ -25,11 +25,12 @@ class ACERTrainer:
         self.action_dim = action_size
         self.gamma = gamma
         self.tau = 0.01
-        self.delta = 0.1
+        self.delta = trust_region_delta
         self.rho_bar = 5.0
         self.c_bar = 1.0
         self.seq_len = 20
         self.retrace_lambda = 1.0
+        self.entropy_coeff = 0.001
 
     def _prepare_batch(self, replay_buffer, batch_size, on_policy):
         if on_policy:
@@ -69,7 +70,7 @@ class ACERTrainer:
 
     def _compute_importance_weights(self, policy_logp, mu_logps):
         log_ratio = (policy_logp - mu_logps).clamp(-10, 10)
-        rho = torch.exp(log_ratio)
+        rho = torch.exp(log_ratio).clamp(min=1e-7)
         rho_bar = rho.clamp(max=self.rho_bar)
         c = rho.clamp(max=self.c_bar)
         return rho, rho_bar, c
@@ -115,7 +116,7 @@ class ACERTrainer:
         self.critic_optimizer.zero_grad()
         loss.backward()
         # NOT IN ACER PSEUDOCODE — numerical stability
-        torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=10.0)
+        torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=0.5)
         self.critic_optimizer.step()
 
     def _policy_gradient(self, s_t, a_t, rho_bar_t, advantage_t):
@@ -196,11 +197,17 @@ class ACERTrainer:
 
         target_q = self._compute_retrace_targets(rewards, not_dones, q_vals, v_tp1, c)
 
-        critic_loss = self._critic_loss_function(q_vals, target_q)
+        critic_loss = self._critic_loss_function(q_vals, target_q) / T
         self._update_critic(critic_loss)
 
         Q_opc = self._compute_q_opc(rewards, not_dones, v_vals)
         actor_loss = 0.0
+
+        _, _, policy_mean, policy_log_std = self.actor.sample_action_with_params(flat_states)
+        policy_std = policy_log_std.exp()
+        dist = torch.distributions.Normal(policy_mean, policy_std)
+        entropy = dist.entropy().sum(dim=-1).mean()
+
         for t in range(T):
             s_t = states[:, t, :]
             a_t = actions[:, t, :]
@@ -216,20 +223,24 @@ class ACERTrainer:
 
             actor_loss = actor_loss + pg_loss_t + bc_loss_t
 
-        policy_mean, policy_std,_ = self.actor(flat_states)
+        actor_loss = (actor_loss / T) - (self.entropy_coeff * entropy)
 
-        ref_mean, ref_std, _ = self.trust_region_actor(flat_states)
+        _, _, ref_mean, ref_log_std = self.trust_region_actor.sample_action_with_params(flat_states)
+        ref_std = ref_log_std.exp()
         kl = self._compute_kl(policy_mean, policy_std, ref_mean, ref_std).view(B, T)
         kl = (kl * not_dones).mean()
         kl_grad = torch.autograd.grad(kl, self.actor.parameters(), retain_graph=True)
 
         self._update_actor(actor_loss, kl_grad=kl_grad)
-        synchronize(self.actor, self.trust_region_actor, tau=self.tau)
+        with torch.no_grad():
+            for p, ap in zip(self.actor.parameters(), self.trust_region_actor.parameters()):
+                ap.data.copy_(ap.data * (1.0 - self.tau) + p.data * self.tau)
+
         if torch.rand(1).item() < 0.001:
             print(
                 f"critic_loss={critic_loss.item():.3f}, "
                 f"actor_loss={actor_loss.item():.3f}, "
-                # f"entropy={entropy.item():.3f}, "
+                f"entropy={entropy.item():.3f}, "  # --- CHANGE: Monitoring entropy ---
                 f"mean_rho={rho.mean().item():.3f}, "
                 f"mean_c={c.mean().item():.3f},"
                 f"mean_kl={kl.item():.5f}")

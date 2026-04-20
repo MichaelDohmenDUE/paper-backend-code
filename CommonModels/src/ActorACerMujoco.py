@@ -3,7 +3,7 @@ import torch.nn.functional as F
 from torch.distributions import Categorical
 
 
-class Actor(nn.Module):
+class ACERNet(nn.Module):
     def __init__(self, action_dim):
         super().__init__()
 
@@ -13,31 +13,27 @@ class Actor(nn.Module):
             nn.Conv2d(64, 64, 3, stride=1), nn.ReLU()
         )
 
-        self.fc1 = nn.Linear(64 * 7 * 7, 512)
-        self.fc2 = nn.Linear(512, action_dim)
+        self.fc_shared = nn.Linear(64 * 7 * 7, 512)
+        self.actor_head = nn.Linear(512, action_dim)
+        self.critic_head = nn.Linear(512, action_dim)
 
     def forward(self, state):
         x = self.conv(state)
-        x = x.view(x.size(0), -1)
-        x = F.relu(self.fc1(x))
-        logits = self.fc2(x)
+        x = x.reshape(x.size(0), -1)
+        x = F.relu(self.fc_shared(x))
+        logits = self.actor_head(x)
+        q_values = self.critic_head(x)
+        return logits, q_values
+
+    def get_policy_logits(self, state):
+        logits, _ = self.forward(state)
         return logits
 
-    def sample_action(self, state):
-        logits = self.forward(state)
-        dist = Categorical(logits=logits)
-        action = dist.sample()
-        logp = dist.log_prob(action)
-        return action, logp
-
-    def sample_action_with_params(self, state):
-        logits = self.forward(state)
-        dist = Categorical(logits=logits)
-        action = dist.sample()
-        logp = dist.log_prob(action)
-        return action, logp, logits
+    def get_q_values(self, state):
+        _, q_vals = self.forward(state)
+        return q_vals
 
     def log_prob(self, state, action):
-        logits = self.forward(state)
+        logits, _ = self.forward(state)
         dist = Categorical(logits=logits)
         return dist.log_prob(action)

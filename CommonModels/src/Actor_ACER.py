@@ -10,19 +10,12 @@ class Actor(nn.Module):
         self.mean = nn.Linear(hidden_dim, action_dim)
         self.log_std = nn.Linear(hidden_dim, action_dim)
 
-        nn.init.orthogonal_(self.fc1.weight, gain=1.0)
-        nn.init.orthogonal_(self.fc2.weight, gain=1.0)
-        nn.init.orthogonal_(self.mean.weight, gain=0.01)
-        nn.init.orthogonal_(self.log_std.weight, gain=0.01)
-
-        nn.init.constant_(self.log_std.bias, -1.0)
-
     def forward(self, state):
         x = torch.relu(self.fc1(state))
         x = torch.relu(self.fc2(x))
         mean = self.mean(x)
         log_std = self.log_std(x)
-        log_std = torch.clamp(log_std, -2.0, 0.5)
+        log_std = torch.clamp(log_std, -1.0, 2.0)
         std = torch.exp(log_std)
         return mean, std, log_std
 
@@ -32,6 +25,7 @@ class Actor(nn.Module):
         pre_tanh = dist.rsample()
         action = torch.tanh(pre_tanh)
         log_prob = dist.log_prob(pre_tanh).sum(-1)
+        log_prob -= torch.log(1 - action.pow(2) + 1e-6).sum(-1)
         return action, log_prob, mean, log_std
 
     def sample_action(self, state):
@@ -44,4 +38,7 @@ class Actor(nn.Module):
     def log_prob(self, state, action):
         mean, std, log_std = self.forward(state)
         dist = torch.distributions.Normal(mean, std)
-        return dist.log_prob(action).sum(-1)
+        pre_tanh = torch.atanh(torch.clamp(action, -0.999, 0.999))
+        log_p = dist.log_prob(pre_tanh).sum(-1)
+        log_p -= torch.log(1 - action.pow(2) + 1e-6).sum(-1)
+        return log_p

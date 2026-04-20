@@ -22,11 +22,7 @@ class DataCollectionProcessor:
         while not done:
             action, log_prob = self.action_handler.select_action(state)
             next_state, reward, done, done_bool = self.env_handler.step(action)
-            transition = self.transition_factory.create(
-                logp=log_prob,
-                reward=reward,
-                done=done_bool
-            )
+            transition = self.transition_factory.forward(logp=log_prob, reward=reward, done=done_bool)
             self.replay_buffer.append(transition)
             state = next_state
             episode_timesteps += 1

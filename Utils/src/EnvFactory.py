@@ -43,12 +43,12 @@ class AtariEnvFactory(EnvFactory):
         self.env_name = env_name
         self.frames = frames
 
-    def create(self):
-        env = gym.make(self.env_name, frameskip=1)
+    def create(self, render_mode=None):
+        env = gym.make(self.env_name, frameskip=1, render_mode=render_mode)
         env = AtariPreprocessing(
             env,
             grayscale_obs=True,
-            scale_obs=True,
+            scale_obs=False,
             screen_size=84,
             terminal_on_life_loss=True,
             noop_max=30,

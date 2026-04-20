@@ -33,12 +33,10 @@ class StepBuffer(object):
 
             first_transition = self.buffer[0]
 
-            transition_n_steps = self.transition_factory.create(state=first_transition.state,
-                                                                action=first_transition.action,
-                                                                reward=return_in_n_steps,
-                                                                next_state=final_next_state,
-                                                                done=done
-                                                                )
+            transition_n_steps = self.transition_factory.forward(state=first_transition.state,
+                                                                 action=first_transition.action,
+                                                                 reward=return_in_n_steps, next_state=final_next_state,
+                                                                 done=done)
 
             self.buffer.popleft()
 
@@ -65,13 +63,9 @@ class StepBuffer(object):
 
             first = self.buffer[0]
 
-            transition = self.transition_factory.create(
-                state=first.state,
-                action=first.action,
-                reward=return_in_n_steps,
-                next_state=final_next_state,
-                done=done
-            )
+            transition = self.transition_factory.forward(state=first.state, action=first.action,
+                                                         reward=return_in_n_steps, next_state=final_next_state,
+                                                         done=done)
 
             out.append(transition)
             self.buffer.popleft()

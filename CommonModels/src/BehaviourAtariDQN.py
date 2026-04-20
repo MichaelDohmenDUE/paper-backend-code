@@ -1,5 +1,10 @@
 from torch import nn
 
+
+def preprocess(state):
+    return state / 255.0
+
+
 class BehaviourAtariDQN(nn.Module):
     def __init__(self, action_size):
         super().__init__()
@@ -19,7 +24,7 @@ class BehaviourAtariDQN(nn.Module):
         )
 
     def forward(self, x):
-        #x = x / 255.0
+        x = preprocess(x)
         x = self.conv(x)
         x = x.view(x.size(0), -1)
         return self.fc(x)

@@ -261,15 +261,14 @@ def env_step():
 def build_transition():
     return Node(
         name="build_transition",
-        function=lambda factory, state_t, action, reward, value, dist, done: factory.create(
-            state=state_t,
-            action=action,
-            reward=float(reward),
-            value=value.squeeze(-1),
-            log_prob=dist.log_prob(action),
-            done=bool(done),
-            entropy=dist.entropy()
-        ),
+        function=lambda factory, state_t, action, reward, value, dist, done: factory.forward(state=state_t,
+                                                                                             action=action,
+                                                                                             reward=float(reward),
+                                                                                             value=value.squeeze(-1),
+                                                                                             log_prob=dist.log_prob(
+                                                                                                 action),
+                                                                                             done=bool(done),
+                                                                                             entropy=dist.entropy()),
         inputs=["factory", "state_t", "action", "reward", "value", "dist", "done"],
         outputs=["transition"]
     )

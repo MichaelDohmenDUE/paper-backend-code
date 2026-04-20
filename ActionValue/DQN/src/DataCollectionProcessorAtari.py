@@ -10,14 +10,14 @@ from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 
 
 class DataCollectionProcessor:
-    def __init__(self, behaviour: nn.Module, env: EnvironmentHandler, buffer: ReplayBuffer,
-                 epsilon_greedy: EpsilonGreedyPolicy, transition_factory: TransitionFactory, device: torch.device):
-        self.behaviour = behaviour
+    def __init__(self, policy: nn.Module, env: EnvironmentHandler, buffer: ReplayBuffer,
+                 eps_greedy: EpsilonGreedyPolicy, transition_factory: TransitionFactory, device: torch.device):
+        self.policy = policy
         self.env = env
         self.buffer = buffer
         self.state = env.reset()
         self.done = False
-        self.epsilon_greedy = epsilon_greedy
+        self.eps_greedy = eps_greedy
         self.transition_factory = transition_factory
         self.device = device
         # Logging
@@ -45,19 +45,19 @@ class DataCollectionProcessor:
 
     def run(self) -> None:
         with torch.no_grad():
-            state_tensor = torch.tensor(self.state, dtype=torch.float32, device=self.device).unsqueeze(0)
-            q_values = self.behaviour(state_tensor).squeeze(0)
-        action = self.epsilon_greedy.forward(q_values=q_values)
-        self.epsilon_greedy.update()
+            state_tensor = torch.tensor(self.state, device=self.device).unsqueeze(0).float()
+            q_values = self.policy(state_tensor).squeeze(0)
+        action = self.eps_greedy.select_action(q_values=q_values)
+        self.eps_greedy.update()
         next_state, reward, done, done_bool = self.env.step(action)
-        self.done = done
-
-        transition = self.transition_factory.forward(state=self.state, action=action, reward=reward,
-                                                     next_state=next_state, done=self.done)
-        self.buffer.append(transition)
-        ###### Logging
         self.episode_reward += reward
+        clipped_reward = np.sign(reward)
+        self.done = done
         self.episode_steps += 1
-        self.total_steps += 1
-        ######
+        transition = self.transition_factory.forward(state=self.state.astype(np.uint8), action=action,
+                                                     reward=clipped_reward, next_state=next_state.astype(np.uint8),
+                                                     done=self.done)
+
+        self.buffer.append(transition)
         self.reset_handler(next_state, done)
+        self.total_steps += 1

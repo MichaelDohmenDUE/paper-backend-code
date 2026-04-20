@@ -20,3 +20,11 @@ class EpsilonGreedyPolicy:
             return random.randrange(q_values.shape[0])
         else:
             return torch.argmax(q_values).item()
+
+    def forward(self, q_values: torch.Tensor):
+        """
+        Calculate Q-Values and does an Update Step for Epsilon-Annealing (intended for the DataCollection)
+        """
+        action = self.select_action(q_values)
+        self.update()
+        return action

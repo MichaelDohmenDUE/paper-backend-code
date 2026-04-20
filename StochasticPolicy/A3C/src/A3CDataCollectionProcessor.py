@@ -42,15 +42,9 @@ class A3CDataCollectionProcessor:
             next_state, reward, done, _ = self.env.step(action.item())
             self.episode_reward += reward
 
-            transition = self.factory.create(
-                state=state_t,
-                action=action,
-                reward=float(reward),
-                value=value.squeeze(-1),
-                log_prob=dist.log_prob(action),
-                done=bool(done),
-                entropy=dist.entropy()
-            )
+            transition = self.factory.forward(state=state_t, action=action, reward=float(reward),
+                                              value=value.squeeze(-1), log_prob=dist.log_prob(action), done=bool(done),
+                                              entropy=dist.entropy())
 
             rollout.append(transition)
 

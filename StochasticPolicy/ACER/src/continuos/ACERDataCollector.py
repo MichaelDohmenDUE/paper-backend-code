@@ -51,16 +51,9 @@ class ACERDataCollector:
             action
         )
 
-        transition = self.factory.create(
-            state=self.state,
-            action=action,
-            reward=self.normalize_reward(reward),
-            next_state=next_state,
-            mask=1.0 - done_bool,
-            mu_logp=mu_logp,
-            mu_mean=mu_mean,
-            mu_log_std=mu_log_std
-        )
+        transition = self.factory.forward(state=self.state, action=action, reward=self.normalize_reward(reward),
+                                          next_state=next_state, mask=1.0 - done_bool, mu_logp=mu_logp, mu_mean=mu_mean,
+                                          mu_log_std=mu_log_std)
 
         self.buffer.append(transition)
 

@@ -12,49 +12,45 @@ from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-def acer_evaluate(trainer, env_factory, episodes=100):
+
+
+def acer_evaluate(trainer, env_factory, episodes=10):
     scores = []
-    for _ in range(episodes):
-        env = env_factory.create()
+    env = env_factory.forward(render_mode="human")
+    for i in range(episodes):
         state, _ = env.reset()
         state = np.asarray(state, dtype=np.float32)
-        noops = random.randint(0, 30)
-        for _ in range(noops):
-            state, _, terminated, truncated, _ = env.step(0)
-            done = terminated or truncated
-            state = np.asarray(state, dtype=np.float32)
-            if done:
-                state, _ = env.reset()
-                state = np.asarray(state, dtype=np.float32)
-
         done = False
         episode_reward = 0.0
 
         while not done:
-            state_t = torch.from_numpy(state).unsqueeze(0).float().to(device)
-            logits = trainer.actor(state_t)
-            action = torch.argmax(logits, dim=-1).item()
+            state_t = torch.from_numpy(state).unsqueeze(0).float().to(device) / 255.0
+            with torch.no_grad():
+                logits, _ = trainer.model(state_t)
+                dist = torch.distributions.Categorical(logits=logits)
+                action = dist.sample().item()
 
             next_state, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
-
             state = np.asarray(next_state, dtype=np.float32)
             episode_reward += reward
 
         scores.append(episode_reward)
+        #print(f"Eval Episode {i + 1} Score: {episode_reward}")
 
+    env.close()
     return np.mean(scores)
 
 def main():
     env_name = "ALE/Breakout-v5"
-    seed = 100
+    seed = 1
     max_timesteps = 100000
     num_envs = 16
     batch_size = 32
     learning_rate = 3e-4
     hidden_dim = 200
-    tau = 1.0
-    buffer_size = int(1e6)
+    tau = 0.01
+    buffer_size = 250_000
     seq_len = 20
     replay_ratio = 4
     trust_region_delta = 1.0

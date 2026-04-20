@@ -1,7 +1,9 @@
 import torch
 import torch.nn.functional as F
+from torch import nn
 
 from backend.Utils.src.NodeLib.Node import Node
+from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
 def bellman(target_Q: torch.Tensor, reward: torch.Tensor, done: torch.Tensor, discount_factor: float) -> torch.Tensor:
@@ -9,12 +11,57 @@ def bellman(target_Q: torch.Tensor, reward: torch.Tensor, done: torch.Tensor, di
     target_Q = reward + valid_transition * discount_factor * target_Q
     return target_Q
 
+
 def optimizer_update(optimizer: torch.optim.Optimizer, loss: torch.Tensor) -> torch.Tensor:
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
     return loss
 
+
+def indexing(tensor: torch.Tensor, index) -> torch.Tensor:
+    return tensor.gather(1, index)
+
+
+def nl_max(tensor: torch.Tensor, dim: int = 1) -> torch.Tensor:
+    return tensor.max(dim=dim, keepdim=True).values
+
+def mean_squared_error(tensor: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    return F.mse_loss(tensor, target)
+
+def optimizer_normalized(net: nn.Module, optimizer: torch.optim.Optimizer, loss: torch.Tensor,
+                         max_norm: float) -> torch.Tensor:
+    optimizer.zero_grad()
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(net.parameters(), max_norm)
+    optimizer.step()
+    return loss
+
+def detransition(replay_buffer: ReplayBuffer, device: torch.device):
+    batch = replay_buffer.sample_batch()
+    processed = {}
+
+    for key, tensor in batch.items():
+        t = tensor.to(device)
+
+        if "action" in key:
+            is_discrete = not t.is_floating_point() or torch.all(t == t.long())
+            if is_discrete:
+                processed[key] = t.long().view(-1, 1)
+            else:
+                processed[key] = t.float()
+        elif "state" in key:
+            if t.dtype == torch.uint8:
+                processed[key] = t.contiguous().float() / 255.0
+            else:
+                processed[key] = t.float()
+        elif key in ["reward", "done"]:
+            processed[key] = t.float().view(-1, 1)
+
+        else:
+            processed[key] = t
+    fields = replay_buffer.spec.fields
+    return tuple(processed[k] for k in fields)
 
 
 class NodeLibrary:

@@ -29,13 +29,8 @@ class DataCollectionProcessor:
         self.episode_timesteps += 1
         next_state, reward, done_env, done_bool = self.env.step(action_np)
 
-        transition = self.transition_factory.create(
-            state=self.state,
-            action=action_np,
-            reward=reward,
-            next_state=next_state,
-            done=done_bool,
-        )
+        transition = self.transition_factory.forward(state=self.state, action=action_np, reward=reward,
+                                                     next_state=next_state, done=done_bool)
         self.buffer.append(transition)
 
         self.state = next_state

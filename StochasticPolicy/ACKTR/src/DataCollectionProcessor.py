@@ -23,16 +23,9 @@ class DataCollectionProcessor:
 
             action, logp, entropy, value = self.policy.select_action(state)
             next_state, reward, done, done_bool = self.env_handler.step(action, episode_timesteps)
-            transition = self.transition_factory.create(
-                state=state,
-                action=action,
-                logp=logp,
-                reward=reward,
-                done=done_bool,
-                value=value,
-                entropy=entropy,
-                bootstrap_value=None
-            )
+            transition = self.transition_factory.forward(state=state, action=action, logp=logp, reward=reward,
+                                                         done=done_bool, value=value, entropy=entropy,
+                                                         bootstrap_value=None)
             self.replay_buffer.append(transition)
             state = next_state
 
