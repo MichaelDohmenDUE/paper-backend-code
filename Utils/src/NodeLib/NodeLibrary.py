@@ -18,6 +18,8 @@ def optimizer_update(optimizer: torch.optim.Optimizer, loss: torch.Tensor) -> to
     optimizer.step()
     return loss
 
+def argmax(tensor: torch.Tensor) -> torch.Tensor:
+    return tensor.argmax(dim=1, keepdim=True)
 
 def indexing(tensor: torch.Tensor, index) -> torch.Tensor:
     return tensor.gather(1, index)
