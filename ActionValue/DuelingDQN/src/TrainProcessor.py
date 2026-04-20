@@ -1,8 +1,10 @@
 import torch
 import torch.nn.functional as F
 from torch import nn
+from torch.nn.functional import huber_loss
 
-from backend.Utils.src.NodeLib.NodeLibrary import bellman
+from backend.Utils.src.NodeLib.NodeLibrary import bellman, detransition, indexing, nl_max, argmax, optimizer_normalized, \
+    mean_squared_error
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
@@ -22,24 +24,26 @@ class TrainProcessor:
         if len(self.buffer) < self.buffer.batch_size:
             return
 
-        batch = self.buffer.sample_batch()
+        states_tensor, actions_tensor, rewards_tensor, next_states_tensor, dones_tensor = detransition(self.buffer,
+                                                                                                       self.device)
 
-        states = batch["state"].to(self.device)
-        actions = batch["action"].long().to(self.device)
-        rewards = batch["reward"].to(self.device)
-        next_states = batch["next_state"].to(self.device)
-        dones = batch["done"].to(self.device)
-
-        qsa_behavior = self.behavior_net(states).gather(1, actions)
+        qs_behavoiur = self.behavior_net(states_tensor)
+        qsa_behavior = indexing(qs_behavoiur, actions_tensor)
 
         with torch.no_grad():
-            next_actions = self.behavior_net(next_states).argmax(dim=1, keepdim=True)
-            q_next = self.target_net(next_states).gather(1, next_actions)
-            target = bellman(target_Q=q_next, reward=rewards, done=dones, discount_factor=self.gamma)
+            next_actions = self.behavior_net(next_states_tensor)
+            next_actions = argmax(next_actions)
+            q_next = self.target_net(next_states_tensor)
+            q_next = indexing(q_next, next_actions)
+            target = bellman(target_Q=q_next, reward=rewards_tensor, done=dones_tensor, discount_factor=self.gamma)
 
-        loss = F.mse_loss(qsa_behavior, target)
+        loss = huber_loss(qsa_behavior, target)
 
-        self.optimizer.zero_grad()
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.behavior_net.parameters(), self.max_grad_norm) # TODO: I can't abstract here becuase of Clipping, think about the structure again
-        self.optimizer.step()
+        optimizer_normalized(self.behavior_net, self.optimizer, loss, self.max_grad_norm)
+
+        metrics = {
+            "losses/td_loss": loss.item(),
+            "losses/q_values": qsa_behavior.mean().item(),
+        }
+
+        return metrics
