@@ -22,16 +22,16 @@ def main():
     start_time = time.time()
     epsilon = 1.0
     env_name = "CartPole-v1"
-    sync_freq = 40
-    hidden_size = 200
-    batch_size = 64
+    sync_freq = 500
+    hidden_size = 64
+    batch_size = 128
     max_buffer_size = 100000
     tau = 1.0
     gamma = 0.99
     max_steps = 500000
     seed = 1
-    lr = 5e-4
-    warmup_steps = 1000
+    lr = 2.5e-4
+    warmup_steps = 2000
 
     wandb.init(
         entity="michael_dohmen-",
@@ -67,7 +67,7 @@ def main():
     optimizer = torch.optim.Adam(behavior_net.parameters(), lr)
 
     buffer = ReplayBuffer(spec, max_buffer_size, batch_size)
-    eps_greedy = EpsilonGreedyPolicy(epsilon_start=epsilon, epsilon_final=0.05, epsilon_decay=10000)
+    eps_greedy = EpsilonGreedyPolicy(epsilon_start=epsilon, epsilon_final=0.05, epsilon_decay=20000)
     collector = DataCollectionProcessor(behavior_net, env, buffer, eps_greedy, factory, device)
 
     train_process = TrainProcessor(buffer, behavior_net, target_net, optimizer, gamma, device)
@@ -85,7 +85,7 @@ def main():
             metrics["charts/epsilon"] = collector.epsilon_greedy.epsilon
             wandb.log(metrics, step=step)
         if step % 10_000 == 0 and step > warmup_steps:
-            avg_score = evaluate_policy(behavior_net, eval_env, episodes=5, device=device)
+            avg_score = evaluate_policy(behavior_net, eval_env, episodes=10, device=device)
             wandb.log({"charts/eval_avg_score": avg_score}, step=step)
 
 if __name__ == "__main__":
