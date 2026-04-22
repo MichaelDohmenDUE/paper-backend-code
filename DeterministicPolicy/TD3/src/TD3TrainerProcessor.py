@@ -51,12 +51,8 @@ class TrainProcessor:
 
     def train(self):
         batch = self.replay_buffer.sample_batch()
-        state = batch["state"].to(self.device)
-        action = batch["action"].to(self.device)
-        reward = batch["reward"].to(self.device)
-        next_state = batch["next_state"].to(self.device)
-        done = batch["done"].to(self.device)
-
+        state, action, reward, next_state, done = detransition(self.replay_buffer.spec.fields, batch, self.device)
+        print(state.shape, action.shape, reward.shape, next_state.shape, done.shape)
         with torch.no_grad():
             noise = (torch.randn_like(action) * self.policy_noise).clamp(-self.noise_clip, self.noise_clip)
             next_action = (self.actor_target(next_state) + noise).clamp(-self.max_action, self.max_action)

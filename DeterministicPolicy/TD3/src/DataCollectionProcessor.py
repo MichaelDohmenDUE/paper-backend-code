@@ -2,6 +2,7 @@ from backend.DeterministicPolicy.TD3.src.ActionHandler import ActionHandler
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.GlobalCounter import GlobalCounter
+from backend.Utils.src.NodeLib.NodeLibrary import reset_handler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
@@ -23,21 +24,26 @@ class DataCollectionProcessor:
     def run(self):
         action = self.action_handler.select_action(self.state, self.global_counter.get())
         self.episode_timesteps += 1
-        next_state, reward, done_env, done_bool = self.env.step(action)
+        next_state, reward, truncated, terminated, info = self.env.step_ddpg(action)
 
         transition = self.factory.forward(state=self.state, action=action, reward=reward, next_state=next_state,
-                                          done=done_bool)
+                                          done=terminated)
 
         self.buffer.append(transition)
-        self.state = next_state
+        self.state = reset_handler(env=self.env, next_state=next_state, done=terminated or truncated)
+        #Logging
         self.episode_reward += reward
-        if done_env:
+        self.global_counter.set(self.global_counter.get() + 1)
+        self.episode_timesteps += 1
+        metrics = {}
+        if truncated or terminated:
             print(f"Episode {self.episode_num + 1} — Reward: {self.episode_reward:.2f}")
-            self.state = self.env.reset()
+            metrics = {
+                "charts/episodic_return": self.episode_reward,
+                "charts/episodic_length": self.episode_timesteps,
+                "global_step": self.global_counter,
+            }
             self.episode_reward = 0
             self.episode_timesteps = 0
             self.episode_num += 1
-
-        self.global_counter.set(self.global_counter.get() + 1)
-
-        return transition
+        return metrics
