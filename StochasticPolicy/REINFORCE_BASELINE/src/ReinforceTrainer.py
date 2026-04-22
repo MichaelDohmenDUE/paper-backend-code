@@ -30,8 +30,9 @@ class REINFORCETrainer:
     def run(self):
         rollout = self.rollout_buffer.sample()
         state, logps, rewards, dones = detransition(self.rollout_buffer.spec.fields, rollout, self.device)
+        print(logps.shape, rewards.shape, dones.shape)
         _, value = self.behaviour(state)
-        value = value.squeeze(-1)
+        value = value.reshape(-1)
         with torch.no_grad():
             G = discounted_cumulative_reward(self.gamma, rewards.cpu(), dones.cpu())
             G = torch.tensor(G, dtype=torch.float32).to(self.device)

@@ -72,23 +72,20 @@ def detransition(fields, batch, device: torch.device):
 
     for key, tensor in batch.items():
         t = tensor.to(device)
-
-        if "action" in key:
-            is_discrete = not t.is_floating_point() or torch.all(t == t.long())
-            if is_discrete:
-                processed[key] = t.long().view(-1, 1)
-            else:
-                processed[key] = t.float()
-        elif "state" in key:
+        if "state" in key:
             if t.dtype == torch.uint8:
                 processed[key] = t.contiguous().float() / 255.0
             else:
                 processed[key] = t.float()
+        elif "action" in key:
+            is_discrete = not t.is_floating_point() or torch.all(t == t.long())
+            processed[key] = t.long() if is_discrete else t.float()
         elif key in ["reward", "done"]:
-            processed[key] = t.float().view(-1, 1)
+            processed[key] = t.float().flatten()
 
         else:
             processed[key] = t
+
     return tuple(processed[k] for k in fields)
 
 
