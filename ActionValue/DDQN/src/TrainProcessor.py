@@ -28,7 +28,7 @@ class TrainProcessor:
             self.device)
 
         q_values = self.behavior_net(states_tensor)
-        qsa_behavior = indexing(q_values, actions_tensor)
+        qsa_behavior = indexing(q_values, actions_tensor).reshape(-1)
 
         # Double DQN target
         with torch.no_grad():
@@ -36,7 +36,7 @@ class TrainProcessor:
             next_actions = argmax(next_q_online)
 
             next_q_target = self.target_net(next_states_tensor)
-            qsa_target = indexing(next_q_target, next_actions)
+            qsa_target = indexing(next_q_target, next_actions).reshape(-1)
             target = bellman(target_Q=qsa_target, reward=rewards_tensor, done=dones_tensor, discount_factor=self.gamma)
 
         loss = mean_squared_error(qsa_behavior, target)
