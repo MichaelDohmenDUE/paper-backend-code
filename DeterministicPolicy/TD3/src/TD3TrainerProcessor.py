@@ -42,7 +42,9 @@ class TrainProcessor:
 
     def update_actor(self, state: torch.Tensor) -> None:
         if self.global_counter.get() % self.syncro_frequency == 0:
-            actor_loss = -self.critic_1(state, self.actor(state)).mean()
+            action = self.actor(state)
+            q_val = self.critic_1(state, action)
+            actor_loss = deterministic_policy_gradient(q_val)
             optimizer_update(optimizer=self.optimizer_actor, loss=actor_loss)
 
     def run(self):
@@ -52,7 +54,6 @@ class TrainProcessor:
     def train(self):
         batch = self.replay_buffer.sample_batch()
         state, action, reward, next_state, done = detransition(self.replay_buffer.spec.fields, batch, self.device)
-        print(state.shape, action.shape, reward.shape, next_state.shape, done.shape)
         with torch.no_grad():
             noise = (torch.randn_like(action) * self.policy_noise).clamp(-self.noise_clip, self.noise_clip)
             next_action = (self.actor_target(next_state) + noise).clamp(-self.max_action, self.max_action)
@@ -65,9 +66,8 @@ class TrainProcessor:
 
         current_Q1 = self.critic_1(state, action)
         current_Q2 = self.critic_2(state, action)
-
-        critic_loss_1 = F.mse_loss(current_Q1, target_Q)
-        critic_loss_2 = F.mse_loss(current_Q2, target_Q)
+        critic_loss_1 = mean_squared_error(current_Q1, target_Q)
+        critic_loss_2 = mean_squared_error(current_Q2, target_Q)
 
         optimizer_update(optimizer=self.optimizer_critic_1, loss=critic_loss_1)
         optimizer_update(optimizer=self.optimizer_critic_2, loss=critic_loss_2)
