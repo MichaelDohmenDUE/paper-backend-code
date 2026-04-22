@@ -21,7 +21,7 @@ class TransitionFactory:
         setattr(module, "Transition", cls)
         self.transition_cls = cls
 
-    def forward(self, **kwargs):# TODO: Remove later once Refactoring is doen
+    def forward(self, **kwargs):
         for f in self.spec.fields:
             if f not in kwargs:
                 raise ValueError(f"Missing field: {f}")
