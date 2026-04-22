@@ -35,12 +35,11 @@ class REINFORCETrainer:
             G = discounted_cumulative_reward(self.gamma, rewards.cpu(), dones.cpu())
             G = torch.tensor(G, dtype=torch.float32).to(self.device)
             advantage = G - value.detach()
-            advantage = (advantage - advantage.mean()) / (advantage.std() + 1e-8)
         loss_policy = policy_loss(logps, advantage)
 
         loss_value = mean_squared_error(G, value)
 
-        loss = loss_policy + 0.5 * loss_value
+        loss = self.c_pol * loss_policy + self.c_val * loss_value
 
         optimizer_update(optimizer=self.optimizer, loss=loss)
         #Logging

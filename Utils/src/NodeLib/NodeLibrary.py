@@ -37,7 +37,7 @@ def deterministic_policy_gradient(critic, actor, states):
     return -critic(states, actor(states)).mean()
 
 def policy_loss(tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
-    return -(tensor_1 * tensor_2).mean()
+    return -(tensor_1 * tensor_2).sum()
 
 def argmax(tensor: torch.Tensor) -> torch.Tensor:
     return tensor.argmax(dim=1, keepdim=True)
