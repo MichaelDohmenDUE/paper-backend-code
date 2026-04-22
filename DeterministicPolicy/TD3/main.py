@@ -115,8 +115,6 @@ def main():
     sync_process_critic_2 = SyncProcessor(critic_2, critic_target_2, tau, sync_freq, gl_counter)
     sync_process_actor = SyncProcessor(actor, actor_target, tau, sync_freq, gl_counter)
 
-    evaluations = [eval_trainer(trainer, env_handler)]
-
     for t in range(max_timesteps):
         metrics_ep =datacollector.run()
         metrics_train = trainer.run()
