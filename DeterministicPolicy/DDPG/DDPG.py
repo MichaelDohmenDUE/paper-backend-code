@@ -1,6 +1,8 @@
+import time
 from copy import deepcopy
 
 import torch
+import wandb
 
 from backend.CommonModels.src.Actor import Actor
 from backend.CommonModels.src.Critic import Critic
@@ -18,17 +20,36 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def main():
+    start_time = time.time()
     lr_actor = 1e-4
     lr_critic = 1e-3
-    max_timesteps = 100000
+    max_timesteps = 1000000
     env_name = "HalfCheetah-v4"
     sync_freq = 1
     hidden_size = 300
     batch_size = 64
-    max_buffer_size = 10000
+    max_buffer_size = 100000
     tau = 0.001
     gamma = 0.99
     seed = 42
+
+    wandb.init(
+        entity="michael_dohmen-",
+        project="my-DDPG-benchmarks",
+        config={
+            "env_id": env_name,
+            "exp_name": "DDPG-HalfCheetah-v4",
+            "seed": seed,
+            "max_buffer_size": max_buffer_size,
+            "batch_size": batch_size,
+            "max_timesteps": max_timesteps,
+            "lr_actor": lr_actor,
+            "lr_critic": lr_critic,
+            "gamma": gamma,
+            "sync_freq": sync_freq,
+            "tau": tau,
+        }
+    )
 
     gym_factory = GymEnvFactory(env_name)
     env = EnvironmentHandler(gym_factory, seed)
@@ -60,8 +81,11 @@ def main():
     sync_process_critic = SyncProcessor(critic, critic_target, tau, sync_freq, gl_counter)
 
     for t in range(max_timesteps):
-        data_collection_process.run()
-        actor_loss, critic_loss = train_process.run()
+        metrics_ep = data_collection_process.run()
+        metrics_train = train_process.run()
+        all_metrics = {**metrics_ep, **metrics_train, "charts/SPS": int(t / (time.time() - start_time)),
+                       "global_step": gl_counter.get()}
+        wandb.log(all_metrics, step=gl_counter.get())
         sync_process_actor.run()
         sync_process_critic.run()
 

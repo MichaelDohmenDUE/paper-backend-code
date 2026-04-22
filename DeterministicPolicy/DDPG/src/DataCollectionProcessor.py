@@ -36,15 +36,17 @@ class DataCollectionProcessor:
 
         self.state = next_state
         self.done = done
-
+        self.global_counter.set(self.global_counter.get() + 1)
+        metrics = {}
         if done:
-            self.episode_idx += 1
-            if self.episode_idx % 20 == 0:
-                print(f" — Reward: {self.episode_reward:.2f}")
+            metrics = {
+                "charts/episodic_return": self.episode_reward,
+                "charts/episodic_length": self.episode_timesteps,
+                "global_step": self.global_counter.get(),
+            }
             self.state = self.env.reset()
             self.episode_reward = 0
             self.episode_timesteps = 0
-
+            self.episode_idx += 1
             self.policy.noise.reset()
-        self.global_counter.set(self.global_counter.get() + 1)
-        return transition
+        return metrics

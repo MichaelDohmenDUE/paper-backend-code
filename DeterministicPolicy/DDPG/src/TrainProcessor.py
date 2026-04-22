@@ -23,7 +23,7 @@ class TrainProcess:
 
     def run(self):
         if len(self.replay_buffer) < self.replay_buffer.batch_size:
-            return None, None
+            return {}
         batch = self.replay_buffer.sample_batch()
         states, actions, rewards, next_states, dones = detransition(self.replay_buffer.spec.fields, batch, self.device)
         # Critic update
@@ -35,6 +35,12 @@ class TrainProcess:
         critic_loss = mean_squared_error(current_q, target)
         optimizer_update(optimizer=self.critic_opt, loss=critic_loss)
         # Actor update
-        actor_loss = deterministic_policy_gradient(critic=self.critic, actor=self.actor, states=states)
+        action = self.actor(states)
+        q_value = self.critic(states, action)
+        actor_loss = deterministic_policy_gradient(q_value)
         optimizer_update(optimizer=self.actor_opt, loss=actor_loss)
-        return actor_loss, critic_loss
+        metrics = {
+            "losses/critic_loss": critic_loss.item(),
+            "losses/actor_loss": actor_loss.item(),
+        }
+        return metrics
