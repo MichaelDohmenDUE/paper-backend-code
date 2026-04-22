@@ -37,32 +37,37 @@ def evaluate_policy(policy, env_handler, device, episodes=10):
     return total_reward / episodes
 
 
-def main():
+def main(seed):
     """
     Related Paper: https://link.springer.com/article/10.1007/BF00992696
     """
     start_time = time.time()
-    learn_rate = 1e-5
-    max_steps = 1000
-    seed = 1
+    learn_rate = 1e-3
+    max_episodes = 2000
+    seed = seed
     hidden_dim = 64
     env_name = "CartPole-v1"
     beta = 0.01
     gamma = 0.99
-    eval_freq = 20
+    eval_freq = 10
     eval_episodes = 10
+    algo_name = "REINFORCE_BASELINE"
     setting_global_seed(seed)
 
     wandb.init(
         entity="michael_dohmen-",
         project="my-REINFORCE-benchmarks",
+        group=algo_name,
+        name=f"{algo_name}-seed-{seed}",
+        tags=[env_name, "baseline_study"],
+        reinit=True,
         config={
             "env_id": env_name,
             "exp_name": "REINFORCE-CartPole-v1",
             "seed": seed,
             "lr": learn_rate,
             "gamma": gamma,
-            "max_steps": max_steps,
+            "max_episodes": max_episodes,
             "hidden_dim": hidden_dim,
         }
     )
@@ -73,18 +78,18 @@ def main():
 
     gym_factory = GymEnvFactory(env_name)
     env_handler = EnvironmentHandler(gym_factory, seed=seed)
-    eval_env_handler = EnvironmentHandler(gym_factory, seed=seed+100)
+    eval_env_handler = EnvironmentHandler(gym_factory, seed=seed + 100)
     observation_size, action_size, _ = env_handler.get_env_specs()
     policy = PolicyVPG(observation_size, action_size, hidden_dim=hidden_dim).to(device)
 
     action_handler = ActionHandler(policy, device)
-    optimizer = torch.optim.SGD(policy.parameters(), lr=learn_rate)
+    optimizer = torch.optim.SGD(policy.parameters(), lr=learn_rate, momentum=0.9)
 
     data_collector = DataCollectionProcessor(env_handler, transition_factory, replay_buffer, policy, device)
 
     trainer = REINFORCETrainer(replay_buffer, optimizer, beta, gamma, device=device)
 
-    for step in range(max_steps):
+    for step in range(max_episodes):
         metrics_ep = data_collector.run()
         metrics_train = trainer.run()
         all_metrics = {**metrics_ep, **metrics_train, "charts/SPS": int(step / (time.time() - start_time)),
@@ -94,6 +99,7 @@ def main():
             avg_eval_reward = evaluate_policy(policy, eval_env_handler, device, eval_episodes)
             all_metrics["eval/avg_reward"] = avg_eval_reward
         wandb.log(all_metrics, step=step)
-
+    wandb.finish()
 if __name__ == "__main__":
-    main()
+    for seed in range(10):
+        main(seed)

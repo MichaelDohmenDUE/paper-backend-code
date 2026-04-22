@@ -28,7 +28,7 @@ class REINFORCETrainer:
 
         with torch.no_grad():
             G = discounted_cumulative_reward(self.gamma, rewards.cpu(), dones.cpu())
-            G = torch.tensor(G, dtype=torch.float32).to(self.device)
+            G = torch.tensor(G, dtype=torch.float32).to(self.device).view(-1)
         loss = policy_loss(logps, G)
 
         optimizer_update(optimizer=self.optimizer, loss=loss)
