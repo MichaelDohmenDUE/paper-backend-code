@@ -30,7 +30,6 @@ class REINFORCETrainer:
     def run(self):
         rollout = self.rollout_buffer.sample()
         state, logps, rewards, dones = detransition(self.rollout_buffer.spec.fields, rollout, self.device)
-        print(logps.shape, rewards.shape, dones.shape)
         _, value = self.behaviour(state)
         value = value.reshape(-1)
         with torch.no_grad():
