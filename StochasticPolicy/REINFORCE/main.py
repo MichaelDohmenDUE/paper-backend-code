@@ -13,8 +13,29 @@ from backend.CommonModels.src.Policy_Reinforce import PolicyVPG
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.StochasticPolicy.REINFORCE.src.DataCollector import DataCollectionProcessor
 from backend.StochasticPolicy.REINFORCE.src.ReinforceTrainer import REINFORCETrainer
+from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+def evaluate_policy(policy, env_handler, device, episodes=10):
+    policy.eval()
+    total_reward = 0
+    for _ in range(episodes):
+        state = env_handler.reset()
+        done = False
+        while not done:
+            state_t = torch.as_tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
+            with torch.no_grad():
+                action_logits = policy(state_t)
+                action = torch.argmax(action_logits, dim=1).item()
+            next_state, reward, done, _ = env_handler.step(action)
+            total_reward += reward
+            state = next_state
+    env_handler.reset()
+    policy.train()
+    return total_reward / episodes
+
 
 def main():
     """
@@ -28,6 +49,9 @@ def main():
     env_name = "CartPole-v1"
     beta = 0.01
     gamma = 0.99
+    eval_freq = 20
+    eval_episodes = 10
+    setting_global_seed(seed)
 
     wandb.init(
         entity="michael_dohmen-",
@@ -49,7 +73,7 @@ def main():
 
     gym_factory = GymEnvFactory(env_name)
     env_handler = EnvironmentHandler(gym_factory, seed=seed)
-
+    eval_env_handler = EnvironmentHandler(gym_factory, seed=seed+100)
     observation_size, action_size, _ = env_handler.get_env_specs()
     policy = PolicyVPG(observation_size, action_size, hidden_dim=hidden_dim).to(device)
 
@@ -61,15 +85,15 @@ def main():
     trainer = REINFORCETrainer(replay_buffer, optimizer, beta, gamma, device=device)
 
     for step in range(max_steps):
-        data_collector.run()
-        metrics = trainer.run()
-        if metrics and step % 400 == 0:
-            metrics["charts/SPS"] = int(step / (time.time() - start_time))
-            wandb.log(metrics, step=step)
-            #TODO: THINK ABOUT AN EVAL FOR LATER / also doesn't log
-       # if step % 1_000 == 0 and episode > 0:
-        #    avg_score = evaluate_policy(behavior_net, eval_env, episodes=10, device=device)
-        #    wandb.log({"charts/eval_avg_score": avg_score}, step=step)
+        metrics_ep = data_collector.run()
+        metrics_train = trainer.run()
+        all_metrics = {**metrics_ep, **metrics_train, "charts/SPS": int(step / (time.time() - start_time)),
+                       "global_step": data_collector.total_steps}
+
+        if step % eval_freq == 0:
+            avg_eval_reward = evaluate_policy(policy, eval_env_handler, device, eval_episodes)
+            all_metrics["eval/avg_reward"] = avg_eval_reward
+        wandb.log(all_metrics, step=step)
 
 if __name__ == "__main__":
     main()

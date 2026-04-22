@@ -11,17 +11,7 @@ class EnvironmentHandler:
         self.env = factory.create()
         self.seed = seed
         self.env.reset(seed=seed)
-        self.env.action_space.seed(seed)
-        torch.manual_seed(seed)
-        if torch.cuda.is_available():
-            torch.cuda.manual_seed(seed)
-            torch.cuda.manual_seed_all(seed)
-        np.random.seed(seed)
-        random.seed(seed)
-        torch.backends.cudnn.deterministic = True #TODO: Expose this for performance
-        torch.use_deterministic_algorithms(True)
         self.reward_scale: float = reward_scale
-
         self.reward_scale = reward_scale
         obs_space = self.env.observation_space
 

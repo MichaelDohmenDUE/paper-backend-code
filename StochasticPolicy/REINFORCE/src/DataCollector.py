@@ -38,13 +38,11 @@ class DataCollectionProcessor:
             self.episode_reward += reward
 
             if done:
-                try:
-                    wandb.log({
-                        "charts/episodic_return": self.episode_reward,
-                        "charts/episodic_length": self.episode_timesteps,
-                        "global_step": self.total_steps,
-                    })
-                except Exception as e:
-                    print(f"Logging error: {e}")
+                metrics = {
+                    "charts/episodic_return": self.episode_reward,
+                    "charts/episodic_length": self.episode_timesteps,
+                    "global_step": self.total_steps,
+                }
                 self.episode_timesteps = 0
                 self.episode_reward = 0
+                return metrics
