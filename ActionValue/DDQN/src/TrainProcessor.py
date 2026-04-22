@@ -21,10 +21,12 @@ class TrainProcessor:
         if len(self.buffer) < self.buffer.batch_size:
             return
 
-        states_tensor, actions_tensor, rewards_tensor, next_states_tensor, dones_tensor = detransition(self.buffer,
-                                                                                                       self.device)
+        batch = self.buffer.sample_batch()
+        states_tensor, actions_tensor, rewards_tensor, next_states_tensor, dones_tensor = detransition(
+            self.buffer.spec.fields,
+            batch,
+            self.device)
 
-        # Q(s,a) from behavior net
         q_values = self.behavior_net(states_tensor)
         qsa_behavior = indexing(q_values, actions_tensor)
 

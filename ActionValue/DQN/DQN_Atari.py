@@ -112,7 +112,7 @@ def main():
 
         if metrics and step % 400 == 0:
             metrics["charts/SPS"] = int(step / (time.time() - start_time))
-            metrics["charts/epsilon"] = collector.action_selector.epsilon
+            metrics["charts/epsilon"] = collector.eps_greedy.epsilon
             wandb.log(metrics, step=step)
         if step % 10_000 == 0 and step > warmup_steps:
             avg_score = evaluate_policy(behavior_net, eval_env, episodes=5, device=device)

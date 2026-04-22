@@ -1,9 +1,7 @@
 import torch
-import torch.nn.functional as F
 from torch import nn
-from torch.nn.functional import huber_loss
 
-from backend.Utils.src.NodeLib.NodeLibrary import bellman, detransition, indexing, nl_max, argmax, optimizer_normalized, \
+from backend.Utils.src.NodeLib.NodeLibrary import bellman, detransition, indexing, argmax, optimizer_normalized, \
     mean_squared_error
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
@@ -24,11 +22,14 @@ class TrainProcessor:
         if len(self.buffer) < self.buffer.batch_size:
             return
 
-        states_tensor, actions_tensor, rewards_tensor, next_states_tensor, dones_tensor = detransition(self.buffer,
-                                                                                                       self.device)
+        batch = self.buffer.sample_batch()
+        states_tensor, actions_tensor, rewards_tensor, next_states_tensor, dones_tensor = detransition(
+            self.buffer.spec.fields,
+            batch,
+            self.device)
 
-        qs_behavoiur = self.behavior_net(states_tensor)
-        qsa_behavior = indexing(qs_behavoiur, actions_tensor)
+        qs_behaviour = self.behavior_net(states_tensor)
+        qsa_behavior = indexing(qs_behaviour, actions_tensor)
 
         with torch.no_grad():
             next_actions = self.behavior_net(next_states_tensor)
@@ -37,7 +38,7 @@ class TrainProcessor:
             q_next = indexing(q_next, next_actions)
             target = bellman(target_Q=q_next, reward=rewards_tensor, done=dones_tensor, discount_factor=self.gamma)
 
-        loss = huber_loss(qsa_behavior, target)
+        loss = mean_squared_error(qsa_behavior, target)
 
         optimizer_normalized(self.behavior_net, self.optimizer, loss, self.max_grad_norm)
 

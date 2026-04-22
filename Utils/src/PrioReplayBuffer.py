@@ -72,6 +72,7 @@ class PrioReplayBuffer:
         for i in range(self.batch_size):
             s: float = random.uniform(segment * i, segment * (i + 1))
             idx = self.sum_tree.retrieve(s)
+            idx = min(idx, len(self.buffer) - 1)
             indices.append(idx)
             transitions.append(self.buffer[idx])
 

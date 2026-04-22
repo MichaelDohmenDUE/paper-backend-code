@@ -1,6 +1,8 @@
+import time
 from copy import deepcopy
 
 import torch
+import wandb
 
 from backend.CommonModels.src.RainbowDuellingDQN import RainbowDuellingDQN
 from backend.ActionValue.RainbowDQN.src.ActionHandler import GreedyPolicy
@@ -17,6 +19,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def main():
+    start_time = time.time()
     env_name = "CartPole-v1"
     sync_freq = 40
     hidden_size = 128
@@ -31,6 +34,27 @@ def main():
     max_grad_norm = 10.0
     v_min: int = 0  # dependent on used environment, so be careful
     v_max: int = 500
+
+    wandb.init(
+        entity="michael_dohmen-",
+        project="my-RainbowDQN-benchmarks",
+        config={
+            "env_id": env_name,
+            "exp_name": "Rainbow-CartPole-v1",
+            "seed": seed,
+            "max_buffer_size": max_buffer_size,
+            "batch_size": batch_size,
+            "max_steps": max_steps,
+            "lr": lr,
+            "gamma": gamma,
+            "sync_freq": sync_freq,
+            "tau": tau,
+            "max_grad_norm": max_grad_norm,
+            "v_min": v_min,
+            "v_max": v_max,
+            "atoms_size": atoms_size,
+        }
+    )
 
     spec = TransitionSpec(["state", "action", "reward", "next_state", "done"])
     factory = TransitionFactory(spec)
@@ -56,8 +80,15 @@ def main():
 
     for step in range(max_steps):
         collector.run()
-        train_process.run()
+        metrics = train_process.run()
         sync_process.run()
+
+        if metrics and step % 400 == 0:
+            metrics["charts/SPS"] = int(step / (time.time() - start_time))
+            wandb.log(metrics, step=step)
+        #if step % 1_000 == 0 and step > 0:
+            #avg_score = evaluate_policy(behavior_net, eval_env, episodes=10, device=device)
+         #   wandb.log({"charts/eval_avg_score": avg_score}, step=step)
 
 
 if __name__ == "__main__":

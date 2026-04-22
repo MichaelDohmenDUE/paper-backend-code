@@ -1,6 +1,7 @@
 import gymnasium as gym
 import numpy as np
 import torch
+import random
 
 from backend.Utils.src.EnvFactory import EnvFactory
 
@@ -13,8 +14,12 @@ class EnvironmentHandler:
         self.env.action_space.seed(seed)
         torch.manual_seed(seed)
         if torch.cuda.is_available():
+            torch.cuda.manual_seed(seed)
             torch.cuda.manual_seed_all(seed)
         np.random.seed(seed)
+        random.seed(seed)
+        torch.backends.cudnn.deterministic = True #TODO: Expose this for performance
+        torch.use_deterministic_algorithms(True)
         self.reward_scale: float = reward_scale
 
         self.reward_scale = reward_scale
@@ -47,10 +52,9 @@ class EnvironmentHandler:
         #if self.episode_max_steps is not None and episode_timesteps >= self.episode_max_steps:
         #sv    truncated = True
         done = terminated or truncated
-        done_bool = float(done)
 
         next_state = np.asarray(next_state, dtype=np.float32)
-        return next_state, reward, done, done_bool
+        return next_state, reward, done, info
 
     def get_env_specs(self) -> tuple[int, int, float | None]:
         extracted_value = self.state_dim, self.action_dim, self.max_action

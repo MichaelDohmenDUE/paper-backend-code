@@ -11,6 +11,9 @@ class PolicyVPG(nn.Module):
             nn.Linear(hidden_dim, output_dim)
         )
 
+    def forward(self, state):
+        return self.model(state)
+
     def dist_categorical(self, x):
         logits = self.model(x)
         return torch.distributions.Categorical(logits=logits)

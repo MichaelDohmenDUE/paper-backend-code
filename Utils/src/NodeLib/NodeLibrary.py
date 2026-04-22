@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 from torch import nn
+from torch.distributions import Categorical
 
 from backend.Utils.src.NodeLib.Node import Node
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
@@ -11,12 +12,29 @@ def bellman(target_Q: torch.Tensor, reward: torch.Tensor, done: torch.Tensor, di
     target_Q = reward + valid_transition * discount_factor * target_Q
     return target_Q
 
+def reset_handler(env, next_state, done):
+    state = next_state
+    if done:
+        state = env.reset()
+        return state
+    return state
+
+def categorical_distribution(logits: torch.Tensor) -> Categorical:
+    return torch.distributions.Categorical(logits=logits)
+
+def sample_distribution(dist: Categorical) -> tuple[int, torch.Tensor]:
+    action_dist = dist.sample()
+    log_prob = dist.log_prob(action_dist).squeeze(0)
+    return int(action_dist.item()), log_prob
 
 def optimizer_update(optimizer: torch.optim.Optimizer, loss: torch.Tensor) -> torch.Tensor:
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
     return loss
+
+def policy_loss(tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
+    return -(tensor_1 * tensor_2).mean()
 
 def argmax(tensor: torch.Tensor) -> torch.Tensor:
     return tensor.argmax(dim=1, keepdim=True)
@@ -39,8 +57,7 @@ def optimizer_normalized(net: nn.Module, optimizer: torch.optim.Optimizer, loss:
     optimizer.step()
     return loss
 
-def detransition(replay_buffer: ReplayBuffer, device: torch.device):
-    batch = replay_buffer.sample_batch()
+def detransition(fields, batch, device: torch.device):
     processed = {}
 
     for key, tensor in batch.items():
@@ -62,7 +79,6 @@ def detransition(replay_buffer: ReplayBuffer, device: torch.device):
 
         else:
             processed[key] = t
-    fields = replay_buffer.spec.fields
     return tuple(processed[k] for k in fields)
 
 

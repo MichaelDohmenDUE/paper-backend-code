@@ -89,3 +89,17 @@ class TrainProcessor:
         # Update Prios
         new_priorities = loss_per_sample.detach().abs().cpu().numpy().flatten()
         self.buffer.update_priorities(indices, new_priorities)
+
+        # Logging
+        with torch.no_grad():
+            probs_a = torch.exp(log_probs_a)
+            q_values_expected = (probs_a * self.support).sum(dim=-1)
+
+        metrics = {
+            "losses/kl_loss": loss.item(),
+            "values/mean_q": q_values_expected.mean().item(),
+            "values/max_q": q_values_expected.max().item(),
+            "per/mean_weight": weights.mean().item(),
+            "per/max_priority": new_priorities.max().item()
+        }
+        return metrics

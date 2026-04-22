@@ -7,12 +7,13 @@ from backend.ActionValue.DQN.src.ActionHandler import EpsilonGreedyPolicy
 from backend.Utils.src import ReplayBuffer
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
+from backend.Utils.src.NodeLib.NodeLibrary import reset_handler
 
 
 class DataCollectionProcessor:
-    def __init__(self, policy: nn.Module, env: EnvironmentHandler, buffer: ReplayBuffer,
+    def __init__(self, behaviour_net: nn.Module, env: EnvironmentHandler, buffer: ReplayBuffer,
                  eps_greedy: EpsilonGreedyPolicy, transition_factory: TransitionFactory, device: torch.device):
-        self.policy = policy
+        self.behaviour_net = behaviour_net
         self.env = env
         self.buffer = buffer
         self.state = env.reset()
@@ -26,8 +27,23 @@ class DataCollectionProcessor:
         self.total_steps = 0
         self.episode_steps = 0
 
-    def reset_handler(self, next_state, done):
-        self.state = next_state
+    def run(self) -> None:
+        with torch.no_grad():
+            state_tensor = torch.tensor(self.state, dtype=torch.float32, device=self.device).unsqueeze(0)
+            q_values = self.behaviour_net(state_tensor).squeeze(0)
+        action = self.eps_greedy.forward(q_values=q_values)
+        next_state, reward, done, done_bool = self.env.step(action)
+        clipped_reward = np.sign(reward)
+        transition = self.transition_factory.forward(state=self.state.astype(np.uint8), action=action,
+                                                     reward=clipped_reward, next_state=next_state.astype(np.uint8),
+                                                     done=done)
+
+        self.buffer.append(transition)
+        self.state = reset_handler(self.env, next_state, done)
+        ###### Logging
+        self.episode_reward += reward
+        self.episode_steps += 1
+        self.total_steps += 1
         if done:
             try:
                 wandb.log({
@@ -39,25 +55,4 @@ class DataCollectionProcessor:
                 print(f"Logging error: {e}")
             self.episode_count += 1
             self.episode_reward = 0.0
-            self.state = self.env.reset()
-            self.done = False
             self.episode_steps = 0
-
-    def run(self) -> None:
-        with torch.no_grad():
-            state_tensor = torch.tensor(self.state, device=self.device).unsqueeze(0).float()
-            q_values = self.policy(state_tensor).squeeze(0)
-        action = self.eps_greedy.select_action(q_values=q_values)
-        self.eps_greedy.update()
-        next_state, reward, done, done_bool = self.env.step(action)
-        self.episode_reward += reward
-        clipped_reward = np.sign(reward)
-        self.done = done
-        self.episode_steps += 1
-        transition = self.transition_factory.forward(state=self.state.astype(np.uint8), action=action,
-                                                     reward=clipped_reward, next_state=next_state.astype(np.uint8),
-                                                     done=self.done)
-
-        self.buffer.append(transition)
-        self.reset_handler(next_state, done)
-        self.total_steps += 1

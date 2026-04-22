@@ -7,6 +7,7 @@ from backend.ActionValue.DQN.src.ActionHandler import EpsilonGreedyPolicy
 from backend.Utils.src import ReplayBuffer
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
+from backend.Utils.src.NodeLib.NodeLibrary import reset_handler
 
 
 class DataCollectionProcessor:
@@ -26,8 +27,22 @@ class DataCollectionProcessor:
         self.total_steps = 0
         self.episode_steps = 0
 
-    def reset_handler(self, next_state, done):
-        self.state = next_state
+    def run(self) -> None:
+        with torch.no_grad():
+            state_tensor = torch.tensor(self.state, dtype=torch.float32, device=self.device).unsqueeze(0)
+            q_values = self.behaviour(state_tensor).squeeze(0)
+        action = self.epsilon_greedy.forward(q_values=q_values)
+        next_state, reward, done, done_bool = self.env.step(action)
+
+        transition = self.transition_factory.forward(state=self.state, action=action, reward=reward,
+                                                     next_state=next_state, done=done)
+
+        self.buffer.append(transition)
+        self.state = reset_handler(self.env, next_state, done)
+        ###### Logging
+        self.episode_reward += reward
+        self.episode_steps += 1
+        self.total_steps += 1
         if done:
             try:
                 wandb.log({
@@ -39,24 +54,5 @@ class DataCollectionProcessor:
                 print(f"Logging error: {e}")
             self.episode_count += 1
             self.episode_reward = 0.0
-            self.state = self.env.reset()
-            self.done = False
             self.episode_steps = 0
 
-    def run(self) -> None:
-        with torch.no_grad():
-            state_tensor = torch.tensor(self.state, dtype=torch.float32, device=self.device).unsqueeze(0)
-            q_values = self.behaviour(state_tensor).squeeze(0)
-        action = self.epsilon_greedy.forward(q_values=q_values)
-        next_state, reward, done, done_bool = self.env.step(action)
-        self.done = done
-
-        transition = self.transition_factory.forward(state=self.state, action=action, reward=reward,
-                                                     next_state=next_state, done=self.done)
-        self.buffer.append(transition)
-        ###### Logging
-        self.episode_reward += reward
-        self.episode_steps += 1
-        self.total_steps += 1
-        ######
-        self.reset_handler(next_state, done)

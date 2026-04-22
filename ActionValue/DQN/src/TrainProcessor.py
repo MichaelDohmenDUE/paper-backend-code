@@ -22,9 +22,11 @@ class TrainProcessor:
     def run(self):
         if len(self.buffer) < self.warmup_steps:
             return
-
-        states_tensor, actions_tensor, rewards_tensor, next_states_tensor, dones_tensor = detransition(self.buffer,
-                                                                                                       self.device)
+        batch = self.buffer.sample_batch()
+        states_tensor, actions_tensor, rewards_tensor, next_states_tensor, dones_tensor = detransition(
+            self.buffer.spec.fields,
+            batch,
+            self.device)
 
         qs_behaviour = self.behavior_net(states_tensor)
         qsa_behavior = indexing(qs_behaviour, actions_tensor)
