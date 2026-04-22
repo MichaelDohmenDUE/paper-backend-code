@@ -1,3 +1,5 @@
+from xxlimited_35 import Null
+
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -51,6 +53,14 @@ def nl_max(tensor: torch.Tensor, dim: int = 1) -> torch.Tensor:
 
 def mean_squared_error(tensor: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     return F.mse_loss(tensor, target)
+
+def combined_loss(*args):
+    if len(args) % 2 == 1:
+        print("Error in combining losses")
+        return None
+    return sum(loss * weight for loss, weight in zip(args[0::2], args[1::2]))
+
+
 
 def optimizer_normalized(net: nn.Module, optimizer: torch.optim.Optimizer, loss: torch.Tensor,
                          max_norm: float) -> torch.Tensor:
