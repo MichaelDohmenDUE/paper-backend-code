@@ -15,5 +15,10 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
             avg_reward += reward
             state = next_state
     avg_reward /= eval_episodes
+
+    metrics = {
+        "charts/eval_avg_reward": avg_reward / eval_episodes,
+    }
+
     print(f"Average Reward over {eval_episodes} episodes: {avg_reward:.3f}")
-    return avg_reward
+    return metrics

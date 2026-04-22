@@ -40,16 +40,20 @@ class TrainProcessor:
         self.replay_buffer = replay_buffer
         self.device = device
 
-    def update_actor(self, state: torch.Tensor) -> None:
+    def update_actor(self, state: torch.Tensor):
+        actor_loss = None
         if self.global_counter.get() % self.syncro_frequency == 0:
             action = self.actor(state)
             q_val = self.critic_1(state, action)
             actor_loss = deterministic_policy_gradient(q_val)
             optimizer_update(optimizer=self.optimizer_actor, loss=actor_loss)
+            return actor_loss.item()
+        return None
 
     def run(self):
         if self.global_counter.get() >= self.start_timesteps:
-            self.train()
+            return self.train()
+        return {}
 
     def train(self):
         batch = self.replay_buffer.sample_batch()
@@ -72,4 +76,12 @@ class TrainProcessor:
         optimizer_update(optimizer=self.optimizer_critic_1, loss=critic_loss_1)
         optimizer_update(optimizer=self.optimizer_critic_2, loss=critic_loss_2)
 
-        self.update_actor(state)
+        actor_loss = self.update_actor(state)
+
+        metrics = {
+            "losses/critic_loss 1": critic_loss_1.item(),
+            "losses/critic_loss 2": critic_loss_2.item(),
+            "losses/actor_loss": actor_loss,
+        }
+
+        return metrics

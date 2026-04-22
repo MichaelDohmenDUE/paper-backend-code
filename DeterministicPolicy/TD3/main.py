@@ -1,6 +1,8 @@
 import copy
+import time
 
 import torch
+import wandb
 from torch import optim
 
 from backend.CommonModels.src.Actor import Actor
@@ -20,6 +22,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def main():
+    start_time = time.time()
     env_name = "HalfCheetah-v4"
     seed = 100
     max_timesteps = 1000000
@@ -35,6 +38,29 @@ def main():
     policy_noise = 0.2
     hidden_dim = 256
     buffer_size = int(1e6)
+
+    wandb.init(
+        entity="michael_dohmen-",
+        project="my-Td3-benchmarks",
+        config={
+            "env_id": env_name,
+            "exp_name": "DDPG-HalfCheetah-v4",
+            "seed": seed,
+            "buffer_size": buffer_size,
+            "batch_size": batch_size,
+            "max_timesteps": max_timesteps,
+            "sync_freq": sync_freq,
+            "tau": tau,
+            "noise_clip": noise_clip,
+            "policy_noise": policy_noise,
+            "hidden_dim": hidden_dim,
+            "start_timesteps": start_timesteps,
+            "eval_freq": eval_freq,
+            "eval_episodes": eval_episodes,
+            "expl_noise": expl_noise,
+            "learning_rate": learning_rate,
+        }
+    )
     gym_factory = GymEnvFactory(env_name)
     env_handler = EnvironmentHandler(gym_factory, seed)
     observation_size, action_size, max_action = env_handler.get_env_specs()
@@ -92,14 +118,18 @@ def main():
     evaluations = [eval_trainer(trainer, env_handler)]
 
     for t in range(max_timesteps):
-        datacollector.run()
-        trainer.run()
+        metrics_ep =datacollector.run()
+        metrics_train = trainer.run()
         sync_process_critic_1.run()
         sync_process_critic_2.run()
         sync_process_actor.run()
-        if (t + 1) % eval_freq == 0:
-            evaluations.append(eval_trainer(trainer, env_handler, eval_episodes))
+        all_metrics = {**metrics_ep, **metrics_train, "charts/SPS": int(t / (time.time() - start_time)),
+                       "global_step": gl_counter.get()}
 
+        if (t + 1) % eval_freq == 0:
+            eval_metrics = eval_trainer(trainer, env_handler, eval_episodes)
+            all_metrics.update(eval_metrics)
+        wandb.log(all_metrics, step=gl_counter.get())
 
 if __name__ == "__main__":
     main()
