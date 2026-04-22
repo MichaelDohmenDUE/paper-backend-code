@@ -33,6 +33,9 @@ def optimizer_update(optimizer: torch.optim.Optimizer, loss: torch.Tensor) -> to
     optimizer.step()
     return loss
 
+def deterministic_policy_gradient(critic, actor, states):
+    return -critic(states, actor(states)).mean()
+
 def policy_loss(tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
     return -(tensor_1 * tensor_2).mean()
 

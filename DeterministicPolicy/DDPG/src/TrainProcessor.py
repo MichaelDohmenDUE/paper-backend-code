@@ -2,7 +2,8 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from backend.Utils.src.NodeLib.NodeLibrary import bellman, optimizer_update, detransition
+from backend.Utils.src.NodeLib.NodeLibrary import bellman, optimizer_update, detransition, mean_squared_error, \
+    deterministic_policy_gradient
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
@@ -31,9 +32,9 @@ class TrainProcess:
             target_q = self.critic_target(next_states, next_actions)
             target = bellman(target_Q=target_q, reward=rewards, done=dones, discount_factor=self.gamma)
         current_q = self.critic(states, actions)
-        critic_loss = F.mse_loss(current_q, target)
+        critic_loss = mean_squared_error(current_q, target)
         optimizer_update(optimizer=self.critic_opt, loss=critic_loss)
         # Actor update
-        actor_loss = -self.critic(states, self.actor(states)).mean()
+        actor_loss = deterministic_policy_gradient(critic=self.critic, actor=self.actor, states=states)
         optimizer_update(optimizer=self.actor_opt, loss=actor_loss)
         return actor_loss, critic_loss

@@ -20,10 +20,10 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def main():
     lr_actor = 1e-4
     lr_critic = 1e-3
-    max_timesteps = 20000
-    env_name = "InvertedPendulum-v4"
+    max_timesteps = 100000
+    env_name = "HalfCheetah-v4"
     sync_freq = 1
-    hidden_size = 32
+    hidden_size = 300
     batch_size = 64
     max_buffer_size = 10000
     tau = 0.001
