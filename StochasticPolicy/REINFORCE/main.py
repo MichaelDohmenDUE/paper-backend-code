@@ -43,7 +43,7 @@ def main(seed):
     """
     start_time = time.time()
     learn_rate = 1e-3
-    max_episodes = 2000
+    max_episodes = 1000
     seed = seed
     hidden_dim = 64
     env_name = "CartPole-v1"
@@ -51,12 +51,12 @@ def main(seed):
     gamma = 0.99
     eval_freq = 10
     eval_episodes = 10
-    algo_name = "REINFORCE_BASELINE"
+    algo_name = "REINFORCE"
     setting_global_seed(seed)
 
     wandb.init(
         entity="michael_dohmen-",
-        project="my-REINFORCE-benchmarks",
+        project="Educational_Benchmarks",
         group=algo_name,
         name=f"{algo_name}-seed-{seed}",
         tags=[env_name, "baseline_study"],
@@ -69,6 +69,9 @@ def main(seed):
             "gamma": gamma,
             "max_episodes": max_episodes,
             "hidden_dim": hidden_dim,
+            "eval_freq": eval_freq,
+            "eval_episodes": eval_episodes,
+            "algo_name": algo_name,
         }
     )
 
@@ -83,7 +86,7 @@ def main(seed):
     policy = PolicyVPG(observation_size, action_size, hidden_dim=hidden_dim).to(device)
 
     action_handler = ActionHandler(policy, device)
-    optimizer = torch.optim.SGD(policy.parameters(), lr=learn_rate, momentum=0.9)
+    optimizer = torch.optim.SGD(policy.parameters(), lr=learn_rate)
 
     data_collector = DataCollectionProcessor(env_handler, transition_factory, replay_buffer, policy, device)
 
@@ -93,7 +96,8 @@ def main(seed):
         metrics_ep = data_collector.run()
         metrics_train = trainer.run()
         all_metrics = {**metrics_ep, **metrics_train, "charts/SPS": int(step / (time.time() - start_time)),
-                       "global_step": data_collector.total_steps}
+                       "global_step": data_collector.total_steps
+                       "episode": step}
 
         if step % eval_freq == 0:
             avg_eval_reward = evaluate_policy(policy, eval_env_handler, device, eval_episodes)
