@@ -3,7 +3,8 @@ import torch
 
 from backend.CommonModels.src.Policy_Reinforce_Baseline import PolicyReinforceBaseline
 from backend.Utils.src import  RolloutBuffer
-from backend.Utils.src.NodeLib.NodeLibrary import detransition, optimizer_update, policy_loss, mean_squared_error
+from backend.Utils.src.NodeLib.NodeLibrary import detransition, optimizer_update, policy_loss, mean_squared_error, \
+    combined_loss
 from backend.Utils.src.utils import discounted_cumulative_reward
 from backend.StochasticPolicy.REINFORCE_BASELINE.src import ActionHandler
 
@@ -39,7 +40,7 @@ class REINFORCETrainer:
 
         loss_value = mean_squared_error(G, value)
 
-        loss = self.c_pol * loss_policy + self.c_val * loss_value
+        loss = combined_loss(loss_policy, self.c_pol, loss_value, self.c_val)
 
         optimizer_update(optimizer=self.optimizer, loss=loss)
         #Logging
