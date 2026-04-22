@@ -61,12 +61,13 @@ def main():
     trainer = REINFORCETrainer(replay_buffer, optimizer, beta, gamma, device=device)
 
     for step in range(max_steps):
-        data_collector.run()
-        metrics = trainer.run()
-        if metrics and step % 400 == 0:
-            metrics["charts/SPS"] = int(step / (time.time() - start_time))
-            wandb.log(metrics, step=step)
-            #TODO: THINK ABOUT AN EVAL FOR LATER / also doesn't log
+        metrics_ep = data_collector.run()
+        metrics_train = trainer.run()
+
+        all_metrics = {**metrics_ep, **metrics_train, "charts/SPS": int(step / (time.time() - start_time)),
+                       "global_step": data_collector.total_steps}
+        wandb.log(all_metrics, step=step)
+        #TODO: THINK ABOUT AN EVAL FOR LATER
        # if step % 1_000 == 0 and episode > 0:
         #    avg_score = evaluate_policy(behavior_net, eval_env, episodes=10, device=device)
         #    wandb.log({"charts/eval_avg_score": avg_score}, step=step)
