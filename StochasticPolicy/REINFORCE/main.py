@@ -84,8 +84,6 @@ def main(seed):
     eval_env_handler = EnvironmentHandler(gym_factory, seed=seed + 100)
     observation_size, action_size, _ = env_handler.get_env_specs()
     policy = PolicyVPG(observation_size, action_size, hidden_dim=hidden_dim).to(device)
-
-    action_handler = ActionHandler(policy, device)
     optimizer = torch.optim.SGD(policy.parameters(), lr=learn_rate)
 
     data_collector = DataCollectionProcessor(env_handler, transition_factory, replay_buffer, policy, device)

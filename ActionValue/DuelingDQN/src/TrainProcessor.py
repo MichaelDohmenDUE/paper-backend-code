@@ -29,13 +29,13 @@ class TrainProcessor:
             self.device)
 
         qs_behaviour = self.behavior_net(states_tensor)
-        qsa_behavior = indexing(qs_behaviour, actions_tensor)
+        qsa_behavior = indexing(qs_behaviour, actions_tensor).reshape(-1)
 
         with torch.no_grad():
             next_actions = self.behavior_net(next_states_tensor)
             next_actions = argmax(next_actions)
             q_next = self.target_net(next_states_tensor)
-            q_next = indexing(q_next, next_actions)
+            q_next = indexing(q_next, next_actions).reshape(-1)
             target = bellman(target_Q=q_next, reward=rewards_tensor, done=dones_tensor, discount_factor=self.gamma)
 
         loss = mean_squared_error(qsa_behavior, target)

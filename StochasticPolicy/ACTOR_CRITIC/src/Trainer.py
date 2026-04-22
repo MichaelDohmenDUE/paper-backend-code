@@ -4,12 +4,11 @@ import torch
 from backend.CommonModels.src.Policy_Reinforce_Baseline import PolicyReinforceBaseline
 from backend.Utils.src import  RolloutBuffer
 from backend.Utils.src.NodeLib.NodeLibrary import detransition, optimizer_update, policy_loss, mean_squared_error, \
-    combined_loss
+    combined_loss, bellman
 from backend.Utils.src.utils import discounted_cumulative_reward
-from backend.StochasticPolicy.REINFORCE_BASELINE.src import ActionHandler
 
 
-class REINFORCETrainer:
+class Trainer:
     def __init__(self,
                  rollout_buffer: RolloutBuffer.RolloutBuffer,
                  behaviour: PolicyReinforceBaseline,
@@ -29,17 +28,17 @@ class REINFORCETrainer:
 
     def run(self):
         rollout = self.rollout_buffer.sample()
-        state, logps, rewards, dones = detransition(self.rollout_buffer.spec.fields, rollout, self.device)
+        state, logps, rewards, dones, next_state = detransition(self.rollout_buffer.spec.fields, rollout, self.device)
         _, value = self.behaviour(state)
+        _, next_value = self.behaviour(next_state)
+        next_value = next_value.reshape(-1)
         value = value.reshape(-1)
         with torch.no_grad():
-            G = discounted_cumulative_reward(self.gamma, rewards.cpu(), dones.cpu())
-            G = torch.tensor(G, dtype=torch.float32).to(self.device)
-            advantage = G - value.detach()
-            advantage = advantage.squeeze(-1)
-        loss_policy = policy_loss(logps, advantage)
+            G = bellman(next_value, rewards, dones, discount_factor=self.gamma)
+            G = G.detach().clone().to(dtype=torch.float32, device=self.device)
+        loss_policy = policy_loss(logps, G)
 
-        loss_value = mean_squared_error(G, value)
+        loss_value = mean_squared_error(value, G)
 
         loss = combined_loss(loss_policy, self.c_pol, loss_value, self.c_val)
 

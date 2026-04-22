@@ -1,3 +1,5 @@
+from xxlimited_35 import Null
+
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -37,7 +39,7 @@ def deterministic_policy_gradient(values: torch.Tensor) -> torch.Tensor:
     return -values.mean()
 
 def policy_loss(tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
-    return -(tensor_1 * tensor_2).mean()
+    return -(tensor_1 * tensor_2).sum()
 
 def argmax(tensor: torch.Tensor) -> torch.Tensor:
     return tensor.argmax(dim=1, keepdim=True)
@@ -52,6 +54,14 @@ def nl_max(tensor: torch.Tensor, dim: int = 1) -> torch.Tensor:
 def mean_squared_error(tensor: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     return F.mse_loss(tensor, target)
 
+def combined_loss(*args):
+    if len(args) % 2 == 1:
+        print("Error in combining losses, you likely missed a loss or scalar")
+        return None
+    return sum(loss * weight for loss, weight in zip(args[0::2], args[1::2]))
+
+
+
 def optimizer_normalized(net: nn.Module, optimizer: torch.optim.Optimizer, loss: torch.Tensor,
                          max_norm: float) -> torch.Tensor:
     optimizer.zero_grad()
@@ -65,23 +75,20 @@ def detransition(fields, batch, device: torch.device):
 
     for key, tensor in batch.items():
         t = tensor.to(device)
-
-        if "action" in key:
-            is_discrete = not t.is_floating_point() or torch.all(t == t.long())
-            if is_discrete:
-                processed[key] = t.long().view(-1, 1)
-            else:
-                processed[key] = t.float()
-        elif "state" in key:
+        if "state" in key:
             if t.dtype == torch.uint8:
                 processed[key] = t.contiguous().float() / 255.0
             else:
                 processed[key] = t.float()
+        elif "action" in key:
+            is_discrete = not t.is_floating_point() or torch.all(t == t.long())
+            processed[key] = t.long() if is_discrete else t.float()
         elif key in ["reward", "done"]:
-            processed[key] = t.float().view(-1, 1)
+            processed[key] = t.float().flatten()
 
         else:
             processed[key] = t
+
     return tuple(processed[k] for k in fields)
 
 
