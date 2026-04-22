@@ -31,15 +31,11 @@ class Trainer:
         state, logps, rewards, dones, next_state = detransition(self.rollout_buffer.spec.fields, rollout, self.device)
         _, value = self.behaviour(state)
         _, next_value = self.behaviour(next_state)
-        print(value.shape, next_value.shape, dones.shape, next_value.shape, logps.shape)
-        value = value.view(-1)
-        next_value = next_value.view(-1)
-        logps = logps.view(-1)
-        rewards = rewards.view(-1)
-        dones = dones.view(-1)
+        next_value = next_value.reshape(-1)
+        value = value.reshape(-1)
         with torch.no_grad():
             G = bellman(next_value, rewards, dones, discount_factor=self.gamma)
-            G = torch.tensor(G, dtype=torch.float32).to(self.device)
+            G = G.detach().clone().to(dtype=torch.float32, device=self.device)
         loss_policy = policy_loss(logps, G)
 
         loss_value = mean_squared_error(value, G)

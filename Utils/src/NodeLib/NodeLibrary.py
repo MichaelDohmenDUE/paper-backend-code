@@ -53,7 +53,7 @@ def mean_squared_error(tensor: torch.Tensor, target: torch.Tensor) -> torch.Tens
 
 def combined_loss(*args):
     if len(args) % 2 == 1:
-        print("Error in combining losses")
+        print("Error in combining losses, you likely missed a loss or scalar")
         return None
     return sum(loss * weight for loss, weight in zip(args[0::2], args[1::2]))
 
