@@ -27,18 +27,18 @@ class DataCollectionProcessor:
         action_np = action_tensor.cpu().numpy()
 
         self.episode_timesteps += 1
-        next_state, reward, done, info = self.env.step(action_np)
+        next_state, reward, terminated, truncated, info = self.env.step_ddpg(action_np)
         self.episode_reward += reward
 
         transition = self.transition_factory.forward(state=self.state, action=action_np, reward=reward,
-                                                     next_state=next_state, done=done)
+                                                     next_state=next_state, done=terminated)
         self.buffer.append(transition)
 
         self.state = next_state
-        self.done = done
+        self.done = terminated
         self.global_counter.set(self.global_counter.get() + 1)
         metrics = {}
-        if done:
+        if terminated or truncated:
             metrics = {
                 "charts/episodic_return": self.episode_reward,
                 "charts/episodic_length": self.episode_timesteps,

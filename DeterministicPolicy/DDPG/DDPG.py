@@ -21,17 +21,18 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def main():
     start_time = time.time()
-    lr_actor = 1e-4
-    lr_critic = 1e-3
+    lr_actor = 10e-4
+    lr_critic = 10e-3
     max_timesteps = 1000000
     env_name = "HalfCheetah-v4"
     sync_freq = 1
     hidden_size = 300
     batch_size = 64
-    max_buffer_size = 100000
+    max_buffer_size = 1000000
     tau = 0.001
     gamma = 0.99
     seed = 42
+    warmup = 20000
 
     wandb.init(
         entity="michael_dohmen-",
@@ -62,7 +63,7 @@ def main():
 
     critic = Critic(observation_size, action_size, hidden_size).to(device)
     critic_target = deepcopy(critic).to(device)
-    critic_optimizer = torch.optim.Adam(critic.parameters(), lr=lr_critic)
+    critic_optimizer = torch.optim.Adam(critic.parameters(), lr=lr_critic, weight_decay=0.01)
 
     spec = TransitionSpec(["state", "action", "reward", "next_state", "done"])
     factory = TransitionFactory(spec)
@@ -75,7 +76,7 @@ def main():
 
     data_collection_process = DataCollectionProcessor(env, policy, buffer, factory, gl_counter, device)
     train_process = TrainProcess(buffer, actor, actor_target, critic, critic_target, actor_optimizer, critic_optimizer,
-                                 gamma, device)
+                                 gamma,warmup, device)
 
     sync_process_actor = SyncProcessor(actor, actor_target, tau, sync_freq, gl_counter)
     sync_process_critic = SyncProcessor(critic, critic_target, tau, sync_freq, gl_counter)

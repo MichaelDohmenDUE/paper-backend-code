@@ -56,6 +56,13 @@ class EnvironmentHandler:
         next_state = np.asarray(next_state, dtype=np.float32)
         return next_state, reward, done, info
 
+    def step_ddpg(self, action):
+        next_state, reward, terminated, truncated, info = self.env.step(action)
+        reward *= self.reward_scale
+
+        next_state = np.asarray(next_state, dtype=np.float32)
+        return next_state, reward, terminated,truncated, info
+
     def get_env_specs(self) -> tuple[int, int, float | None]:
         extracted_value = self.state_dim, self.action_dim, self.max_action
         return extracted_value
