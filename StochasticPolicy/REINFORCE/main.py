@@ -94,7 +94,7 @@ def main(seed):
         metrics_ep = data_collector.run()
         metrics_train = trainer.run()
         all_metrics = {**metrics_ep, **metrics_train, "charts/SPS": int(step / (time.time() - start_time)),
-                       "global_step": data_collector.total_steps
+                       "global_step": data_collector.total_steps,
                        "episode": step}
 
         if step % eval_freq == 0:

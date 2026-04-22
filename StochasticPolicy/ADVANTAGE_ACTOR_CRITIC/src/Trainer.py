@@ -39,7 +39,7 @@ class Trainer:
         advantage = G - value.detach()
         loss_policy = policy_loss(logps, advantage)
 
-        loss_value = mean_squared_error(G, value)
+        loss_value = mean_squared_error(value, G)
 
         loss = combined_loss(loss_policy, self.c_pol, loss_value, self.c_val)
 
