@@ -25,7 +25,6 @@ class REINFORCETrainer:
     def run(self):
         rollout = self.rollout_buffer.sample()
         logps, rewards, dones = detransition(self.rollout_buffer.spec.fields, rollout, self.device)
-
         with torch.no_grad():
             G = discounted_cumulative_reward(self.gamma, rewards.cpu(), dones.cpu())
             G = torch.tensor(G, dtype=torch.float32).to(self.device)

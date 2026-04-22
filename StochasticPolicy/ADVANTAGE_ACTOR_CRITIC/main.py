@@ -6,13 +6,12 @@ from backend.Utils.src import RolloutBuffer
 from backend.Utils.src.BatchTransitioner import TransitionFactory, TransitionSpec
 from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
-from backend.StochasticPolicy.REINFORCE.src.ActionHandler import ActionHandler
 import torch
 
-from backend.CommonModels.src.Policy_Reinforce import PolicyVPG
+from backend.CommonModels.src.Policy_Reinforce_Baseline import PolicyReinforceBaseline
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
-from backend.StochasticPolicy.REINFORCE.src.DataCollector import DataCollectionProcessor
-from backend.StochasticPolicy.REINFORCE.src.ReinforceTrainer import REINFORCETrainer
+from backend.StochasticPolicy.ADVANTAGE_ACTOR_CRITIC.src.DataCollector import DataCollectionProcessor
+from backend.StochasticPolicy.ADVANTAGE_ACTOR_CRITIC.src.Trainer import Trainer
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -22,7 +21,7 @@ def main():
     """
     start_time = time.time()
     learn_rate = 1e-5
-    max_steps = 1000
+    max_steps = 10000
     seed = 1
     hidden_dim = 64
     env_name = "CartPole-v1"
@@ -31,10 +30,10 @@ def main():
 
     wandb.init(
         entity="michael_dohmen-",
-        project="my-REINFORCE-benchmarks",
+        project="my-ADVANTAGE_ACTORCRITIC-benchmarks",
         config={
             "env_id": env_name,
-            "exp_name": "REINFORCE-CartPole-v1",
+            "exp_name": "ADVANTAGEACTORCRITIC-CartPole-v1",
             "seed": seed,
             "lr": learn_rate,
             "gamma": gamma,
@@ -43,7 +42,7 @@ def main():
         }
     )
 
-    spec = TransitionSpec(["logp", "reward", "done"])
+    spec = TransitionSpec(["state", "logp", "reward", "done", "next_state"])
     transition_factory = TransitionFactory(spec)
     replay_buffer = RolloutBuffer(spec)
 
@@ -51,24 +50,20 @@ def main():
     env_handler = EnvironmentHandler(gym_factory, seed=seed)
 
     observation_size, action_size, _ = env_handler.get_env_specs()
-    policy = PolicyVPG(observation_size, action_size, hidden_dim=hidden_dim).to(device)
-    optimizer = torch.optim.SGD(policy.parameters(), lr=learn_rate)
+    policy = PolicyReinforceBaseline(observation_size, action_size, hidden_dim=hidden_dim).to(device)
+
+    optimizer = torch.optim.Adam(policy.parameters(), lr=1e-3)
 
     data_collector = DataCollectionProcessor(env_handler, transition_factory, replay_buffer, policy, device)
 
-    trainer = REINFORCETrainer(replay_buffer, optimizer, beta, gamma, device=device)
+    trainer = Trainer(replay_buffer, policy, optimizer, beta, gamma, device=device)
 
     for step in range(max_steps):
         metrics_ep = data_collector.run()
         metrics_train = trainer.run()
-
         all_metrics = {**metrics_ep, **metrics_train, "charts/SPS": int(step / (time.time() - start_time)),
                        "global_step": data_collector.total_steps}
         wandb.log(all_metrics, step=step)
-        #TODO: THINK ABOUT AN EVAL FOR LATER
-       # if step % 1_000 == 0 and episode > 0:
-        #    avg_score = evaluate_policy(behavior_net, eval_env, episodes=10, device=device)
-        #    wandb.log({"charts/eval_avg_score": avg_score}, step=step)
-
+        # TODO: What about Eval?
 if __name__ == "__main__":
     main()
