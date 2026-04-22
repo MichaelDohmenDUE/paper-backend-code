@@ -34,7 +34,7 @@ def optimizer_update(optimizer: torch.optim.Optimizer, loss: torch.Tensor) -> to
     return loss
 
 def policy_loss(tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
-    return -(tensor_1 * tensor_2).mean()
+    return -(tensor_1 * tensor_2).sum()
 
 def argmax(tensor: torch.Tensor) -> torch.Tensor:
     return tensor.argmax(dim=1, keepdim=True)
