@@ -32,7 +32,7 @@ class DataCollectionProcessor:
             state_tensor = torch.tensor(self.state, dtype=torch.float32, device=self.device).unsqueeze(0)
             q_values = self.behaviour(state_tensor).squeeze(0)
         action = self.epsilon_greedy.forward(q_values=q_values)
-        next_state, reward, done, done_bool = self.env.step(action)
+        next_state, reward, done, info = self.env.step(action)
 
         transition = self.transition_factory.forward(state=self.state, action=action, reward=reward,
                                                      next_state=next_state, done=done)
