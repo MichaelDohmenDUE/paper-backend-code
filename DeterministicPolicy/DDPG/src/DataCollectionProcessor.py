@@ -27,15 +27,15 @@ class DataCollectionProcessor:
         action_np = action_tensor.cpu().numpy()
 
         self.episode_timesteps += 1
-        next_state, reward, done, done_bool = self.env.step(action_np)
+        next_state, reward, done, info = self.env.step(action_np)
         self.episode_reward += reward
 
         transition = self.transition_factory.forward(state=self.state, action=action_np, reward=reward,
-                                                     next_state=next_state, done=done_bool)
+                                                     next_state=next_state, done=done)
         self.buffer.append(transition)
 
         self.state = next_state
-        self.done = done_bool
+        self.done = done
 
         if done:
             self.episode_idx += 1
