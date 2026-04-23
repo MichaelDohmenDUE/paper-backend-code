@@ -42,13 +42,13 @@ def main(seed):
     """
     start_time = time.time()
     learn_rate = 1e-3
-    max_steps = 200000
+    max_steps = 100_000
     seed = seed
     hidden_dim = 64
     env_name = "CartPole-v1"
     beta = 0.01
     gamma = 0.99
-    eval_freq = 10
+    eval_freq = 1000
     eval_episodes = 10
     algo_name = "ACTOR_CRITIC"
     setting_global_seed(seed)
@@ -90,16 +90,18 @@ def main(seed):
     data_collector = DataCollectionProcessor(env_handler, transition_factory, replay_buffer, policy, device)
 
     trainer = Trainer(replay_buffer, policy, optimizer, beta, gamma, device=device)
-
-    for step in range(max_steps):
+    step = 0
+    eval_step = 0
+    while step < max_steps:
         metrics_ep = data_collector.run()
         metrics_train = trainer.run()
         all_metrics = {**metrics_ep, **metrics_train, "charts/SPS": int(step / (time.time() - start_time)),
-                       "global_step": data_collector.total_steps,
-                       "episode": step}
-        if step % eval_freq == 0:
+                       "global_step": data_collector.total_steps}
+        step = data_collector.total_steps
+        if step > eval_step:
             avg_eval_reward = evaluate_policy(policy, eval_env_handler, device, eval_episodes)
             all_metrics["eval/avg_reward"] = avg_eval_reward
+            eval_step += eval_freq
         wandb.log(all_metrics, step=step)
     wandb.finish()
 if __name__ == "__main__":
