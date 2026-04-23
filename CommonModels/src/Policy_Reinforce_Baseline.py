@@ -15,15 +15,6 @@ class PolicyReinforceBaseline(nn.Module):
         self.policy = nn.Linear(hidden_dim, output_dim)
         self.value = nn.Linear(hidden_dim, 1)
 
-        self.apply(self._init_weights)
-
-    def _init_weights(self, module):
-        if isinstance(module, nn.Linear):
-            nn.init.orthogonal_(module.weight, gain=nn.init.calculate_gain('relu'))
-            nn.init.constant_(module.bias, 0)
-        nn.init.orthogonal_(self.policy.weight, gain=0.01)
-        nn.init.orthogonal_(self.value.weight, gain=1.0)
-
     def forward(self, state):
         x = self.model(state)
         value = self.value(x)

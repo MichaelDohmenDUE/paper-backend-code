@@ -19,19 +19,24 @@ class DataCollectionProcessor:
         self.episode_timesteps = 0
         self.total_steps = 0
         self.episode_reward = 0
+        self.t_max = 20
         self.device = device
 
     def run(self):
         done = False
-        while not done:
+        t = 0
+        while t < 20 and not done:
             state_tensor = torch.as_tensor(self.state, dtype=torch.float32, device=self.device)
             logits, _ = self.behaviour(state_tensor.unsqueeze(0))
+            #print(logits.shape)
             dist = categorical_distribution(logits)
             action, log_prob = sample_distribution(dist)
+            #print(action, log_prob)
             next_state, reward, done, _ = self.env_handler.step(action)
             transition = self.transition_factory.forward(state=state_tensor, logp=log_prob, reward=reward, done=done, next_state= next_state)
             self.rollout_buffer.append(transition)
             self.state = reset_handler(self.env_handler, next_state, done)
+            t += 1
             # Logging
             self.episode_timesteps += 1
             self.total_steps += 1
@@ -46,3 +51,4 @@ class DataCollectionProcessor:
                 self.episode_timesteps = 0
                 self.episode_reward = 0
                 return metrics
+        return {}

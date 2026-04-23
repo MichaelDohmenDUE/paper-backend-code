@@ -51,6 +51,7 @@ def main(seed):
     eval_freq = 10
     eval_episodes = 10
     algo_name = "REINFORCE_WITH_BASELINE"
+    opt = "Adam"
     setting_global_seed(seed)
 
     wandb.init(
@@ -71,6 +72,7 @@ def main(seed):
             "eval_freq": eval_freq,
             "eval_episodes": eval_episodes,
             "algo_name": algo_name,
+            "optimizer": opt,
         }
     )
 

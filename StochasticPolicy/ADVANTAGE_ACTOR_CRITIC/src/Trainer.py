@@ -96,24 +96,23 @@ class Trainer:
             G = bellman(next_value, rewards, dones, discount_factor=self.gamma)
             G = G.detach().clone().to(dtype=torch.float32, device=self.device)
         advantage = G - value.detach()
-        advantage = (advantage - advantage.mean()) / (advantage.std() + 1e-8)
         loss_policy = policy_loss(logps, advantage)
 
         loss_value = mean_squared_error(value, G)
         # Entropy
-        dist = Categorical(logits=logits)
+        #dist = Categorical(logits=logits)
         #print(logps.shape)
-        entropy = dist.entropy().mean()
-        loss_entropy = -entropy
+        #entropy = dist.entropy().mean()
+        #loss_entropy = -entropy
 
-        loss = combined_loss(loss_policy, self.c_pol, loss_value, self.c_val, loss_entropy, self.beta)
+        loss = combined_loss(loss_policy, self.c_pol, loss_value, self.c_val)#, loss_entropy, self.beta)
 
-        optimizer_normalized(net = self.behaviour, optimizer=self.optimizer, loss=loss, max_norm=0.5)
+        optimizer_update(optimizer=self.optimizer, loss=loss)
         #Logging
         metrics = {
             "losses/policy_loss": loss_policy.item(),
             "losses / loss_vale": loss_value.item(),
             "losses / loss": loss.item(),
-            "losses/entropy": entropy.item(),
+           # "losses/entropy": entropy.item(),
         }
         return metrics
