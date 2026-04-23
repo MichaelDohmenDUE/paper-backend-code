@@ -24,10 +24,10 @@ def main(seed):
     Related Paper: https://link.springer.com/article/10.1007/BF00992696
     """
     start_time = time.time()
-    learn_rate = 1e-3
+    learn_rate = 7e-4
     max_steps = 1000
     seed = seed
-    hidden_dim = 64
+    hidden_dim = 128
     env_name = "CartPole-v1"
     beta = 0.01
     gamma = 0.99
@@ -68,7 +68,7 @@ def main(seed):
     observation_size, action_size, _ = env_handler.get_env_specs()
     policy = PolicyReinforceBaseline(observation_size, action_size, hidden_dim=hidden_dim).to(device)
 
-    optimizer = torch.optim.SGD(policy.parameters(), lr=learn_rate)
+    optimizer = torch.optim.Adam(policy.parameters(), lr=learn_rate)
 
     data_collector = DataCollectionProcessor(env_handler, transition_factory, replay_buffer, policy, device)
 
@@ -77,10 +77,11 @@ def main(seed):
     for step in range(max_steps):
         metrics_ep = data_collector.run()
         metrics_train = trainer.run()
+
         all_metrics = {**metrics_ep, **metrics_train, "charts/SPS": int(step / (time.time() - start_time)),
                        "global_step": data_collector.total_steps,
                        "episode": step}
-        if step % eval_freq == 0:
+        if step % eval_freq == 0 and step > 0:
             avg_eval_reward = evaluate_policy(policy, eval_env_handler, device, eval_episodes)
             all_metrics["eval/avg_reward"] = avg_eval_reward
         wandb.log(all_metrics, step=step)

@@ -42,7 +42,7 @@ def main(seed):
     """
     start_time = time.time()
     learn_rate = 1e-3
-    max_steps = 1000
+    max_steps = 20000
     seed = seed
     hidden_dim = 64
     env_name = "CartPole-v1"
