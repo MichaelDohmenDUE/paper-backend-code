@@ -19,10 +19,11 @@ class TrainProcess:
         self.actor_opt = actor_optimizer
         self.critic_opt = critic_optimizer
         self.gamma = gamma
+        self.warmup = warmup
         self.device = device
 
     def run(self):
-        if len(self.replay_buffer) < self.replay_buffer.batch_size:
+        if len(self.replay_buffer) < self.replay_buffer.batch_size or len(self.replay_buffer) < self.warmup:
             return {}
         batch = self.replay_buffer.sample_batch()
         states, actions, rewards, next_states, dones = detransition(self.replay_buffer.spec.fields, batch, self.device)
