@@ -3,6 +3,7 @@ import torch
 
 def eval_trainer(trainer, env_handler, eval_episodes=5):
     avg_reward = 0.0
+    trainer.actor.eval()
     for _ in range(eval_episodes):
         state = env_handler.reset()
         done = False
@@ -19,6 +20,6 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
     metrics = {
         "charts/eval_avg_reward": avg_reward,
     }
-
-    print(f"Average Reward over {eval_episodes} episodes: {avg_reward:.3f}")
+    trainer.actor.train()
+    #print(f"Average Reward over {eval_episodes} episodes: {avg_reward:.3f}")
     return metrics

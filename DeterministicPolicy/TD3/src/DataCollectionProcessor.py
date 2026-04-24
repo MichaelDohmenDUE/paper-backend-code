@@ -36,7 +36,7 @@ class DataCollectionProcessor:
         self.episode_timesteps += 1
         metrics = {}
         if truncated or terminated:
-            print(f"Episode {self.episode_num + 1} — Reward: {self.episode_reward:.2f}")
+            #print(f"Episode {self.episode_num + 1} — Reward: {self.episode_reward:.2f}")
             metrics = {
                 "charts/episodic_return": self.episode_reward,
                 "charts/episodic_length": self.episode_timesteps,

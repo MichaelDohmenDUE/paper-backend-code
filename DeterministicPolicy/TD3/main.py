@@ -26,7 +26,7 @@ def main():
     env_name = "HalfCheetah-v4"
     seed = 100
     max_timesteps = 1000000
-    warmup = 2000
+    warmup = 25000
     eval_freq = 2000
     eval_episodes = 10
     expl_noise = 0.1
@@ -118,6 +118,8 @@ def main():
     for t in range(max_timesteps):
         metrics_ep = datacollector.run()
         metrics_train = trainer.run()
+        #if metrics_train and "losses/actor_loss" in metrics_train: #TODO: Double Check my COunter logic again, but it seems the warmup is the vital step and not an error with my sync
+        #    if metrics_train["losses/actor_loss"] is not None:
         sync_process_critic_1.run()
         sync_process_critic_2.run()
         sync_process_actor.run()
