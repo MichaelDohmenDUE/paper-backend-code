@@ -21,8 +21,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def main():
     start_time = time.time()
-    lr_actor = 10e-4
-    lr_critic = 10e-3
+    lr_actor = 1e-4
+    lr_critic = 1e-3
     max_timesteps = 1000000
     env_name = "HalfCheetah-v4"
     sync_freq = 1

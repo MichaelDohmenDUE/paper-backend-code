@@ -41,6 +41,7 @@ class TrainProcess:
         q_value = self.critic(states, action)
         actor_loss = deterministic_policy_gradient(q_value)
         optimizer_update(optimizer=self.actor_opt, loss=actor_loss)
+        #Logging'
         metrics = {
             "losses/critic_loss": critic_loss.item(),
             "losses/actor_loss": actor_loss.item(),
