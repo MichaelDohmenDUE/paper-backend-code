@@ -61,6 +61,16 @@ def combined_loss(*args):
     return sum(loss * weight for loss, weight in zip(args[0::2], args[1::2]))
 
 
+def action_with_noise(noise,  action_tensor: torch.Tensor, max_action) -> torch.Tensor:
+    noise = noise.sample()
+    action_tensor = action_tensor + noise
+    action_tensor = action_tensor.clamp(-max_action, max_action)
+    return action_tensor
+
+def noise_handler(noise, done: bool):
+    if done:
+        noise.reset()
+
 
 def optimizer_normalized(net: nn.Module, optimizer: torch.optim.Optimizer, loss: torch.Tensor,
                          max_norm: float) -> torch.Tensor:

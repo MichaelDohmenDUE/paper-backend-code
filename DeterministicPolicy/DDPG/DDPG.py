@@ -70,13 +70,13 @@ def main():
     buffer = ReplayBuffer(spec, max_buffer_size, batch_size)
 
     noise = OUNoise(action_size, theta=0.15, sigma=0.2, device=device)
-    policy = DeterministicPolicyWithNoise(actor, noise, max_action, device)
+    #policy = DeterministicPolicyWithNoise(actor, noise, max_action, device)
 
     gl_counter = GlobalCounter()
 
-    data_collection_process = DataCollectionProcessor(env, policy, buffer, factory, gl_counter, device)
+    data_collection_process = DataCollectionProcessor(env, actor, noise, buffer, factory, gl_counter,max_action, device)
     train_process = TrainProcess(buffer, actor, actor_target, critic, critic_target, actor_optimizer, critic_optimizer,
-                                 gamma,warmup, device)
+                                 gamma, warmup, device)
 
     sync_process_actor = SyncProcessor(actor, actor_target, tau, sync_freq, gl_counter)
     sync_process_critic = SyncProcessor(critic, critic_target, tau, sync_freq, gl_counter)

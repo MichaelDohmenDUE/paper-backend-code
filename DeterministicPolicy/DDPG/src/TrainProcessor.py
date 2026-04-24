@@ -30,10 +30,12 @@ class TrainProcess:
         with torch.no_grad():
             next_actions = self.actor_target(next_states)
             target_q = self.critic_target(next_states, next_actions)
+            target_q = target_q.squeeze()
             target = bellman(target_Q=target_q, reward=rewards, done=dones, discount_factor=self.gamma)
-        current_q = self.critic(states, actions)
+        current_q = self.critic(states, actions).squeeze()
         critic_loss = mean_squared_error(current_q, target)
         optimizer_update(optimizer=self.critic_opt, loss=critic_loss)
+
         # Actor update
         action = self.actor(states)
         q_value = self.critic(states, action)
