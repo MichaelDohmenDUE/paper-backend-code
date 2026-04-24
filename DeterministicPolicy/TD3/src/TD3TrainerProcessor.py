@@ -44,7 +44,7 @@ class TrainProcessor:
         actor_loss = None
         if self.global_counter.get() % self.syncro_frequency == 0:
             action = self.actor(state)
-            q_val = self.critic_1(state, action)
+            q_val = self.critic_1(state, action).squeeze()
             actor_loss = deterministic_policy_gradient(q_val)
             optimizer_update(optimizer=self.optimizer_actor, loss=actor_loss)
             return actor_loss.item()
@@ -62,14 +62,15 @@ class TrainProcessor:
             noise = (torch.randn_like(action) * self.policy_noise).clamp(-self.noise_clip, self.noise_clip)
             next_action = (self.actor_target(next_state) + noise).clamp(-self.max_action, self.max_action)
 
-            target_Q1 = self.critic_target_1(next_state, next_action)
-            target_Q2 = self.critic_target_2(next_state, next_action)
+            target_Q1 = self.critic_target_1(next_state, next_action).squeeze()
+            target_Q2 = self.critic_target_2(next_state, next_action).squeeze()
 
             target_Q = torch.min(target_Q1, target_Q2)
             target_Q = bellman(target_Q, reward, done, self.discount_factor)
 
-        current_Q1 = self.critic_1(state, action)
-        current_Q2 = self.critic_2(state, action)
+        current_Q1 = self.critic_1(state, action).squeeze()
+        current_Q2 = self.critic_2(state, action).squeeze()
+
         critic_loss_1 = mean_squared_error(current_Q1, target_Q)
         critic_loss_2 = mean_squared_error(current_Q2, target_Q)
 

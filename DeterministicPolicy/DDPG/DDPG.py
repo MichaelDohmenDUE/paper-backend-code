@@ -27,7 +27,7 @@ def main():
     env_name = "HalfCheetah-v4"
     sync_freq = 1
     hidden_size = 300
-    batch_size = 64
+    batch_size = 256
     max_buffer_size = 1000000
     tau = 0.001
     gamma = 0.99

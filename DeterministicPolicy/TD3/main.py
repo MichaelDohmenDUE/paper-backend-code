@@ -26,7 +26,7 @@ def main():
     env_name = "HalfCheetah-v4"
     seed = 100
     max_timesteps = 1000000
-    start_timesteps = 25000
+    warmup = 2000
     eval_freq = 2000
     eval_episodes = 10
     expl_noise = 0.1
@@ -54,7 +54,7 @@ def main():
             "noise_clip": noise_clip,
             "policy_noise": policy_noise,
             "hidden_dim": hidden_dim,
-            "start_timesteps": start_timesteps,
+            "warmup": warmup,
             "eval_freq": eval_freq,
             "eval_episodes": eval_episodes,
             "expl_noise": expl_noise,
@@ -83,7 +83,7 @@ def main():
     optimizer_critic_1 = optim.Adam(critic_1.parameters(), lr=learning_rate)
     optimizer_critic_2 = optim.Adam(critic_2.parameters(), lr=learning_rate)
 
-    action_handler = ActionHandler(actor, action_size, max_action, expl_noise, noise_clip, start_timesteps, device)
+    action_handler = ActionHandler(actor, action_size, max_action, expl_noise, noise_clip, warmup, device)
     replay_buffer = ReplayBuffer(spec=spec, max_buffer_size=buffer_size, batch_size=batch_size)
 
     gl_counter = GlobalCounter()
@@ -102,7 +102,7 @@ def main():
         global_counter=gl_counter,
         max_action=max_action,
         learning_rate=learning_rate,
-        start_timesteps=start_timesteps,
+        start_timesteps=warmup,
         synchro_frequency=sync_freq,
         noise_clip=noise_clip * max_action,
         policy_noise=policy_noise * max_action,
