@@ -1,5 +1,3 @@
-from torch import nn
-
 from backend.Utils.src.GlobalCounter import GlobalCounter
 from backend.Utils.src.NodeLib.NodeLibrary import *
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
@@ -39,7 +37,7 @@ class TrainProcessor:
         self.replay_buffer = replay_buffer
         self.device = device
 
-    def update_actor(self, state: torch.Tensor):
+    def old_update_actor(self, state: torch.Tensor):
         actor_loss = None
         if self.global_counter.get() % self.syncro_frequency == 0:
             action = self.actor(state)
@@ -76,13 +74,18 @@ class TrainProcessor:
 
         optimizer_update(optimizer=self.optimizer_critic_1, loss=critic_loss_1)
         optimizer_update(optimizer=self.optimizer_critic_2, loss=critic_loss_2)
-
-        actor_loss = self.update_actor(state)
+        #Actor_Update
+        action = self.actor(state)
+        q_val = self.critic_1(state, action).squeeze()
+        actor_loss = deterministic_policy_gradient(q_val)
+        actor_loss_val = timed_optimizer_update(self.optimizer_actor, loss=actor_loss,
+                                                gloabal_step=self.global_counter.get(),
+                                                syncro_frequency=self.syncro_frequency)
 
         metrics = {
             "losses/critic_loss 1": critic_loss_1.item(),
             "losses/critic_loss 2": critic_loss_2.item(),
-            "losses/actor_loss": actor_loss,
+            "losses/actor_loss": actor_loss_val,
         }
 
         return metrics

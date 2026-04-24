@@ -42,6 +42,12 @@ def optimizer_update(optimizer: torch.optim.Optimizer, loss: torch.Tensor) -> to
     optimizer.step()
     return loss
 
+def timed_optimizer_update(optim: torch.optim.Optimizer, loss: torch.Tensor, step: int, syncro_frequency: int):
+    if step % syncro_frequency != 0:
+        return None
+    optimizer_update(optimizer=optim, loss=loss)
+    return loss.item()
+
 def deterministic_policy_gradient(values: torch.Tensor) -> torch.Tensor:
     return -values.mean()
 
