@@ -8,6 +8,13 @@ from torch.distributions import Categorical
 from backend.Utils.src.NodeLib.Node import Node
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
+def action_with_gaussian_noise(action, policy_noise, noise_clip, max_action):
+    noise = (torch.randn_like(action) * policy_noise).clamp(-noise_clip, noise_clip)
+    action_noisy = (action + noise)
+    return action_noisy
+
+def clipper(action, max_action):
+    return action.clamp(-max_action, max_action)
 
 def bellman(target_Q: torch.Tensor, reward: torch.Tensor, done: torch.Tensor, discount_factor: float) -> torch.Tensor:
     valid_transition = 1.0 - done

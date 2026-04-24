@@ -2,15 +2,14 @@ from torch import nn
 
 from backend.Utils.src.GlobalCounter import GlobalCounter
 from backend.Utils.src.NodeLib.NodeLibrary import *
-from backend.Utils.src.NodeLib.NodeLibrary import bellman
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
-
 
 class TrainProcessor:
     """
     Twin Delayed Deep Deterministic Policy Gradient (TD3)
     Paper: https://arxiv.org/abs/1802.09477
     """
+
 
     def __init__(self, actor: nn.Module, critic_1: nn.Module, critic_2: nn.Module,
                  optimizer_critic_1: torch.optim.Optimizer, optimizer_critic_2: torch.optim.Optimizer,
@@ -59,8 +58,9 @@ class TrainProcessor:
         batch = self.replay_buffer.sample_batch()
         state, action, reward, next_state, done = detransition(self.replay_buffer.spec.fields, batch, self.device)
         with torch.no_grad():
-            noise = (torch.randn_like(action) * self.policy_noise).clamp(-self.noise_clip, self.noise_clip)
-            next_action = (self.actor_target(next_state) + noise).clamp(-self.max_action, self.max_action)
+            next_action = self.actor_target(next_state)
+            next_action = action_with_gaussian_noise(next_action, self.policy_noise, self.noise_clip, self.max_action)
+            next_action = clipper(next_action, self.max_action)
 
             target_Q1 = self.critic_target_1(next_state, next_action).squeeze()
             target_Q2 = self.critic_target_2(next_state, next_action).squeeze()
