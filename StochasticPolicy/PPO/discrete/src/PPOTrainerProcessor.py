@@ -2,18 +2,20 @@ import numpy as np
 import torch
 from torch import nn
 
+from backend.Utils.src import RolloutBuffer
 from backend.Utils.src.utils import compute_gae
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class PPOTrainerProcessor:
-    def __init__(self, actor, critic, optimizer, replay_buffer, batch_size: int = 64, epochs: int = 10,
+    def __init__(self, actor, critic, optimizer, rollout_buffer: RolloutBuffer.RolloutBuffer, batch_size: int = 64,
+                 epochs: int = 10,
                  clip_eps=0.2, vf_coef=1.0, ent_coef=0.00, max_grad_norm=0.5, gamma=0.99, lam=0.95):
         self.actor = actor
         self.critic = critic
         self.optimizer = optimizer
-        self.replay_buffer = replay_buffer
+        self.rollout_buffer = rollout_buffer
         self.batch_size = batch_size
         self.epochs = epochs
         self.clip_eps = clip_eps
@@ -26,14 +28,17 @@ class PPOTrainerProcessor:
         self.device = device
 
     def run(self):
+        #Logging
         all_policy_losses = []
         all_value_losses = []
         all_entropies = []
         all_approx_kls = []
-        states, actions, old_logps, advantages, returns = compute_gae(self.replay_buffer, gamma=self.gamma,
+        ######
+
+        states, actions, old_logps, advantages, returns = compute_gae(self.rollout_buffer, gamma=self.gamma,
                                                                       lam=self.lam)
-        #print(states.shape)
-        #advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+        # print(states.shape)
+        # advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
         states = torch.as_tensor(states, dtype=torch.float32, device=self.device)
         actions = torch.as_tensor(actions, dtype=torch.long, device=self.device)

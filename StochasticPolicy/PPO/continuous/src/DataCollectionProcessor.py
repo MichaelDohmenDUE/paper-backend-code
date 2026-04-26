@@ -1,4 +1,5 @@
 from backend.AbstractHandlers.AbstractActionHandler import AbstractActionHandler
+from backend.Utils.src import RolloutBuffer
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.NodeLib.NodeLibrary import reset_handler
@@ -14,7 +15,7 @@ def bootstaping_value(replay_buffer: ReplayBuffer, done: bool, policy, state):
 
 class DataCollectionProcessor:
     def __init__(self, env_handler: EnvironmentHandler, transition_factory: TransitionFactory,
-                 replay_buffer: ReplayBuffer, rollout_size: int,
+                 replay_buffer: RolloutBuffer.RolloutBuffer, rollout_size: int,
                  action_handler: AbstractActionHandler):
         self.env_handler = env_handler
         self.transition_factory = transition_factory
