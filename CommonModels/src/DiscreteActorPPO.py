@@ -15,9 +15,9 @@ class DiscreteActorPPO(nn.Module):
     def __init__(self, state_dim, action_dim, hidden_dim=64):
         super().__init__()
         self.net = nn.Sequential(
-            layer_init(nn.Linear(state_dim, hidden_dim), std=0.01),
+            nn.Linear(state_dim, hidden_dim),
             nn.Tanh(),
-            layer_init(nn.Linear(hidden_dim, hidden_dim), std=0.01),
+            nn.Linear(hidden_dim, hidden_dim),
             nn.Tanh(),
             layer_init(nn.Linear(hidden_dim, action_dim), std=0.01),
         )
