@@ -1,3 +1,5 @@
+import time
+
 import torch
 import wandb
 from torch import optim
@@ -12,6 +14,7 @@ from backend.Utils.src.BatchTransitioner import TransitionSpec
 from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
+from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -26,7 +29,7 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
             with torch.no_grad():
                 dist = trainer.actor(state_t)
                 action = dist.probs.argmax(dim=-1).item()
-            next_state, reward, done, _ = env_handler.step(action, 0)
+            next_state, reward, done, _ = env_handler.step(action)
             avg_reward += reward
             state = next_state
 
@@ -36,16 +39,19 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
 
 
 def main():
+    start_time = time.time()
     env_name = "CartPole-v1"
-    seed = 100
+    seed = 1
     rollout_size = 2048
     batch_size = 64
-    epochs = 10
-    num_updates = 1000
+    epochs = 5
+    max_steps = 1_000_000
     lr = 3e-4
-    hidden_dim = 64
+    hidden_dim = 128
     gamma = 0.99
     lam = 0.95
+    eval_freq = 10000
+    setting_global_seed(seed)
 
     wandb.init(
         entity="michael_dohmen-",
@@ -60,6 +66,7 @@ def main():
             "lr": lr,
             "gamma": gamma,
             "lam": lam,
+            "max_steps": max_steps,
         }
     )
 
@@ -67,6 +74,7 @@ def main():
     transition_factory = TransitionFactory(spec)
     factory = GymEnvFactory(env_name)
     env_handler = EnvironmentHandler(factory, seed)
+    eval_env_handler = EnvironmentHandler(factory, seed + 100)
     state_dim, action_dim, _ = env_handler.get_env_specs()
 
     actor = DiscreteActorPPO(state_dim, action_dim, hidden_dim).to(device)
@@ -81,17 +89,20 @@ def main():
 
     data_collector = DataCollectionProcessor(env_handler, transition_factory, replay_buffer, rollout_size,
                                              action_handler)
+    steps = 0
+    eval_step = 0
+    while steps < max_steps:
+        metrics_ep = data_collector.run()
+        metrics_train = trainer.run()
+        all_metrics = {**metrics_ep, **metrics_train, "charts/SPS": int(steps / (time.time() - start_time)),
+                       "global_step": data_collector.total_steps}
+        steps = data_collector.total_steps
 
-    for update in range(num_updates):
-        data_collector.run()
-        trainer.run()
-
-        if update % 10 == 0:
-            eval_reward = eval_trainer(trainer, env_handler, eval_episodes=5)
-            wandb.log({
-                "charts/episodic_return": eval_reward,
-                "global_step": update * rollout_size,
-            })
+        if eval_step <= steps:
+            avg_eval_reward = eval_trainer(trainer, eval_env_handler, eval_episodes=10)
+            all_metrics["eval/avg_reward"] = avg_eval_reward
+            eval_step += eval_freq
+        wandb.log(all_metrics, step=steps)
 
 
 if __name__ == "__main__":

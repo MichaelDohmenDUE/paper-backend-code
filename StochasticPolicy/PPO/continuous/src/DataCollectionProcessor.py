@@ -24,6 +24,7 @@ class DataCollectionProcessor:
         self.total_steps = 0
 
     def run(self):
+        metrics = {}
         self.replay_buffer.buffer.clear()
         episode_timesteps = 0
         episodic_reward = 0
@@ -32,19 +33,18 @@ class DataCollectionProcessor:
             self.total_steps += 1
             episode_timesteps += 1
             action, logp, value = self.policy.select_action(state)
-            next_state, reward, done, done_bool = self.env_handler.step(action, episode_timesteps)
+            next_state, reward, truncated, terminated, info = self.env_handler.step_ddpg(action)
             transition = self.transition_factory.forward(state=state, action=action, logp=logp, reward=reward,
-                                                         done=done_bool, value=value, bootstrap_value=None)
+                                                         done=terminated, value=value, bootstrap_value=None)
             episodic_reward += reward
             self.replay_buffer.append(transition)
             state = next_state
+            if truncated or terminated:
+                #print("global_step", self.total_steps, "charts/episodic_return", episodic_reward)
+                metrics = {"charts/episodic_return": episodic_reward,
+                           "charts/episodic_length": episode_timesteps,
+                           "global_step": self.total_steps}
 
-            if done:
-                wandb.log({
-                    "charts/episodic_return": episodic_reward,
-                    "charts/episodic_length": episode_timesteps,
-                    "global_step": self.total_steps,
-                })
                 state = self.env_handler.reset()
                 episode_timesteps = 0
                 episodic_reward = 0
@@ -52,3 +52,4 @@ class DataCollectionProcessor:
         _, _, last_value = self.policy.select_action(state)
         self.replay_buffer.buffer[
             -1].bootstrap_value = last_value  # overwrite last Bootstrap value that gets later extracted for GAE
+        return metrics
