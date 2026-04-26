@@ -106,6 +106,8 @@ def td_residual(rewards, dones, value, bootstrap_value, gamma):
     return deltas
 
 def normalize(tensor: torch.Tensor) -> torch.Tensor:
+    if tensor.numel() <= 1:
+        return tensor
     return (tensor - tensor.mean()) / (tensor.std() + 1e-8)
 
 def detransition(fields, batch, device: torch.device):
@@ -129,6 +131,12 @@ def detransition(fields, batch, device: torch.device):
 
     return tuple(processed[k] for k in fields)
 
+def clipped_surrogate_objective(new_logp, old_logps, advantage, clip_eps):
+    ratio = torch.exp(new_logp - old_logps)
+    surrogate_objective = ratio * advantage
+    surrogate_objective2 = torch.clamp(ratio, 1.0 - clip_eps, 1.0 + clip_eps) * advantage
+    policy_loss = -torch.min(surrogate_objective, surrogate_objective2).mean()
+    return policy_loss
 
 class NodeLibrary:
 

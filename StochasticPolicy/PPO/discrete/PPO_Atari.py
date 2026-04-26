@@ -41,16 +41,16 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
 def main():
     start_time = time.time()
     env_name = "BreakoutNoFrameskip-v4"
-    seed = 3
+    seed = 1
     rollout_size = 2048
-    batch_size = 32
+    batch_size = 256
     epochs = 10
-    max_steps = 1_000_000
+    max_steps = 10_000_000
     lr = 3e-4
     hidden_dim = 64
     gamma = 0.99
     lam = 0.95
-    eval_freq = 10000
+    eval_freq = 100000
     algo_name = "PPO_discrete"
     setting_global_seed(seed)
 

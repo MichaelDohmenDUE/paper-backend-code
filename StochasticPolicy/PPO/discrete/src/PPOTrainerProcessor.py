@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch import nn
 
-from backend.Utils.src.NodeLib.NodeLibrary import detransition, td_residual, normalize
+from backend.Utils.src.NodeLib.NodeLibrary import detransition, td_residual, normalize, clipped_surrogate_objective
 from backend.Utils.src.utils import compute_gae, gae
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -63,10 +63,8 @@ class PPOTrainerProcessor:
                 value_pred = self.critic(b_states).squeeze(-1)
 
                 # Policy Losses
-                ratio = torch.exp(new_logp - b_old_logps)
-                surrogate_objective = ratio * b_adv
-                surrogate_objective2 = torch.clamp(ratio, 1.0 - self.clip_eps, 1.0 + self.clip_eps) * b_adv
-                policy_loss = -torch.min(surrogate_objective, surrogate_objective2).mean()
+
+                policy_loss = clipped_surrogate_objective(new_logp, b_old_logps, b_adv, self.clip_eps)
 
                 # value loss
                 value_loss = 0.5 * (b_ret - value_pred).pow(2).mean()
@@ -80,17 +78,17 @@ class PPOTrainerProcessor:
                     nn.utils.clip_grad_norm_(list(self.actor.parameters()) + list(self.critic.parameters()),
                                              self.max_grad_norm)
                 self.optimizer.step()
-                with torch.no_grad():
-                    approx_kl = ((ratio - 1) - torch.log(ratio)).mean().item()
+
+                #with torch.no_grad():
+                #    approx_kl = ((ratio - 1) - torch.log(ratio)).mean().item()
 
                 all_policy_losses.append(policy_loss.item())
                 all_value_losses.append(value_loss.item())
                 all_entropies.append(entropy.item())
-                all_approx_kls.append(approx_kl)
+                #all_approx_kls.append(approx_kl)
 
         return {
             "losses/value_loss": np.mean(all_value_losses),
             "losses/policy_loss": np.mean(all_policy_losses),
             "losses/entropy": np.mean(all_entropies),
-            "losses/approx_kl": np.mean(all_approx_kls)
         }
