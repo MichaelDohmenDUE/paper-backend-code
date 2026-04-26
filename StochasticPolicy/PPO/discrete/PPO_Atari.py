@@ -40,11 +40,11 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
 
 def main():
     start_time = time.time()
-    env_name = "BreakoutNoFrameskip-v4"
+    env_name = "PongNoFrameskip-v4"
     seed = 1
     rollout_size = 2048
     batch_size = 256
-    epochs = 10
+    epochs = 4
     max_steps = 10_000_000
     lr = 3e-4
     hidden_dim = 64
@@ -82,7 +82,7 @@ def main():
     eval_env_handler = EnvironmentHandler(factory, seed + 100)
     state_dim, action_dim, _ = env_handler.get_env_specs()
     channels = state_dim[0]
-    actor = DiscreteAtariActorPPO(channels, action_dim).to(device)
+    actor = DiscreteAtariActorPPO(action_dim, channels).to(device)
     critic = CriticPPOAtari(channels).to(device)
     optimizer = optim.Adam(list(actor.parameters()) + list(critic.parameters()), lr=lr)
 
