@@ -5,6 +5,13 @@ from backend.Utils.src.NodeLib.NodeLibrary import reset_handler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
+def bootstaping_value(replay_buffer: ReplayBuffer, done: bool, policy, state):
+    if done:
+        last_value = 0.0
+    else:
+        _, _, last_value = policy.select_action(state)
+    replay_buffer.buffer[-1].bootstrap_value = last_value
+
 class DataCollectionProcessor:
     def __init__(self, env_handler: EnvironmentHandler, transition_factory: TransitionFactory,
                  replay_buffer: ReplayBuffer, rollout_size: int,
@@ -35,6 +42,7 @@ class DataCollectionProcessor:
             episode_timesteps += 1
             self.total_steps += 1
             self.state = reset_handler(self.env_handler, next_state, done)
+            ###Logging
             if done:
                 metrics = {"charts/episodic_return": episodic_reward,
                            "charts/episodic_length": episode_timesteps,
@@ -42,10 +50,6 @@ class DataCollectionProcessor:
                            }
                 episode_timesteps = 0
                 episodic_reward = 0
-
-        if done:
-            last_value = 0.0
-        else:
-            _, _, last_value = self.policy.select_action(self.state)
-        self.replay_buffer.buffer[-1].bootstrap_value = last_value
+            ##### Logging End
+        bootstaping_value(self.replay_buffer, done, self.policy, self.state)
         return metrics

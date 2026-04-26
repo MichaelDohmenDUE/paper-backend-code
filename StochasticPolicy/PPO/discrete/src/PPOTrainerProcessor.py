@@ -9,7 +9,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class PPOTrainerProcessor:
     def __init__(self, actor, critic, optimizer, replay_buffer, batch_size: int = 64, epochs: int = 10,
-                 clip_eps=0.2, vf_coef=1.0, ent_coef=0.01, max_grad_norm=0.5, gamma=0.99, lam=0.95):
+                 clip_eps=0.2, vf_coef=1.0, ent_coef=0.00, max_grad_norm=0.5, gamma=0.99, lam=0.95):
         self.actor = actor
         self.critic = critic
         self.optimizer = optimizer
@@ -33,7 +33,7 @@ class PPOTrainerProcessor:
         states, actions, old_logps, advantages, returns = compute_gae(self.replay_buffer, gamma=self.gamma,
                                                                       lam=self.lam)
         #print(states.shape)
-        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+        #advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
         states = torch.as_tensor(states, dtype=torch.float32, device=self.device)
         actions = torch.as_tensor(actions, dtype=torch.long, device=self.device)
@@ -67,7 +67,7 @@ class PPOTrainerProcessor:
                 policy_loss = -torch.min(surrogate_objective, surrogate_objective2).mean()
 
                 # value loss
-                value_loss =  0.5 * (b_ret - value_pred).pow(2).mean()
+                value_loss = 0.5 * (b_ret - value_pred).pow(2).mean()
 
                 loss = policy_loss + self.vf_coef * value_loss - self.ent_coef * entropy
 
