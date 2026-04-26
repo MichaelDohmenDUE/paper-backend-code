@@ -32,10 +32,9 @@ class PPOTrainerProcessor:
         all_approx_kls = []
         states, actions, old_logps, advantages, returns = compute_gae(self.replay_buffer, gamma=self.gamma,
                                                                       lam=self.lam)
+        #print(states.shape)
+        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
-       # advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-
-        # Convert to tensors
         states = torch.as_tensor(states, dtype=torch.float32, device=self.device)
         actions = torch.as_tensor(actions, dtype=torch.long, device=self.device)
         old_logps = torch.as_tensor(old_logps, dtype=torch.float32, device=self.device)
@@ -46,7 +45,6 @@ class PPOTrainerProcessor:
         indices = np.arange(dataset_size)
 
         for epoch in range(self.epochs):
-            # 3. Shuffle indices, not data
             np.random.shuffle(indices)
 
             for start in range(0, dataset_size, self.batch_size):
@@ -81,7 +79,7 @@ class PPOTrainerProcessor:
                                              self.max_grad_norm)
                 self.optimizer.step()
                 with torch.no_grad():
-                    approx_kl = ((ratio - 1) - torch.log(ratio)).mean().item()
+                    approx_kl = (b_old_logps - new_logp).mean().item()
 
                 all_policy_losses.append(policy_loss.item())
                 all_value_losses.append(value_loss.item())

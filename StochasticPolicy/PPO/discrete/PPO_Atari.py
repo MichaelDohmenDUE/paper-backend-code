@@ -4,7 +4,7 @@ import torch
 import wandb
 from torch import optim
 
-from backend.CommonModels.src.CriticPPO import CriticPPO, CriticPPOAtari
+from backend.CommonModels.src.CriticPPO import  CriticPPOAtari
 from backend.CommonModels.src.DiscreteActorPPO import DiscreteAtariActorPPO, DiscreteActorPPO
 from backend.StochasticPolicy.PPO.continuous.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.StochasticPolicy.PPO.discrete.src.DiscreteActionHandler import ActionHandler
@@ -25,7 +25,7 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
         state = env_handler.reset()
         done = False
         while not done:
-            state_t = torch.FloatTensor(state.reshape(1, -1)).to(trainer.device)
+            state_t = torch.as_tensor(state, dtype=torch.float32, device=trainer.device).unsqueeze(0)
             with torch.no_grad():
                 dist = trainer.actor(state_t)
                 action = dist.probs.argmax(dim=-1).item()
@@ -81,9 +81,9 @@ def main():
     env_handler = EnvironmentHandler(factory, seed)
     eval_env_handler = EnvironmentHandler(factory, seed + 100)
     state_dim, action_dim, _ = env_handler.get_env_specs()
-
-    actor = DiscreteActorPPO(state_dim, action_dim, hidden_dim).to(device)
-    critic = CriticPPO(state_dim, hidden_dim).to(device)
+    channels = state_dim[0]
+    actor = DiscreteAtariActorPPO(channels, action_dim).to(device)
+    critic = CriticPPOAtari(channels).to(device)
     optimizer = optim.Adam(list(actor.parameters()) + list(critic.parameters()), lr=lr)
 
     action_handler = ActionHandler(actor, critic, device)

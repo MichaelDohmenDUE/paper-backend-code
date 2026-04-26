@@ -26,6 +26,27 @@ class DiscreteActorPPO(nn.Module):
         logits = self.net(state)
         return Categorical(logits=logits)
 
+class CriticPPOAtari(nn.Module):
+    def __init__(self, in_channels: int = 4):
+        super().__init__()
+        self.net = nn.Sequential(
+            layer_init(nn.Conv2d(in_channels, 32, kernel_size=8, stride=4)),
+            nn.ReLU(),
+            layer_init(nn.Conv2d(32, 64, kernel_size=4, stride=2)),
+            nn.ReLU(),
+            layer_init(nn.Conv2d(64, 64, kernel_size=3, stride=1)),
+            nn.ReLU(),
+            nn.Flatten(),
+            layer_init(nn.Linear(64 * 7 * 7, 512)),
+            nn.ReLU(),
+            layer_init(nn.Linear(512, 1), std=1.0),
+        )
+
+    def forward(self, state):
+        state = state.float() / 255.0
+        return self.net(state)
+
+
 class DiscreteAtariActorPPO(nn.Module):
     def __init__(self, action_dim: int, in_channels: int = 4):
         super().__init__()
