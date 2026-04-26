@@ -27,30 +27,27 @@ def gae(gamma: float, lambda_: float, deltas: NDArray[np.float64], dones: NDArra
 
 
 def compute_gae(buffer, gamma: float, lam: float):
-    states = [t.state for t in buffer.buffer]
-    actions = [t.action for t in buffer.buffer]
-    logps = [t.logp for t in buffer.buffer]
-    rewards = [t.reward for t in buffer.buffer]
-    dones = [t.done for t in buffer.buffer]
-    values = [t.value for t in buffer.buffer]
+    states = np.array([t.state for t in buffer.buffer])
+    actions = np.array([t.action for t in buffer.buffer])
+    logps = np.array([t.logp for t in buffer.buffer], dtype=np.float32)
+    rewards = np.array([t.reward for t in buffer.buffer], dtype=np.float32)
+    dones = np.array([t.done for t in buffer.buffer], dtype=np.float32)
+    values = np.array([t.value for t in buffer.buffer], dtype=np.float32)
 
-    states, actions = np.array(states), np.array(actions)
-    logps = np.array(logps, dtype=np.float32)
-    rewards = np.array(rewards, dtype=np.float32)
-    dones = np.array(dones, dtype=np.float32)
-    values = np.array(values, dtype=np.float32)
+    advantages = np.zeros_like(rewards)
+    last_gae_lam = 0.0
 
-    deltas = np.zeros_like(rewards)
-    for t in range(len(rewards)):
+    for t in reversed(range(len(rewards))):
         if t == len(rewards) - 1:
             next_value = buffer.buffer[t].bootstrap_value
             next_non_terminal = 1.0 - dones[t]
         else:
             next_value = values[t + 1]
-            next_non_terminal = 1.0 - dones[t + 1]
-        deltas[t] = rewards[t] + gamma * next_value * next_non_terminal - values[t]
+            next_non_terminal = 1.0 - dones[t]
+        delta = rewards[t] + gamma * next_value * next_non_terminal - values[t]
 
-    advantages = gae(gamma, lam, deltas, dones)
+        advantages[t] = last_gae_lam = delta + gamma * lam * next_non_terminal * last_gae_lam
+
     returns = advantages + values
 
     return states, actions, logps, advantages, returns

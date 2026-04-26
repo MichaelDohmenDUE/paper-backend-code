@@ -26,10 +26,14 @@ class PPOTrainerProcessor:
         self.device = device
 
     def run(self):
+        all_policy_losses = []
+        all_value_losses = []
+        all_entropies = []
+        all_approx_kls = []
         states, actions, old_logps, advantages, returns = compute_gae(self.replay_buffer, gamma=self.gamma,
                                                                       lam=self.lam)
 
-        # advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+       # advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
         # Convert to tensors
         states = torch.as_tensor(states, dtype=torch.float32, device=self.device)
@@ -38,19 +42,20 @@ class PPOTrainerProcessor:
         advantages = torch.as_tensor(advantages, dtype=torch.float32, device=self.device)
         returns = torch.as_tensor(returns, dtype=torch.float32, device=self.device)
 
-        # Replaybuffer Rollout
-        replaybuffer_rollout = list(zip(states, actions, old_logps, advantages, returns))
+        dataset_size = len(states)
+        indices = np.arange(dataset_size)
 
-        for _ in range(self.epochs):
-            np.random.shuffle(replaybuffer_rollout)
-            for start in range(0, len(replaybuffer_rollout), self.batch_size):
-                batch = replaybuffer_rollout[start:start + self.batch_size]
-                b_states, b_actions, b_old_logps, b_adv, b_ret = zip(*batch)
-                b_states = torch.stack(b_states)
-                b_actions = torch.stack(b_actions).long()
-                b_old_logps = torch.stack(b_old_logps)
-                b_adv = torch.stack(b_adv)
-                b_ret = torch.stack(b_ret)
+        for epoch in range(self.epochs):
+            # 3. Shuffle indices, not data
+            np.random.shuffle(indices)
+
+            for start in range(0, dataset_size, self.batch_size):
+                batch_idx = indices[start:start + self.batch_size]
+                b_states = states[batch_idx]
+                b_actions = actions[batch_idx]
+                b_old_logps = old_logps[batch_idx]
+                b_adv = advantages[batch_idx]
+                b_ret = returns[batch_idx]
 
                 dist = self.actor(b_states)
                 new_logp = dist.log_prob(b_actions)
@@ -64,10 +69,9 @@ class PPOTrainerProcessor:
                 policy_loss = -torch.min(surrogate_objective, surrogate_objective2).mean()
 
                 # value loss
-                value_loss = (b_ret - value_pred).pow(2).mean()
+                value_loss =  0.5 * (b_ret - value_pred).pow(2).mean()
 
                 loss = policy_loss + self.vf_coef * value_loss - self.ent_coef * entropy
-                # print(f"total loss {loss}")
 
                 # Backprop
                 self.optimizer.zero_grad()
@@ -76,3 +80,17 @@ class PPOTrainerProcessor:
                     nn.utils.clip_grad_norm_(list(self.actor.parameters()) + list(self.critic.parameters()),
                                              self.max_grad_norm)
                 self.optimizer.step()
+                with torch.no_grad():
+                    approx_kl = ((ratio - 1) - torch.log(ratio)).mean().item()
+
+                all_policy_losses.append(policy_loss.item())
+                all_value_losses.append(value_loss.item())
+                all_entropies.append(entropy.item())
+                all_approx_kls.append(approx_kl)
+
+        return {
+            "losses/value_loss": np.mean(all_value_losses),
+            "losses/policy_loss": np.mean(all_policy_losses),
+            "losses/entropy": np.mean(all_entropies),
+            "losses/approx_kl": np.mean(all_approx_kls)
+        }

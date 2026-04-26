@@ -41,13 +41,13 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
 def main():
     start_time = time.time()
     env_name = "CartPole-v1"
-    seed = 1
+    seed = 4
     rollout_size = 2048
-    batch_size = 64
-    epochs = 5
+    batch_size = 32
+    epochs = 10
     max_steps = 1_000_000
     lr = 3e-4
-    hidden_dim = 128
+    hidden_dim = 64
     gamma = 0.99
     lam = 0.95
     eval_freq = 10000
