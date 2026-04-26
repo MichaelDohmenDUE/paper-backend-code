@@ -13,7 +13,7 @@ from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
 from backend.Utils.src.EnvFactory import GymEnvFactory, AtariEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
+from backend.Utils.src.RolloutBuffer import RolloutBuffer
 from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -88,7 +88,7 @@ def main():
 
     action_handler = ActionHandler(actor, critic, device)
 
-    replay_buffer = ReplayBuffer(spec, max_buffer_size=rollout_size, batch_size=batch_size)
+    replay_buffer = RolloutBuffer(spec)
 
     trainer = PPOTrainerProcessor(actor, critic, optimizer, replay_buffer, batch_size, epochs, gamma=gamma, lam=lam)
 
