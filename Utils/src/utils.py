@@ -5,6 +5,7 @@ import torch
 from numpy.typing import NDArray
 from torch import nn
 
+
 def setting_global_seed(seed: int) -> None:
     random.seed(seed)
     np.random.seed(seed)
@@ -17,11 +18,11 @@ def setting_global_seed(seed: int) -> None:
     torch.use_deterministic_algorithms(True)
 
 
-def gae(gamma: float, lambda_: float, deltas: NDArray[np.float64], dones: NDArray[np.bool_]) -> NDArray[np.float64]:
-    advantages = np.empty_like(deltas)
+def gae(gamma: float, lambda_: float, deltas, dones):
+    advantages = torch.zeros_like(deltas)
     advantage = 0.0
     for t in reversed(range(len(deltas))):
-        advantage = deltas[t] + gamma * lambda_ * advantage * (1 - dones[t])
+        advantage = deltas[t] + gamma * lambda_ * advantage * (1.0 - dones[t].float())
         advantages[t] = advantage
     return advantages
 

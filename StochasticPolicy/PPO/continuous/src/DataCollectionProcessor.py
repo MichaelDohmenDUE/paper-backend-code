@@ -37,7 +37,7 @@ class DataCollectionProcessor:
             action, logp, value = self.policy.select_action(self.state)
             next_state, reward, done, info = self.env_handler.step(action)
             transition = self.transition_factory.forward(state=self.state, action=action, logp=logp, reward=reward,
-                                                         done=done, value=value, bootstrap_value=None
+                                                         done=done, value=value, bootstrap_value=0.0
                                                          )
             self.replay_buffer.append(transition)
             self.state = reset_handler(self.env_handler, next_state, done)

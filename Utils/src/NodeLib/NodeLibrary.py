@@ -93,6 +93,21 @@ def optimizer_normalized(net: nn.Module, optimizer: torch.optim.Optimizer, loss:
     optimizer.step()
     return loss
 
+def td_residual(rewards, dones, value, bootstrap_value, gamma):
+    deltas = torch.zeros_like(rewards)
+    for t in range(len(rewards)):
+        if t == len(rewards) - 1:
+            next_value = bootstrap_value[t]
+            next_non_terminal = 1.0 - dones[t]
+        else:
+            next_value = value[t + 1]
+            next_non_terminal = 1.0 - dones[t + 1]
+        deltas[t] = rewards[t] + gamma * next_value * next_non_terminal - value[t]
+    return deltas
+
+def normalize(tensor: torch.Tensor) -> torch.Tensor:
+    return (tensor - tensor.mean()) / (tensor.std() + 1e-8)
+
 def detransition(fields, batch, device: torch.device):
     processed = {}
 

@@ -2,16 +2,14 @@ import numpy as np
 import torch
 from torch import nn
 
-from backend.Utils.src import RolloutBuffer
-from backend.Utils.src.utils import compute_gae
+from backend.Utils.src.NodeLib.NodeLibrary import detransition, td_residual, normalize
+from backend.Utils.src.utils import compute_gae, gae
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
 class PPOTrainerProcessor:
-    def __init__(self, actor, critic, optimizer, rollout_buffer: RolloutBuffer.RolloutBuffer, batch_size: int = 64,
-                 epochs: int = 10,
-                 clip_eps=0.2, vf_coef=1.0, ent_coef=0.00, max_grad_norm=0.5, gamma=0.99, lam=0.95):
+    def __init__(self, actor, critic, optimizer, rollout_buffer, batch_size: int = 64, epochs: int = 10,
+                 clip_eps=0.2, vf_coef=1.0, ent_coef=0.01, max_grad_norm=0.5, gamma=0.99, lam=0.95):
         self.actor = actor
         self.critic = critic
         self.optimizer = optimizer
@@ -33,18 +31,17 @@ class PPOTrainerProcessor:
         all_value_losses = []
         all_entropies = []
         all_approx_kls = []
-        ######
 
-        states, actions, old_logps, advantages, returns = compute_gae(self.rollout_buffer, gamma=self.gamma,
-                                                                      lam=self.lam)
-        # print(states.shape)
-        # advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+        #######
+        rollout = self.rollout_buffer.sample()
+        states, actions, logps, rewards, dones, value, bootstrap_value = detransition(self.rollout_buffer.spec.fields,
+                                                                                      rollout, self.device)
+        deltas = td_residual(rewards, dones, value, bootstrap_value, self.gamma)
 
-        states = torch.as_tensor(states, dtype=torch.float32, device=self.device)
-        actions = torch.as_tensor(actions, dtype=torch.long, device=self.device)
-        old_logps = torch.as_tensor(old_logps, dtype=torch.float32, device=self.device)
-        advantages = torch.as_tensor(advantages, dtype=torch.float32, device=self.device)
-        returns = torch.as_tensor(returns, dtype=torch.float32, device=self.device)
+        advantages = gae(self.gamma, self.lam, deltas, dones)
+        returns = advantages + value
+
+        advantages = normalize(advantages)
 
         dataset_size = len(states)
         indices = np.arange(dataset_size)
@@ -56,7 +53,7 @@ class PPOTrainerProcessor:
                 batch_idx = indices[start:start + self.batch_size]
                 b_states = states[batch_idx]
                 b_actions = actions[batch_idx]
-                b_old_logps = old_logps[batch_idx]
+                b_old_logps = logps[batch_idx]
                 b_adv = advantages[batch_idx]
                 b_ret = returns[batch_idx]
 
@@ -84,7 +81,7 @@ class PPOTrainerProcessor:
                                              self.max_grad_norm)
                 self.optimizer.step()
                 with torch.no_grad():
-                    approx_kl = (b_old_logps - new_logp).mean().item()
+                    approx_kl = ((ratio - 1) - torch.log(ratio)).mean().item()
 
                 all_policy_losses.append(policy_loss.item())
                 all_value_losses.append(value_loss.item())
