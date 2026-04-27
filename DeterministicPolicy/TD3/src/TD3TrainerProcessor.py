@@ -86,6 +86,10 @@ class TrainProcessor:
             "losses/critic_loss 1": critic_loss_1.item(),
             "losses/critic_loss 2": critic_loss_2.item(),
             "losses/actor_loss": actor_loss_val,
+            "losses/qf1_values": current_Q1.mean().item()
         }
+
+        if actor_loss_val is not None:
+            metrics["losses/actor_loss"] = actor_loss_val
 
         return metrics

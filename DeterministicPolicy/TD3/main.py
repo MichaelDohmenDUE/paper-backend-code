@@ -21,14 +21,14 @@ from backend.Utils.src.SyncProcessor import SyncProcessor
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def main():
+def main(seed=0):
     start_time = time.time()
     env_name = "HalfCheetah-v4"
-    seed = 100
-    max_timesteps = 1000000
+    seed = seed
+    max_timesteps = 1_000_000
     warmup = 25000
-    eval_freq = 2000
-    eval_episodes = 10
+    eval_freq = 5000
+    eval_episodes = 5
     expl_noise = 0.1
     batch_size = 256
     sync_freq = 2
@@ -42,6 +42,8 @@ def main():
     wandb.init(
         entity="michael_dohmen-",
         project="my-Td3-benchmarks",
+        name=f"TD3_{env_name}_seed{seed}",
+        tags=["v1.0-benchmark", "official-run"],
         config={
             "env_id": env_name,
             "exp_name": "DDPG-HalfCheetah-v4",
@@ -63,6 +65,7 @@ def main():
     )
     gym_factory = GymEnvFactory(env_name)
     env_handler = EnvironmentHandler(gym_factory, seed)
+    eval_env_handler = EnvironmentHandler(gym_factory, seed + 100)
     observation_size, action_size, max_action = env_handler.get_env_specs()
     if max_action is None:
         max_action = 1
@@ -118,8 +121,6 @@ def main():
     for t in range(max_timesteps):
         metrics_ep = datacollector.run()
         metrics_train = trainer.run()
-        #if metrics_train and "losses/actor_loss" in metrics_train: #TODO: Double Check my COunter logic again, but it seems the warmup is the vital step and not an error with my sync
-        #    if metrics_train["losses/actor_loss"] is not None:
         sync_process_critic_1.run()
         sync_process_critic_2.run()
         sync_process_actor.run()
@@ -127,9 +128,12 @@ def main():
                        "global_step": gl_counter.get()}
 
         if (t + 1) % eval_freq == 0:
-            eval_metrics = eval_trainer(trainer, env_handler, eval_episodes)
+            eval_metrics = eval_trainer(trainer, eval_env_handler, eval_episodes)
             all_metrics.update(eval_metrics)
         wandb.log(all_metrics, step=gl_counter.get())
+    wandb.finish()
 
 if __name__ == "__main__":
-    main()
+    seeds = [0, 1, 2, 3, 4]
+    for current_seed in seeds:
+        main(current_seed)
