@@ -42,7 +42,7 @@ def main(seed):
     Related Paper: https://link.springer.com/article/10.1007/BF00992696
     """
     start_time = time.time()
-    learn_rate = 1e-3
+    learn_rate = 1e-4
     max_steps = 100_000
     hidden_dim = 64
     env_name = "CartPole-v1"
@@ -87,7 +87,7 @@ def main(seed):
     observation_size, action_size, _ = env_handler.get_env_specs()
     policy = PolicyReinforceBaseline(observation_size, action_size, hidden_dim=hidden_dim).to(device)
 
-    optimizer = torch.optim.Adam(policy.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(policy.parameters(), lr=learn_rate)
 
     data_collector = DataCollectionProcessor(env_handler, transition_factory, replay_buffer, policy, device)
 

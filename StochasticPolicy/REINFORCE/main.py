@@ -42,7 +42,7 @@ def main(seed):
     Related Paper: https://link.springer.com/article/10.1007/BF00992696
     """
     start_time = time.time()
-    learn_rate = 1e-3
+    learn_rate = 1e-4
     max_steps = 100_000
     seed = seed
     hidden_dim = 64
