@@ -23,7 +23,7 @@ class DataCollectionProcessor:
 
     def run(self):
         action = self.action_handler.select_action(self.state, self.global_counter.get())
-        next_state, reward, truncated, terminated, info = self.env.step_ddpg(action)
+        next_state, reward, terminated, truncated, info = self.env.step_ddpg(action)
 
         transition = self.factory.forward(state=self.state, action=action, reward=reward, next_state=next_state,
                                           done=terminated)
