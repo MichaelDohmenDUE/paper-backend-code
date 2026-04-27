@@ -25,7 +25,7 @@ class REINFORCETrainer:
         self.gamma = gamma
         self.device = device
         self.c_pol = 1.0
-        self.c_val = 0.5
+        self.c_val = 0.1
 
     def run(self):
         rollout = self.rollout_buffer.sample()
