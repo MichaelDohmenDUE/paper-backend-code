@@ -37,7 +37,6 @@ class REINFORCETrainer:
             G = torch.tensor(G, dtype=torch.float32).to(self.device)
             advantage = G - value.detach()
             advantage = advantage.squeeze(-1)
-            advantage = normalize(advantage)
         loss_policy = policy_loss(logps, advantage)
 
         loss_value = mean_squared_error(G, value)
