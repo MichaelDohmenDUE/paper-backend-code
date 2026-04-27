@@ -39,8 +39,16 @@ def sample_distribution(dist: Categorical) -> tuple[int, torch.Tensor]:
 def optimizer_update(optimizer: torch.optim.Optimizer, loss: torch.Tensor) -> torch.Tensor:
     optimizer.zero_grad()
     loss.backward()
+    grad_metrics = {}
+    for group in optimizer.param_groups:
+        for p in group['params']:
+            if p.grad is not None:
+                param_id = str(p.shape)
+                grad_data = p.grad.detach()
+                grNone:ad_metrics[f"grad_norm_{param_id}"] = grad_data.norm(2).item()
+                grad_metrics[f"grad_std_{param_id}"] = grad_data.std().item()
     optimizer.step()
-    return loss
+    return grad_metrics
 
 def timed_optimizer_update(optim: torch.optim.Optimizer, loss: torch.Tensor, step: int, syncro_frequency: int):
     if step % syncro_frequency != 0:
@@ -94,15 +102,15 @@ def optimizer_normalized(net: nn.Module, optimizer: torch.optim.Optimizer, loss:
     return loss
 
 def td_residual(rewards, dones, value, bootstrap_value, gamma):
-    deltas = torch.zeros_like(rewards)
-    for t in range(len(rewards)):
-        if t == len(rewards) - 1:
-            next_value = bootstrap_value[t]
-            next_non_terminal = 1.0 - dones[t]
-        else:
-            next_value = value[t + 1]
-            next_non_terminal = 1.0 - dones[t + 1]
-        deltas[t] = rewards[t] + gamma * next_value * next_non_terminal - value[t]
+    next_values = torch.zeros_like(value)
+    next_values[:-1] = value[1:]
+    next_values[-1] = bootstrap_value[-1]
+
+    next_non_terminal = 1.0 - dones
+
+    assert (bootstrap_value[:-1] == 0.0).all(), "bootstrap_value Error"
+
+    deltas = rewards + gamma * next_values * next_non_terminal - value
     return deltas
 
 def normalize(tensor: torch.Tensor) -> torch.Tensor:

@@ -27,7 +27,7 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
         state = env_handler.reset()
         done = False
         while not done:
-            state_t = torch.FloatTensor(state.reshape(1, -1)).to(trainer.device)
+            state_t = torch.as_tensor(state, dtype=torch.uint8, device=device).unsqueeze(0)
             with torch.no_grad():
                 dist = trainer.actor(state_t)
                 action = dist.probs.argmax(dim=-1).item()
@@ -45,7 +45,7 @@ def main():
     env_name = "CartPole-v1"
     seed = 4
     rollout_size = 2048
-    batch_size = 32
+    batch_size = 256
     epochs = 10
     max_steps = 1_000_000
     lr = 3e-4

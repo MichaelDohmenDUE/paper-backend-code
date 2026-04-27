@@ -25,7 +25,7 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
         state = env_handler.reset()
         done = False
         while not done:
-            state_t = torch.as_tensor(state, dtype=torch.float32, device=trainer.device).unsqueeze(0)
+            state_t = torch.as_tensor(state, dtype=torch.uint8, device=trainer.device).unsqueeze(0)
             with torch.no_grad():
                 dist = trainer.actor(state_t)
                 action = dist.probs.argmax(dim=-1).item()
@@ -40,7 +40,7 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
 
 def main():
     start_time = time.time()
-    env_name = "PongNoFrameskip-v4"
+    env_name = "BreakoutNoFrameskip-v4"
     seed = 1
     rollout_size = 2048
     batch_size = 256
