@@ -30,9 +30,9 @@ class REINFORCETrainer:
             G = torch.tensor(G, dtype=torch.float32).to(self.device).view(-1)
         loss = policy_loss(logps, G)
 
-        optimizer_update(optimizer=self.optimizer, loss=loss)
+        grad_metrics = optimizer_update(optimizer=self.optimizer, loss=loss)
         #Logging
         metrics = {
             "losses/policy_loss": loss.item(),
         }
-        return metrics
+        return {**metrics, **grad_metrics}

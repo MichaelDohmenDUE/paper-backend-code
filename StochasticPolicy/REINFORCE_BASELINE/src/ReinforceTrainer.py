@@ -4,7 +4,7 @@ import torch
 from backend.CommonModels.src.Policy_Reinforce_Baseline import PolicyReinforceBaseline
 from backend.Utils.src import  RolloutBuffer
 from backend.Utils.src.NodeLib.NodeLibrary import detransition, optimizer_update, policy_loss, mean_squared_error, \
-    combined_loss
+    combined_loss, normalize
 from backend.Utils.src.utils import discounted_cumulative_reward
 from backend.StochasticPolicy.REINFORCE_BASELINE.src import ActionHandler
 
@@ -37,17 +37,18 @@ class REINFORCETrainer:
             G = torch.tensor(G, dtype=torch.float32).to(self.device)
             advantage = G - value.detach()
             advantage = advantage.squeeze(-1)
+            advantage = normalize(advantage)
         loss_policy = policy_loss(logps, advantage)
 
         loss_value = mean_squared_error(G, value)
 
         loss = combined_loss(loss_policy, self.c_pol, loss_value, self.c_val)
 
-        optimizer_update(optimizer=self.optimizer, loss=loss)
+        grad_metrics = optimizer_update(optimizer=self.optimizer, loss=loss)
         #Logging
         metrics = {
             "losses/policy_loss": loss_policy.item(),
             "losses / loss_vale": loss_value.item(),
             "losses / loss": loss.item(),
         }
-        return metrics
+        return {**metrics, **grad_metrics}

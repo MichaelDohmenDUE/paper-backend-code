@@ -1,5 +1,3 @@
-from xxlimited_35 import Null
-
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -36,19 +34,23 @@ def sample_distribution(dist: Categorical) -> tuple[int, torch.Tensor]:
     log_prob = dist.log_prob(action_dist).squeeze(0)
     return int(action_dist.item()), log_prob
 
-def optimizer_update(optimizer: torch.optim.Optimizer, loss: torch.Tensor) -> torch.Tensor:
+
+def optimizer_update(optimizer: torch.optim.Optimizer, loss: torch.Tensor) -> dict:
     optimizer.zero_grad()
     loss.backward()
-    grad_metrics = {}
+    total_squared_norm = 0.0
+    n_params = 0
     for group in optimizer.param_groups:
         for p in group['params']:
             if p.grad is not None:
-                param_id = str(p.shape)
-                grad_data = p.grad.detach()
-                grNone:ad_metrics[f"grad_norm_{param_id}"] = grad_data.norm(2).item()
-                grad_metrics[f"grad_std_{param_id}"] = grad_data.std().item()
+                total_squared_norm += p.grad.detach().pow(2).sum().item()
+                n_params += p.numel()
+    rms_grad = (total_squared_norm / n_params) ** 0.5 if n_params > 0 else 0
     optimizer.step()
-    return grad_metrics
+    return {
+        "grad/rms_gradient": rms_grad,
+        "grad/total_parameters": n_params
+    }
 
 def timed_optimizer_update(optim: torch.optim.Optimizer, loss: torch.Tensor, step: int, syncro_frequency: int):
     if step % syncro_frequency != 0:

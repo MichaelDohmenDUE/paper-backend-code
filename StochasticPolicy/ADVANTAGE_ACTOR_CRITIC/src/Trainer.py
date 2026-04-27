@@ -48,7 +48,7 @@ class Trainer:
 
         loss = combined_loss(loss_policy, self.c_pol, loss_value, self.c_val)#, loss_entropy, self.beta)
 
-        optimizer_update(optimizer=self.optimizer, loss=loss)
+        grad_metrics = optimizer_update(optimizer=self.optimizer, loss=loss)
         #Logging
         metrics = {
             "losses/policy_loss": loss_policy.item(),
@@ -56,7 +56,7 @@ class Trainer:
             "losses / loss": loss.item(),
             #"losses/entropy": entropy.item(),
         }
-        return metrics
+        return {**metrics, **grad_metrics}
 import torch
 from torch.distributions import Categorical
 
