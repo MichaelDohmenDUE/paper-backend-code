@@ -32,34 +32,40 @@ class DataCollectionProcessor:
         episode_timesteps = 0
         episodic_reward = 0
         metrics = {}
+        finished_episode_rewards = []
         done = False
         self.replay_buffer.buffer.clear()
 
         for _ in range(self.rollout_size):
             action, logp, value = self.policy.select_action(self.state)
             next_state, reward, done, info = self.env_handler.step(action)
+            clipped_reward = np.clip(reward, -1, 1)
             state_to_save = next_state.astype(np.uint8)
             transition = self.transition_factory.forward(
                 state=self.state,
                 action=action,
                 logp=logp,
-                reward=reward,
+                reward=clipped_reward,
                 done=done,
                 value=value,
                 bootstrap_value=0.0
             )
             self.replay_buffer.append(transition)
 
-            self.state = reset_handler(self.env_handler, state_to_save, done)
+            self.state = reset_handler(self.env_handler, state_to_save, done).astype(np.uint8)
 
             episodic_reward += reward
             episode_timesteps += 1
             self.total_steps += 1
             if done:
-                metrics = {"charts/episodic_return": episodic_reward, "global_step": self.total_steps}
+                finished_episode_rewards.append(episodic_reward)
                 episodic_reward = 0
                 episode_timesteps = 0
-
+        if len(finished_episode_rewards) > 0:
+            metrics = {
+                "charts/episodic_return": np.mean(finished_episode_rewards),
+                "global_step": self.total_steps
+            }
         final_value = bootstraping_value(done, self.policy, self.state)
 
         self.replay_buffer.buffer[-1].bootstrap_value = final_value

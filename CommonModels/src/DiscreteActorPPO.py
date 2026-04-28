@@ -64,6 +64,6 @@ class DiscreteAtariActorPPO(nn.Module):
         )
 
     def forward(self, state):
-        state = state.float() / 255.0
+        state = state.float() #/ 255.0
         logits = self.net(state)
         return Categorical(logits=logits)

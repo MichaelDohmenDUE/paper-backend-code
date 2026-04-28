@@ -13,7 +13,7 @@ class ActionHandler(AbstractActionHandler):
 
     def select_action(self, state) -> tuple[int, float, float]:
         state = np.array(state, dtype=np.float32)
-        state_t = torch.as_tensor(state, dtype=torch.int8, device=self.device).unsqueeze(0)
+        state_t = torch.as_tensor(state, dtype=torch.uint8, device=self.device).unsqueeze(0)
         with torch.no_grad():
             dist = self.actor(state_t)
             action = dist.sample()

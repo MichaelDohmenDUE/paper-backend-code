@@ -20,7 +20,7 @@ class PPOTrainerProcessor:
         self.vf_coef = vf_coef
         self.ent_coef = ent_coef
         self.max_grad_norm = max_grad_norm
-        self.use_value_clip = False  # TODO: Spinup Implementation uses value Clipping, original PPO Paper does not
+        self.use_value_clip = True  # TODO: Spinup Implementation uses value Clipping, original PPO Paper does not
         self.gamma = gamma
         self.lam = lam
         self.device = device
@@ -36,6 +36,7 @@ class PPOTrainerProcessor:
         rollout = self.rollout_buffer.sample()
         states, actions, logps, rewards, dones, value, bootstrap_value = detransition(self.rollout_buffer.spec.fields,
                                                                                       rollout, self.device)
+        #print("#######",states.shape, actions.shape, logps.shape, rewards.shape, value.shape, bootstrap_value.shape)
         deltas = td_residual(rewards, dones, value, bootstrap_value, self.gamma)
 
         advantages = gae(self.gamma, self.lam, deltas, dones)
@@ -63,10 +64,11 @@ class PPOTrainerProcessor:
                 value_pred = self.critic(b_states).squeeze(-1)
 
                 # Policy Losses
-
+                #print(new_logp.shape, b_old_logps.shape, b_adv.shape, value_pred.shape)
                 policy_loss = clipped_surrogate_objective(new_logp, b_old_logps, b_adv, self.clip_eps)
 
                 # value loss
+                #print(b_ret.shape, value_pred.shape, entropy.shape)
                 value_loss = 0.5 * (b_ret - value_pred).pow(2).mean()
 
                 loss = policy_loss + self.vf_coef * value_loss - self.ent_coef * entropy
