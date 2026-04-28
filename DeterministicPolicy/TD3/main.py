@@ -48,7 +48,7 @@ def main(seed=0):
         tags=["v1.0-benchmark", "official-run"],
         config={
             "env_id": env_name,
-            "exp_name": "Td3-HalfCheetah-v4",
+            "exp_name": "Td3-Hopper-v4",
             "seed": seed,
             "buffer_size": buffer_size,
             "batch_size": batch_size,

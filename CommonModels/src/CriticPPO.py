@@ -36,5 +36,5 @@ class CriticPPOAtari(nn.Module):
         )
 
     def forward(self, state):
-        state = state.float() #/ 255.0
+        state = state.float() / 255.0
         return self.net(state)

@@ -127,7 +127,7 @@ def detransition(fields, batch, device: torch.device):
         t = tensor.to(device)
         if "state" in key:
             if t.dtype == torch.uint8:
-                processed[key] = t.contiguous().float() / 255.0
+                processed[key] = t.contiguous().float() #/ 255.0
             else:
                 processed[key] = t.float()
         elif "action" in key:
