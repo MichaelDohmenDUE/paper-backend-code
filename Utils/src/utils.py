@@ -18,6 +18,16 @@ def setting_global_seed(seed: int) -> None:
     torch.use_deterministic_algorithms(True)
 
 
+def get_module_grad_stats(module: nn.Module):
+    total_squared_norm = 0.0
+    n_params = 0
+    for p in module.parameters():
+        if p.grad is not None:
+            total_squared_norm += p.grad.detach().pow(2).sum().item()
+            n_params += p.numel()
+    rms_grad = (total_squared_norm / n_params) ** 0.5 if n_params > 0 else 0.0
+    return rms_grad, n_params
+
 def gae(gamma: float, lambda_: float, deltas, dones):
     advantages = torch.zeros_like(deltas)
     advantage = 0.0

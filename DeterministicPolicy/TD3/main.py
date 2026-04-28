@@ -17,13 +17,14 @@ from backend.Utils.src.EvaluationHelper import eval_trainer
 from backend.Utils.src.GlobalCounter import GlobalCounter
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
+from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def main(seed=0):
     start_time = time.time()
-    env_name = "HalfCheetah-v4"
+    env_name = "Hopper-v4"
     seed = seed
     max_timesteps = 1_000_000
     warmup = 25000
@@ -38,6 +39,7 @@ def main(seed=0):
     policy_noise = 0.2
     hidden_dim = 256
     buffer_size = int(1e6)
+    setting_global_seed(seed)
 
     wandb.init(
         entity="michael_dohmen-",
