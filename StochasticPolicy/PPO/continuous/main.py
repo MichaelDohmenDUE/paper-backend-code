@@ -35,9 +35,9 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
     return avg_reward
 
 
-def main():
+def main(seed=0):
     env_name = "HalfCheetah-v4"
-    seed = 2
+    seed = seed
     rollout_size = 2048
     batch_size = 64
     epochs = 10
@@ -51,6 +51,7 @@ def main():
         entity="michael_dohmen-",
         project="my-ppo-benchmarks",
         group="test_ppo_halfcheetah-v4",
+        name="PPO_{env_name}_seed{seed}",
         config={
             "env_id": env_name,
             "exp_name": "my_HalfCheetah-v4",
@@ -96,4 +97,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(seed)

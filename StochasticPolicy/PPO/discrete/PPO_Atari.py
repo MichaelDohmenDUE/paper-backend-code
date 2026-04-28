@@ -5,13 +5,13 @@ import wandb
 from torch import optim
 
 from backend.CommonModels.src.CriticPPO import  CriticPPOAtari
-from backend.CommonModels.src.DiscreteActorPPO import DiscreteAtariActorPPO, DiscreteActorPPO
-from backend.StochasticPolicy.PPO.continuous.src.DataCollectionProcessor import DataCollectionProcessor
-from backend.StochasticPolicy.PPO.discrete.src.DiscreteActionHandler import ActionHandler
+from backend.CommonModels.src.DiscreteActorPPO import DiscreteAtariActorPPO
+from backend.StochasticPolicy.PPO.discrete.src.DataCollectionProcessorAtari import DataCollectionProcessor
+from backend.StochasticPolicy.PPO.discrete.src.DiscreteActionHandlerAtari import ActionHandler
 from backend.StochasticPolicy.PPO.discrete.src.PPOTrainerProcessor import PPOTrainerProcessor
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
-from backend.Utils.src.EnvFactory import GymEnvFactory, AtariEnvFactory
+from backend.Utils.src.EnvFactory import AtariEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 from backend.Utils.src.utils import setting_global_seed

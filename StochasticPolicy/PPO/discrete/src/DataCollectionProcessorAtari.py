@@ -26,7 +26,7 @@ class DataCollectionProcessor:
         self.rollout_size = rollout_size
         self.policy = action_handler
         self.total_steps = 0
-        self.state = self.env_handler.reset()
+        self.state = self.env_handler.reset().astype(np.uint8)
 
     def run(self):
         episode_timesteps = 0
@@ -38,6 +38,7 @@ class DataCollectionProcessor:
         for _ in range(self.rollout_size):
             action, logp, value = self.policy.select_action(self.state)
             next_state, reward, done, info = self.env_handler.step(action)
+            state_to_save = next_state.astype(np.uint8)
             transition = self.transition_factory.forward(
                 state=self.state,
                 action=action,
@@ -49,7 +50,7 @@ class DataCollectionProcessor:
             )
             self.replay_buffer.append(transition)
 
-            self.state = reset_handler(self.env_handler, next_state, done)
+            self.state = reset_handler(self.env_handler, state_to_save, done)
 
             episodic_reward += reward
             episode_timesteps += 1

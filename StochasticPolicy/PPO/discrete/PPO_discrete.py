@@ -14,7 +14,6 @@ from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
 from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 from backend.Utils.src.utils import setting_global_seed
 
@@ -27,7 +26,7 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
         state = env_handler.reset()
         done = False
         while not done:
-            state_t = torch.as_tensor(state, dtype=torch.uint8, device=device).unsqueeze(0)
+            state_t = torch.as_tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
             with torch.no_grad():
                 dist = trainer.actor(state_t)
                 action = dist.probs.argmax(dim=-1).item()
