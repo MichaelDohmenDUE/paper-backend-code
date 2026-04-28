@@ -136,6 +136,6 @@ def main(seed=0):
     wandb.finish()
 
 if __name__ == "__main__":
-    seeds = [0, 1, 2, 3, 4]
+    seeds = [1, 2 ,3 ,4]
     for current_seed in seeds:
         main(current_seed)
