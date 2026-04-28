@@ -64,6 +64,8 @@ def main(seed):
     wandb.init(
         entity="michael_dohmen-",
         project="my-DDPG-benchmarks",
+        name=f"DDPG_{env_name}_seed_{seed}",
+        tags=["v1.0-benchmark", "official-run"],
         config={
             "env_id": env_name,
             "exp_name": "DDPG-HalfCheetah-v4",
