@@ -5,7 +5,7 @@ from backend.CommonModels.src.Policy_Reinforce_Baseline import PolicyReinforceBa
 from backend.Utils.src import  RolloutBuffer
 from backend.Utils.src.NodeLib.NodeLibrary import detransition, optimizer_update, policy_loss, mean_squared_error, \
     combined_loss, normalize
-from backend.Utils.src.utils import discounted_cumulative_reward
+from backend.Utils.src.utils import discounted_cumulative_reward, get_module_grad_stats
 from backend.StochasticPolicy.REINFORCE_BASELINE.src import ActionHandler
 
 
@@ -25,7 +25,7 @@ class REINFORCETrainer:
         self.gamma = gamma
         self.device = device
         self.c_pol = 1.0
-        self.c_val = 0.1
+        self.c_val = 1.0
 
     def run(self):
         rollout = self.rollout_buffer.sample()
@@ -42,12 +42,24 @@ class REINFORCETrainer:
         loss_value = mean_squared_error(G, value)
 
         loss = combined_loss(loss_policy, self.c_pol, loss_value, self.c_val)
+        # Just for Logging the seperate Heads
+        self.optimizer.zero_grad()
+        loss.backward()
+        policy_rms, policy_count = get_module_grad_stats(self.behaviour.policy)
+        value_rms, value_count = get_module_grad_stats(self.behaviour.value)
+        trunk_rms, trunk_count = get_module_grad_stats(self.behaviour.model)
+        self.optimizer.step()
 
-        grad_metrics = optimizer_update(optimizer=self.optimizer, loss=loss)
+        #grad_metrics = optimizer_update(optimizer=self.optimizer, loss=loss)
         #Logging
         metrics = {
-            "losses/policy_loss": loss_policy.item(),
-            "losses / loss_vale": loss_value.item(),
-            "losses / loss": loss.item(),
+            "losses/policy": loss_policy.item(),
+            "losses/value": loss_value.item(),
+            "losses/total": loss.item(),
+            "grad/rms_policy": policy_rms,
+            "grad/rms_value": value_rms,
+            "grad/rms_trunk": trunk_rms,
+            "params/count_policy": policy_count,
+            "params/count_value": value_count
         }
-        return {**metrics, **grad_metrics}
+        return metrics

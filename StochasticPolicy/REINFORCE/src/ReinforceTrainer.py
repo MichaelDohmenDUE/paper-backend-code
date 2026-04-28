@@ -30,9 +30,23 @@ class REINFORCETrainer:
             G = torch.tensor(G, dtype=torch.float32).to(self.device).view(-1)
         loss = policy_loss(logps, G)
 
-        grad_metrics = optimizer_update(optimizer=self.optimizer, loss=loss)
-        #Logging
-        metrics = {
-            "losses/policy_loss": loss.item(),
+        self.optimizer.zero_grad()
+        loss.backward()
+
+        total_squared_norm = 0.0
+        n_params = 0
+        for group in self.optimizer.param_groups:
+            for p in group['params']:
+                if p.grad is not None:
+                    total_squared_norm += p.grad.detach().pow(2).sum().item()
+                    n_params += p.numel()
+
+        rms_grad = (total_squared_norm / n_params) ** 0.5 if n_params > 0 else 0
+        self.optimizer.step()
+
+        return {
+            "grad/rms_policy": rms_grad,
+            "grad/rms_gradient": rms_grad,
+            "grad/total_parameters": n_params,
+            "losses/policy_loss": loss.item()
         }
-        return {**metrics, **grad_metrics}

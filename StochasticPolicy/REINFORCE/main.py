@@ -106,5 +106,5 @@ def main(seed):
         wandb.log(all_metrics, step=step)
     wandb.finish()
 if __name__ == "__main__":
-    for seed in range(10):
+    for seed in range(5):
         main(seed)
