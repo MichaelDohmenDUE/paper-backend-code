@@ -1,6 +1,7 @@
 import time
 from copy import deepcopy
 
+import numpy as np
 import torch
 import wandb
 
@@ -15,11 +16,34 @@ from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.GlobalCounter import GlobalCounter
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
+from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def main():
+def eval_trainer(trainer, env_handler, eval_episodes=5):
+    avg_reward = 0.0
+    trainer.actor.eval()
+
+    for _ in range(eval_episodes):
+        state = env_handler.reset()
+        done = False
+        while not done:
+            state_t = torch.as_tensor(state, dtype=torch.float32, device=trainer.device).unsqueeze(0)
+            with torch.no_grad():
+                action = trainer.actor(state_t).cpu().numpy().flatten()
+            next_state, reward, terminated, truncated, _ = env_handler.step_ddpg(action)
+            avg_reward += reward
+            state = next_state
+            done = terminated or truncated
+    avg_reward /= eval_episodes
+    metrics = {
+        "eval/eval_avg_reward": avg_reward,
+    }
+    trainer.actor.train()
+    return metrics
+
+def main(seed):
     start_time = time.time()
     lr_actor = 1e-4
     lr_critic = 1e-3
@@ -31,8 +55,11 @@ def main():
     max_buffer_size = 1000000
     tau = 0.001
     gamma = 0.99
-    seed = 42
+    seed = seed
     warmup = 20000
+    eval_freq = 5000
+    eval_episodes = 10
+    setting_global_seed(seed)
 
     wandb.init(
         entity="michael_dohmen-",
@@ -54,6 +81,7 @@ def main():
 
     gym_factory = GymEnvFactory(env_name)
     env = EnvironmentHandler(gym_factory, seed)
+    eval_env_handler = EnvironmentHandler(gym_factory, seed + 100)
     observation_size, action_size, max_action = env.get_env_specs()
 
     # Networks
@@ -86,9 +114,14 @@ def main():
         metrics_train = train_process.run()
         all_metrics = {**metrics_ep, **metrics_train, "charts/SPS": int(t / (time.time() - start_time)),
                        "global_step": gl_counter.get()}
+        if (t + 1) % eval_freq == 0:
+            eval_metrics = eval_trainer(train_process, eval_env_handler, eval_episodes)
+            all_metrics.update(eval_metrics)
         wandb.log(all_metrics, step=gl_counter.get())
         sync_process_actor.run()
         sync_process_critic.run()
 
 if __name__ == "__main__":
-    main()
+    seeds = range(5)
+    for seed in seeds:
+        main(seed)
