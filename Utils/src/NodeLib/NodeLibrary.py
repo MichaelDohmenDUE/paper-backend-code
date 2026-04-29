@@ -153,3 +153,70 @@ def clipped_surrogate_objective(new_logp, old_logps, advantage, clip_eps):
     surrogate_objective2 = torch.clamp(ratio, 1.0 - clip_eps, 1.0 + clip_eps) * advantage
     policy_loss = -torch.min(surrogate_objective, surrogate_objective2).mean()
     return policy_loss
+
+
+
+class TransitionNode(Node):
+    def __init__(self, factory, input_mapping: dict[str, str], default_kwargs: dict = None):
+        self.factory_args = list(input_mapping.keys())
+        context_keys = list(input_mapping.values())
+
+        super().__init__("Transition", context_keys + ["num_envs"], ["transitions"])
+
+        self.factory = factory
+        self.default_kwargs = default_kwargs if default_kwargs is not None else {}
+
+    def forward(self, *args):
+        #  Split up args into the transition arrays | the num_envs integer
+        *transition_data, num_envs = args
+
+        if num_envs == 1:
+            transition_data = [[x] for x in transition_data]
+
+        transitions = []
+
+        for step_values in zip(*transition_data):
+            kwargs = dict(zip(self.factory_args, step_values))
+            # Inject the hardcoded values
+            kwargs.update(self.default_kwargs)
+            # Transition
+            transition = self.factory.forward(**kwargs)
+            transitions.append(transition)
+
+        return transitions
+
+class BufferAppendingNode(Node):
+    def __init__(self):
+        super().__init__("BufferAppendingNode", ["buffer", "transitions"], ["_buffer_updated"])
+
+    def forward(self, buffer, transitions):
+        for t in transitions:
+            buffer.append(t)
+        return True #DummySignal
+
+
+class BootStrappingNode(Node):
+    def __init__(self, rollout_size):
+        super().__init__("Bootstrapping",
+                         ["buffer", "next_state", "done", "agent", "device", "_buffer_updated"],
+                         [], no_grad=True)
+        self.rollout_size = rollout_size
+
+    def forward(self, buffer: RolloutBuffer, next_state, done, agent, device, _buffer_updated):
+        if not buffer.reached_rollout_size():
+            return
+
+        state_t = torch.as_tensor(next_state, dtype=torch.float32, device=device)
+        if state_t.dim() == 1:
+            state_t = state_t.unsqueeze(0)
+        _, final_values = agent(state_t)
+        final_values = final_values.squeeze(-1).cpu().numpy()
+
+        is_vectorized = isinstance(done, (np.ndarray, list)) and len(np.atleast_1d(done)) > 1
+        if not is_vectorized:
+            done, final_values = [done], [final_values]
+
+        num_envs = len(done)
+        for i in range(num_envs):
+            boot_val = 0.0 if done[i] else final_values[i]
+            buffer.buffer[-(num_envs - i)].bootstrap_value = boot_val
