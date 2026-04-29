@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from torch import nn
 
+from backend.Utils.src.RolloutBuffer import RolloutBuffer
 from backend.Utils.src.NodeLib.NodeLibrary import detransition, td_residual, normalize, clipped_surrogate_objective
 from backend.Utils.src.utils import gae
 
@@ -9,7 +10,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class PPOTrainerProcessor:
-    def __init__(self, actor, optimizer, rollout_buffer, batch_size: int = 64, epochs: int = 10,
+    def __init__(self, actor, optimizer, rollout_buffer: RolloutBuffer, batch_size: int = 64, epochs: int = 10,
                  clip_eps=0.2, vf_coef=1.0, ent_coef=0.01, max_grad_norm=0.5, gamma=0.99, lam=0.95):
         self.actor = actor
         self.optimizer = optimizer
@@ -33,11 +34,14 @@ class PPOTrainerProcessor:
         all_approx_kls = []
 
         #######
+        if not self.rollout_buffer.reached_rollout_size():
+            return {}
+
         rollout = self.rollout_buffer.sample()
         states, actions, logps, rewards, dones, values, bootstrap_values = detransition(
             self.rollout_buffer.spec.fields, rollout, self.device
         )
-
+        #print("#######", states.shape, actions.shape, logps.shape, rewards.shape, values.shape, bootstrap_values.shape)
         r = rewards.view(-1, self.rollout_buffer.num_envs)
         d = dones.view(-1, self.rollout_buffer.num_envs)
         v = values.view(-1, self.rollout_buffer.num_envs)

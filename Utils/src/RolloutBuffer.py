@@ -9,13 +9,17 @@ from backend.Utils.src.BatchTransitioner import TransitionBatch, TransitionSpec
 
 
 class RolloutBuffer:
-    def __init__(self, spec: TransitionSpec):
+    def __init__(self, spec: TransitionSpec, rollout_size: int):
         self.spec = spec
         self.num_envs = 8
         self.buffer = []
+        self.rollout_size = rollout_size
 
     def __len__(self) -> int:
         return len(self.buffer)
+
+    def reached_rollout_size(self) -> bool:
+        return len(self.buffer) >= self.rollout_size
 
     def append(self, x: Any) -> None:
         for f in self.spec.fields:
