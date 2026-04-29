@@ -104,9 +104,10 @@ def main():
     sync_process = SyncProcessor(behavior_net, target_net, tau, sync_freq)
 
     for step in range(max_steps):
-        collector.run()
-        metrics = None
-        metrics = train_process.run()
+        metrics = {}
+        metrics_data = collector.run()
+        metrics_train = train_process.run()
+        metrics = met
         sync_process.run()
 
         if metrics and step % 400 == 0:
@@ -117,6 +118,6 @@ def main():
         if step % 10_000 == 0 and step > warmup_steps:
             avg_score = evaluate_policy(behavior_net, eval_env, episodes=5, device=device)
             wandb.log({"charts/eval_avg_score": avg_score}, step=step)
-
+        wandb.log(metrics, step=step)
 if __name__ == '__main__':
     main()

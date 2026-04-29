@@ -27,7 +27,8 @@ class DataCollectionProcessor:
         self.total_steps = 0
         self.episode_steps = 0
 
-    def run(self) -> None:
+    def run(self):
+        metrics = {}
         with torch.no_grad():
             state_tensor = torch.tensor(self.state, dtype=torch.float32, device=self.device).unsqueeze(0)
             q_values = self.behaviour(state_tensor).squeeze(0)
@@ -44,15 +45,14 @@ class DataCollectionProcessor:
         self.episode_steps += 1
         self.total_steps += 1
         if done:
-            try:
-                wandb.log({
-                    "charts/episodic_return": self.episode_reward,
-                    "charts/episodic_length": self.episode_steps,
-                    "global_step": self.total_steps,
-                })
-            except Exception as e:
-                print(f"Logging error: {e}")
+            metrics = {
+                "charts/episodic_return": self.episode_reward,
+                "charts/episodic_length": self.episode_steps,
+                "global_step": self.total_steps,
+            }
+
             self.episode_count += 1
             self.episode_reward = 0.0
             self.episode_steps = 0
+        return metrics
 
