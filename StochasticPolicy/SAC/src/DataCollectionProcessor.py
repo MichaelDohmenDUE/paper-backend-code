@@ -27,14 +27,14 @@ class DataCollectionProcessor:
         action_np = action_tensor.detach().cpu().numpy()
 
         self.episode_timesteps += 1
-        next_state, reward, done_env, done_bool = self.env.step(action_np)
+        next_state, reward, terminated, truncated, info = self.env.env.step(action_np)
 
         transition = self.transition_factory.forward(state=self.state, action=action_np, reward=reward,
-                                                     next_state=next_state, done=done_bool)
+                                                     next_state=next_state, done=terminated)
         self.buffer.append(transition)
 
         self.state = next_state
-        self.done = done_env
+        self.done = terminated or truncated
         if self.done:
             self.state = self.env.reset()
             self.episode_timesteps = 0
