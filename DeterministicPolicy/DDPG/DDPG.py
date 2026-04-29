@@ -1,3 +1,4 @@
+import sys
 import time
 from copy import deepcopy
 
@@ -125,6 +126,6 @@ def main(seed, env_name):
     wandb.finish()
 if __name__ == "__main__":
     seeds = [1, 2, 3]
-    env_name = "Walker2d-v4"
+    env_name = sys.argv[1] if len(sys.argv) > 1
     for seed in seeds:
         main(seed, env_name)
