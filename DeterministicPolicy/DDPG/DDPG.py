@@ -43,12 +43,12 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
     trainer.actor.train()
     return metrics
 
-def main(seed):
+def main(seed, env_name):
     start_time = time.time()
     lr_actor = 1e-4
     lr_critic = 1e-3
-    max_timesteps = 1000000
-    env_name = "HalfCheetah-v4"
+    max_timesteps = 1_000_000
+    env_name = env_name
     sync_freq = 1
     hidden_size = 300
     batch_size = 256
@@ -56,7 +56,7 @@ def main(seed):
     tau = 0.001
     gamma = 0.99
     seed = seed
-    warmup = 20000
+    warmup = 25000
     eval_freq = 5000
     eval_episodes = 10
     setting_global_seed(seed)
@@ -68,7 +68,7 @@ def main(seed):
         tags=["v1.0-benchmark", "official-run"],
         config={
             "env_id": env_name,
-            "exp_name": "DDPG-HalfCheetah-v4",
+            "exp_name": f"DDPG-{env_name}",
             "seed": seed,
             "max_buffer_size": max_buffer_size,
             "batch_size": batch_size,
@@ -122,8 +122,9 @@ def main(seed):
         wandb.log(all_metrics, step=gl_counter.get())
         sync_process_actor.run()
         sync_process_critic.run()
-
+    wandb.finish()
 if __name__ == "__main__":
-    seeds = range(5)
+    seeds = [1, 2, 3]
+    env_name = "HalfCheetah-v4"
     for seed in seeds:
-        main(seed)
+        main(seed, env_name)

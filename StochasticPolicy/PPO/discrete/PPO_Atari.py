@@ -109,7 +109,7 @@ def main(seed):
             all_metrics["eval/avg_reward"] = avg_eval_reward
             eval_step += eval_freq
         wandb.log(all_metrics, step=steps)
-
+    wandb.finish()
 
 if __name__ == "__main__":
     seed = [0,1,2]
