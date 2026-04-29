@@ -1,7 +1,10 @@
 from collections import deque
+from enum import Enum
 
 import torch
 
+class Signal(Enum):
+    NOSIGNAL = "NOSIGNAL"
 
 class Node:
     def __init__(self, name, function, inputs, outputs, no_grad=False):
@@ -11,6 +14,9 @@ class Node:
         self.outputs = outputs
         self.no_grad = no_grad
 
+    def forward(self, *args):
+        pass
+
     def __call__(self, context):
         args = [context[key] for key in self.inputs]
         if self.no_grad:
@@ -18,62 +24,70 @@ class Node:
                 result = self.function(*args)
         else:
             result = self.function(*args)
+        # Special Signal to abort Graph Execution, different from "None" as an output
+        if result is Signal.NOSIGNAL:
+            return Signal.NOSIGNAL
+
         if len(self.outputs) == 0:
-            return
+            return None
         if len(self.outputs) == 1:
             context[self.outputs[0]] = result
         else:
             for key, value in zip(self.outputs, result):
                 context[key] = value
-
+        return None
 
 class Graph:
-    def __init__(self, nodes):
+    def __init__(self, nodes, initial_keys: list[str]):
         self.nodes: list[Node] = nodes
+        self.execution_order_list: list[Node] = []
+
+        self._compile(initial_keys)
 
     def run(self, context: dict):
-        queue = deque(self.nodes)
-        executed_notes = set()
-        while len(queue) > 0:
-            current_node = queue.popleft()
-
-            if all(input_ in context for input_ in current_node.inputs):
-                current_node(context)
-                executed_notes.add(current_node)
-            else:
-                queue.append(current_node)
+        for node in self.execution_order_list:
+            signal = node(context)
+            if signal is Signal.NOSIGNAL:
+                return None
         return context
 
-    def validate(self, start_context: dict) -> bool:
-        produced = set(start_context.keys())
-        all_outputs = set()
-
-        # Check for Duplicate Node Outputs
+    def _compile(self, initial_keys: list[str]):
+        output_to_node = {}
         for node in self.nodes:
             for output in node.outputs:
-                #if output in all_outputs:
-                #   print(f"Warning: '{output}' overwritten by node {node.name}")
-                all_outputs.add(output)
-        # Check for missing inputs
+                if output in output_to_node:
+                    raise ValueError(f"Error:Duplicate '{output}' from {node.name} , {output_to_node[output].name}")
+                output_to_node[output] = node
+
+        grad = {node.name: 0 for node in self.nodes}
+        adjacent_nodes = {node.name: [] for node in self.nodes}
+        provided_keys = set(initial_keys)
+
         for node in self.nodes:
-            for input in node.inputs:
-                if input not in produced and input not in all_outputs:
-                    raise ValueError(f"Input '{input}' for node '{node.name}' is never produced")
+            for node_input in node.inputs:
+                if node_input in provided_keys:
+                    continue
+                elif node_input in output_to_node:
+                    parent = output_to_node[node_input]
+                    adjacent_nodes[parent.name].append(node)
+                    grad[node.name] += 1
+                else:
+                    raise ValueError(
+                        f"Error: node_input '{node_input}' for node '{node.name}' not here.")
 
-        remaining = set(self.nodes)
-        resolved = set(produced)
-        # LOOP detection
-        progress: bool = True
-        while progress and remaining:
-            progress = False
-            for node in list(remaining):
-                if all(input_ in resolved for input_ in node.inputs):
-                    resolved.update(node.outputs)
-                    remaining.remove(node)
-                    progress = True
+        queue = deque([n for n in self.nodes if grad[n.name] == 0])
+        sorted_nodes = []
 
-        if remaining:
-            names = [node.name for node in remaining]
-            raise ValueError(f"Cycle or unresolved inputs: {names}")
+        while queue:
+            current = queue.popleft()
+            sorted_nodes.append(current)
+            for child in adjacent_nodes[current.name]:
+                grad[child.name] -= 1
+                if grad[child.name] == 0:
+                    queue.append(child)
 
-        return True
+        if len(sorted_nodes) != len(self.nodes):
+            unresolved = [n.name for n in self.nodes if grad[n.name] > 0]
+            raise ValueError(f"Error - Circle found : {unresolved}")
+
+        self.execution_order_list = sorted_nodes
