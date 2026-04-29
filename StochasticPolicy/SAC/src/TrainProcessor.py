@@ -29,7 +29,7 @@ class TrainProcessor:
         self.device = device
 
     def run(self):
-        if len(self.buffer) < 49999:#self.buffer.batch_size:
+        if len(self.buffer) < 10000:#self.buffer.batch_size:
             return {}
 
         current_alpha = self.log_alpha.exp()

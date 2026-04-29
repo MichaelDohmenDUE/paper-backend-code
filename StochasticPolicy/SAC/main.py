@@ -13,6 +13,7 @@ from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
+from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -31,6 +32,7 @@ def main():
     gamma = 0.99
     seed = 42
     algo_name = "SAC"
+    setting_global_seed(seed)
 
     wandb.init(
         entity="michael_dohmen-",
