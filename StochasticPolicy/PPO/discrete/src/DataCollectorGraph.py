@@ -4,28 +4,35 @@ import torch
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 from backend.Utils.src.NodeLib.Node import Node, Graph
 
+
 class TransitionNode(Node):
-    def __init__(self, factory):
-        super().__init__("MakeTransition",
-                         ["state", "action", "logp", "clipped_reward", "done", "value"],
-                         ["transitions"])
+    def __init__(self, factory, input_mapping: dict[str, str], default_kwargs: dict = None):
+        self.factory_args = list(input_mapping.keys())
+        context_keys = list(input_mapping.values())
+
+        super().__init__("Transition", context_keys + ["num_envs"], ["transitions"])
+
         self.factory = factory
+        self.default_kwargs = default_kwargs if default_kwargs is not None else {}
 
-    def forward(self, state, action, logp, clipped_reward, done, value):
-        is_vectorized = isinstance(clipped_reward, (np.ndarray, list)) and len(np.atleast_1d(clipped_reward)) > 1
+    def forward(self, *args):
+        #  Split up args into the transition arrays | the num_envs integer
+        *transition_data, num_envs = args
 
-        if not is_vectorized:
-            state, action, logp = [state], [action], [logp]
-            clipped_reward, done, value = [clipped_reward], [done], [value]
+        if num_envs == 1:
+            transition_data = [[x] for x in transition_data]
 
         transitions = []
-        for s, a, lp, r, d, v in zip(state, action, logp, clipped_reward, done, value):
-            transition = self.factory.forward(
-                state=s, action=a, logp=lp, reward=r, done=d, value=v, bootstrap_value=0.0)
+
+        for step_values in zip(*transition_data):
+            kwargs = dict(zip(self.factory_args, step_values))
+            # Inject the hardcoded values
+            kwargs.update(self.default_kwargs)
+            # Transition
+            transition = self.factory.forward(**kwargs)
             transitions.append(transition)
 
         return transitions
-
 
 class BufferAppendingNode(Node):
     def __init__(self):
@@ -109,7 +116,20 @@ class DataCollectionProcessor:
                  function=lambda env, a: env.step(a)),
             Node("ClipReward", ["reward"], ["clipped_reward"], function=lambda r: np.clip(r, -1, 1)),
 
-            TransitionNode(transition_factory),
+            TransitionNode(
+                factory=transition_factory,
+                input_mapping={
+                    "state": "state",
+                    "action": "action",
+                    "logp": "logp",
+                    "reward": "clipped_reward",
+                    "done": "done",
+                    "value": "value"
+                },
+                default_kwargs={
+                    "bootstrap_value": 0.0
+                }
+            ),
             BufferAppendingNode(),
 
             EpisodicMetricsNode(),
