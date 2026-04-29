@@ -15,15 +15,17 @@ class Node:
         self.no_grad = no_grad
 
     def forward(self, *args):
-        pass
+        if self.function is not None:
+            return self.function(*args)
+        raise NotImplementedError("Implement the function, you silly goose")
 
-    def __call__(self, context):
+    def __call__(self, context: dict):
         args = [context[key] for key in self.inputs]
         if self.no_grad:
             with torch.no_grad():
-                result = self.function(*args)
+                result = self.forward(*args)
         else:
-            result = self.function(*args)
+            result = self.forward(*args)
         # Special Signal to abort Graph Execution, different from "None" as an output
         if result is Signal.NOSIGNAL:
             return Signal.NOSIGNAL
