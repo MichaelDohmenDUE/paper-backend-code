@@ -19,6 +19,12 @@ def bellman(target_Q: torch.Tensor, reward: torch.Tensor, done: torch.Tensor, di
     target_Q = reward + valid_transition * discount_factor * target_Q
     return target_Q
 
+def soft_bellman(target_Q, reward: torch.Tensor, done: torch.Tensor, discount_factor: float,
+                 temp: torch.Tensor, logp: torch.Tensor) -> torch.Tensor:
+    valid_transition = 1.0 - done
+    return reward + discount_factor * valid_transition * (target_Q - temp * logp)
+
+
 def reset_handler(env, next_state, done):
     state = next_state
     if done:

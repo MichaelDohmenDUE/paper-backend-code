@@ -1,6 +1,7 @@
 from copy import deepcopy
 
 import torch
+import wandb
 
 from backend.CommonModels.src.ActorSAC import ActorSAC as Actor
 from backend.CommonModels.src.Critic import Critic
@@ -20,7 +21,7 @@ def main():
     lr_actor = 3e-4
     lr_critic = 3e-4
     lr_alpha = 3e-4
-    num_episodes = 1000
+    max_steps = 1_000_000
     env_name = "HalfCheetah-v4"
     sync_freq = 1
     hidden_size = 256
@@ -29,6 +30,29 @@ def main():
     tau = 0.005
     gamma = 0.99
     seed = 42
+    algo_name = "SAC"
+
+    wandb.init(
+        entity="michael_dohmen-",
+        project="my-SAC-benchmarks",
+        name=f"{algo_name}-seed-{seed}",
+        tags=[env_name, "testing", algo_name],
+        config={
+            "env_id": env_name,
+            "exp_name": f"{algo_name}-{env_name}",
+            "seed": seed,
+            "max_buffer_size": max_buffer_size,
+            "batch_size": batch_size,
+            "hidden_size": hidden_size,
+            "learning_rate_actor": lr_actor,
+            "learning_rate_critic": lr_critic,
+            "learning_rate_alpha": lr_alpha,
+            "sync_freq": sync_freq,
+            "max_steps": max_steps,
+            "gamma": gamma,
+            "tau": tau,
+        }
+    )
 
     gym_factory = GymEnvFactory(env_name)
 
@@ -65,28 +89,20 @@ def main():
     sync_process_critic_1 = SyncProcessor(critic_1, critic_target_1, tau, sync_freq)
     sync_process_critic_2 = SyncProcessor(critic_2, critic_target_2, tau, sync_freq)
     total_steps = 0
-    episode = 0
-    while total_steps < 1000000:
-        done = False
-        episode_reward = 0.0
-        actor_loss, critic_loss_1, critic_loss_2, alpha_loss = None, None, None, None
+    while total_steps < max_steps:
+        total_steps += 1
+        metrics_dl = data_collection_process.run()
+        metrics_train = train_process.run()
 
-        while not done:
-            transition = data_collection_process.run()
-            total_steps += 1
-            actor_loss, critic_loss_1, critic_loss_2, alpha_loss = train_process.run()
-            done = data_collection_process.done
-            episode_reward += transition.reward
+        sync_process_critic_1.run()
+        sync_process_critic_2.run()
 
-            sync_process_critic_1.run()
-            sync_process_critic_2.run()
-        episode += 1
-        if episode % 10 == 9 and actor_loss is not None:
-            print(
-                f"Episode: {episode + 1}, Steps: {total_steps},  Reward: {episode_reward:.2f}, "
-                f"actor_loss: {actor_loss:.3f}, critic_loss_1: {critic_loss_1:.3f}"
-                f"critic_loss_2: {critic_loss_2:.3f}, alpha_loss: {alpha_loss:.3f}"
-            )
+        all_metrics = metrics_dl | metrics_train
+
+        # TODO: Eval is missing right now
+
+        wandb.log(all_metrics, step=total_steps)
+    wandb.finish()
 
 
 if __name__ == "__main__":
