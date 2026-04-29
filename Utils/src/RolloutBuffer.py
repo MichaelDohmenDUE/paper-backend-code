@@ -11,6 +11,7 @@ from backend.Utils.src.BatchTransitioner import TransitionBatch, TransitionSpec
 class RolloutBuffer:
     def __init__(self, spec: TransitionSpec):
         self.spec = spec
+        self.num_envs = 8
         self.buffer = []
 
     def __len__(self) -> int:

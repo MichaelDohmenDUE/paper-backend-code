@@ -5,7 +5,6 @@ from backend.Utils.src import RolloutBuffer
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.NodeLib.NodeLibrary import reset_handler
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
 def bootstraping_value(done: bool, policy, state):
@@ -26,47 +25,44 @@ class DataCollectionProcessor:
         self.rollout_size = rollout_size
         self.policy = action_handler
         self.total_steps = 0
+        self.num_envs = env_handler.num_envs
+        self.current_rewards = np.zeros(self.num_envs)
         self.state = self.env_handler.reset().astype(np.uint8)
 
     def run(self):
-        episode_timesteps = 0
-        episodic_reward = 0
         metrics = {}
         finished_episode_rewards = []
-        done = False
         self.replay_buffer.buffer.clear()
+        num_collection_steps = self.rollout_size // self.num_envs
+        for _ in range(num_collection_steps):
+            actions, logps, values = self.policy.select_action(self.state)
+            next_states, rewards, dones, infos = self.env_handler.step(actions)
+            self.current_rewards += rewards
+            clipped_rewards = np.clip(rewards, -1, 1)
+            for i in range(self.num_envs):
+                transition = self.transition_factory.forward(
+                    state=self.state[i],
+                    action=actions[i],
+                    logp=logps[i],
+                    reward=clipped_rewards[i],
+                    done=dones[i],
+                    value=values[i],
+                    bootstrap_value=0.0
+                )
+                self.replay_buffer.append(transition)
 
-        for _ in range(self.rollout_size):
-            action, logp, value = self.policy.select_action(self.state)
-            next_state, reward, done, info = self.env_handler.step(action)
-            clipped_reward = np.clip(reward, -1, 1)
-            state_to_save = next_state.astype(np.uint8)
-            transition = self.transition_factory.forward(
-                state=self.state,
-                action=action,
-                logp=logp,
-                reward=clipped_reward,
-                done=done,
-                value=value,
-                bootstrap_value=0.0
-            )
-            self.replay_buffer.append(transition)
+                self.state[i] = reset_handler(self.env_handler, next_states, dones[i]).astype(np.uint8)
+                if dones[i]:
+                    finished_episode_rewards.append(self.current_rewards[i])
+                    self.current_rewards[i] = 0  # Reset for next game
+            self.state = next_states.astype(np.uint8)
+            self.total_steps += self.num_envs
+        _, _, final_values = self.policy.select_action(self.state)
 
-            self.state = reset_handler(self.env_handler, state_to_save, done).astype(np.uint8)
-
-            episodic_reward += reward
-            episode_timesteps += 1
-            self.total_steps += 1
-            if done:
-                finished_episode_rewards.append(episodic_reward)
-                episodic_reward = 0
-                episode_timesteps = 0
-        if len(finished_episode_rewards) > 0:
-            metrics = {
-                "charts/episodic_return": np.mean(finished_episode_rewards),
-                "global_step": self.total_steps
-            }
-        final_value = bootstraping_value(done, self.policy, self.state)
-
-        self.replay_buffer.buffer[-1].bootstrap_value = final_value
+        for i in range(self.num_envs):
+            boot_val = 0.0 if dones[i] else final_values[i]
+            self.replay_buffer.buffer[-(self.num_envs - i)].bootstrap_value = boot_val
+        if finished_episode_rewards:
+            metrics = {"charts/episodic_return": np.mean(finished_episode_rewards),
+                       "global_step": self.total_steps}
         return metrics

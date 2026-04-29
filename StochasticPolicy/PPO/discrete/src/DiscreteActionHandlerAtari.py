@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 from torch import nn
 
@@ -6,18 +5,14 @@ from backend.AbstractHandlers.AbstractActionHandler import AbstractActionHandler
 
 
 class ActionHandler(AbstractActionHandler):
-    def __init__(self, actor: nn.Module, critic: nn.Module, device: torch.device):
-        self.actor = actor
-        self.critic = critic
+    def __init__(self, agent: nn.Module, device: torch.device):
+        self.agent = agent
         self.device = device
 
     def select_action(self, state) -> tuple[int, float, float]:
-        state = np.array(state, dtype=np.float32)
-        state_t = torch.as_tensor(state, dtype=torch.uint8, device=self.device).unsqueeze(0)
+        state_t = torch.as_tensor(state, dtype=torch.uint8, device=self.device)
         with torch.no_grad():
-            dist = self.actor(state_t)
+            dist, value = self.agent(state_t)
             action = dist.sample()
             logp = dist.log_prob(action)
-            value = self.critic(state_t).squeeze(-1)
-
-        return int(action.cpu().numpy().item()), float(logp.cpu().numpy().item()), float(value.cpu().numpy().item())
+        return action.cpu().numpy(), logp.cpu().numpy(), value.squeeze(-1).cpu().numpy()

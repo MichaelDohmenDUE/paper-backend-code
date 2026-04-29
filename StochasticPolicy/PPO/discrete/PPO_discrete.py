@@ -2,14 +2,13 @@ import time
 
 import torch
 import wandb
-from mujoco.rollout import Rollout
 from torch import optim
 
 from backend.CommonModels.src.CriticPPO import CriticPPO
 from backend.CommonModels.src.DiscreteActorPPO import DiscreteActorPPO
 from backend.StochasticPolicy.PPO.continuous.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.StochasticPolicy.PPO.discrete.src.DiscreteActionHandler import ActionHandler
-from backend.StochasticPolicy.PPO.discrete.src.PPOTrainerProcessor import PPOTrainerProcessor
+from backend.StochasticPolicy.PPO.discrete.src.PPOTrainer import PPOTrainerProcessor
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
 from backend.Utils.src.EnvFactory import GymEnvFactory
