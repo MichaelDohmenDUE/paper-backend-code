@@ -7,7 +7,7 @@ class Signal(Enum):
     NOSIGNAL = "NOSIGNAL"
 
 class Node:
-    def __init__(self, name, function, inputs, outputs, no_grad=False):
+    def __init__(self, name: str, inputs: list[str], outputs: list[str], function=None, no_grad: bool = False):
         self.name = name
         self.function = function
         self.inputs = inputs
