@@ -22,9 +22,9 @@ from backend.Utils.src.utils import setting_global_seed
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def main(seed=0):
+def main(seed, env_name):
     start_time = time.time()
-    env_name = "Hopper-v4"
+    env_name = env_name
     seed = seed
     max_timesteps = 1_000_000
     warmup = 25000
@@ -136,6 +136,7 @@ def main(seed=0):
     wandb.finish()
 
 if __name__ == "__main__":
-    seeds = [1, 2 ,3 ,4]
+    seeds = [1, 2 ,3]
+    env_name = "Walker2d-v4"
     for current_seed in seeds:
-        main(current_seed)
+        main(current_seed, env_name)

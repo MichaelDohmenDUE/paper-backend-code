@@ -37,10 +37,10 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
     return avg_reward
 
 
-def main():
+def main(seed):
     start_time = time.time()
     env_name = "PongNoFrameskip-v4"
-    seed = 2
+    seed = seed
     rollout_size = 2048
     batch_size = 256
     epochs = 4
@@ -50,20 +50,21 @@ def main():
     gamma = 0.99
     lam = 0.95
     eval_freq = 100_000
-    algo_name = "PPO_discrete"
+    algo_name = "PPO_discrete_atari"
     num_envs = 8
+    offset = 100
     setting_global_seed(seed)
 
     wandb.init(
-        project="Benchmarks",
+        project="my-ppo-benchmarks",
         group=algo_name,
         name=f"{algo_name}-seed-{seed}",
-        tags=[env_name, "baseline_study"],
+        tags=[env_name, "baseline_study", algo_name],
         reinit=True,
         entity="michael_dohmen-",
         config={
             "env_id": env_name,
-            "exp_name": "my_ppo_breakout",
+            "exp_name": "my_ppo_Pong",
             "seed": seed,
             "rollout_size": rollout_size,
             "batch_size": batch_size,
@@ -72,6 +73,7 @@ def main():
             "gamma": gamma,
             "lam": lam,
             "max_steps": max_steps,
+            "offset": offset,
         }
     )
 
@@ -79,7 +81,7 @@ def main():
     transition_factory = TransitionFactory(spec)
     factory = AtariEnvFactory(env_name)
     env_handler = VecEnvironmentHandler(factory, seed, num_envs)
-    eval_env_handler = VecEnvironmentHandler(factory, seed + 100, 1)
+    eval_env_handler = VecEnvironmentHandler(factory, seed + offset, 1)
     state_dim, action_dim, _ = env_handler.get_env_specs()
     channels = state_dim[0]
     agent = AtariPPOAgent(action_dim, channels).to(device)
@@ -110,4 +112,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    seed = [0,1,2]
+    for seed in seed:
+        main(seed)

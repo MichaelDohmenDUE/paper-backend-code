@@ -38,10 +38,10 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
     return avg_reward
 
 
-def main():
+def main(seed):
     start_time = time.time()
     env_name = "CartPole-v1"
-    seed = 4
+    seed = seed
     rollout_size = 2048
     batch_size = 256
     epochs = 10
@@ -51,11 +51,15 @@ def main():
     gamma = 0.99
     lam = 0.95
     eval_freq = 10000
+    offset = 100
     setting_global_seed(seed)
+    algo_name = "ppo_discrete_mujoco"
 
     wandb.init(
         entity="michael_dohmen-",
         project="my-ppo-benchmarks",
+        name=f"{algo_name}-seed-{seed}",
+        tags=[env_name, "baseline_study", algo_name],
         config={
             "env_id": env_name,
             "exp_name": "my_ppo_cartpole",
@@ -67,6 +71,7 @@ def main():
             "gamma": gamma,
             "lam": lam,
             "max_steps": max_steps,
+            "offset": offset,
         }
     )
 
@@ -74,7 +79,7 @@ def main():
     transition_factory = TransitionFactory(spec)
     factory = GymEnvFactory(env_name)
     env_handler = EnvironmentHandler(factory, seed)
-    eval_env_handler = EnvironmentHandler(factory, seed + 100)
+    eval_env_handler = EnvironmentHandler(factory, seed + offset)
     state_dim, action_dim, _ = env_handler.get_env_specs()
 
     actor = DiscreteActorPPO(state_dim, action_dim, hidden_dim).to(device)
@@ -106,4 +111,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    seeds = [0, 1, 2]
+    for seed in seeds:
+        main(seed)

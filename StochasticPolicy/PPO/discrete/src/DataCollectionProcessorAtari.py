@@ -51,7 +51,6 @@ class DataCollectionProcessor:
                 )
                 self.replay_buffer.append(transition)
 
-                self.state[i] = reset_handler(self.env_handler, next_states, dones[i]).astype(np.uint8)
                 if dones[i]:
                     finished_episode_rewards.append(self.current_rewards[i])
                     self.current_rewards[i] = 0  # Reset for next game
