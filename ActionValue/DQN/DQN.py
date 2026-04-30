@@ -52,6 +52,9 @@ def main():
     start_time = time.time()
     lr = 2.5e-4
     epsilon = 1.0
+    epsilon_final = 0.05
+    epsilon_decay = 50000
+    eval_episodes = 10
     env_name = "CartPole-v1"
     sync_freq = 1000
     hidden_size = 120
@@ -70,9 +73,11 @@ def main():
     wandb.init(
         entity="michael_dohmen-",
         project="my-dqn-benchmarks",
+        name=f"DQN_{env_name}_seed{seed}",
+        tags=["testing", "DQN"],
         config={
             "env_id": env_name,
-            "exp_name": "DQN-CartPole-v1",
+            "exp_name": f"DQN_{env_name}_seed-{seed}",
             "seed": seed,
             "max_buffer_size": max_buffer_size,
             "batch_size": batch_size,
@@ -97,7 +102,7 @@ def main():
 
     target_net = deepcopy(behavior_net).to(device)
 
-    eps_greedy = EpsilonGreedyPolicy(epsilon_start=epsilon, epsilon_final=0.05, epsilon_decay=50000)
+    eps_greedy = EpsilonGreedyPolicy(epsilon_start=epsilon, epsilon_final=epsilon_final, epsilon_decay=epsilon_decay)
 
     buffer = ReplayBuffer(spec, max_buffer_size, batch_size)
     collector = DataCollectionProcessor(behavior_net, env, buffer, eps_greedy, factory, device)
@@ -106,16 +111,23 @@ def main():
     for step in range(max_steps):
         metrics = {"global_step": step}
         metrics_data = collector.run()
+        if metrics_data:
+            metrics.update(metrics_data)
         metrics_train = train_process.run()
-        metrics = metrics_data | metrics_train
+        if metrics_train:
+            metrics.update(metrics_train)
         sync_process.run()
-        metrics["charts/epsilon"] = collector.epsilon_greedy.epsilon
-        metrics["global_step"] = step
+
         if step % 400 == 0:
             metrics["charts/SPS"] = int(step / max(time.time() - start_time, 1e-6))
+            metrics["charts/epsilon"] = collector.epsilon_greedy.epsilon
+
         if step % 10_000 == 0 and step > warmup_steps:
-            metrics["charts/eval_avg_score"] = evaluate_policy(behavior_net, eval_env, episodes=5, device=device)
-        if metrics:
+            metrics["charts/eval_avg_score"] = evaluate_policy(behavior_net, eval_env, episodes=eval_episodes, device=device)
+
+        if len(metrics) > 1:
             wandb.log(metrics, step=step)
+    metrics["charts/eval_avg_score"] = evaluate_policy(behavior_net, eval_env, episodes=eval_episodes, device=device)
+    wandb.log(metrics, step=step)
 if __name__ == '__main__':
     main()
