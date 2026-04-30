@@ -22,7 +22,8 @@ class DataCollectionProcessor:
         self.epsilon_greedy = eps_greedy
         self.transition_factory = transition_factory
         self.device = device
-        self.running_lengths =0
+        self.running_rewards = np.zeros(self.env.num_envs)
+        self.running_lengths = np.zeros(self.env.num_envs)
         self.total_steps = 0
 
         self.context = {
