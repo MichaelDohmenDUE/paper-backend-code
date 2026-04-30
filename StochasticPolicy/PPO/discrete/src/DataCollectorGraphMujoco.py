@@ -38,7 +38,6 @@ class DataCollectionProcessor:
             Node("ToNumpy_v", ["value_t_sq"], ["value"], function=lambda t: t.cpu().numpy().squeeze(), no_grad=True),
             Node("EnvStep", ["env", "action"], ["next_state", "reward", "done", "info"],
                  function=lambda env, a: env.step(a)),
-            Node("ClipReward", ["reward"], ["clipped_reward"], function=lambda r: np.clip(r, -1, 1)),
 
             TransitionNode(
                 factory=transition_factory,
@@ -46,7 +45,7 @@ class DataCollectionProcessor:
                     "state": "state",
                     "action": "action",
                     "logp": "logp",
-                    "reward": "clipped_reward",
+                    "reward": "reward",
                     "done": "done",
                     "value": "value"
                 },

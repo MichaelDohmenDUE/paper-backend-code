@@ -7,7 +7,6 @@ from torch import optim
 from backend.CommonModels.src.CriticPPO import CriticPPO
 from backend.CommonModels.src.DiscreteActorPPO import DiscreteActorPPO
 from backend.StochasticPolicy.PPO.discrete.src.DataCollectorGraphMujoco import DataCollectionProcessor
-from backend.StochasticPolicy.PPO.discrete.src.DiscreteActionHandler import ActionHandler
 from backend.StochasticPolicy.PPO.discrete.src.PPOTrainerGraph import PPOTrainerProcessor
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
