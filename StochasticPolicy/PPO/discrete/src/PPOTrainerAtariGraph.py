@@ -58,7 +58,7 @@ class KUpdateNode(Node):
             for start in range(0, dataset_size, self.batch_size):
                 idx = indices[start: start + self.batch_size]
 
-                # Constructing the Inner graph needs context, copy enusres a clean start
+                # Constructing the Inner graph needs context, copy ensures a clean start
                 inner_context = context.copy()
                 inner_context.update({
                     "b_states": states[idx],
@@ -83,8 +83,7 @@ class KUpdateNode(Node):
 
 class PPOTrainerProcessor:
     def __init__(self, agent: nn.Module, optimizer: torch.optim.Optimizer, rollout_buffer: RolloutBuffer, batch_size=64,
-                 epochs=10,
-                 clip_eps=0.2, vf_coef=0.5, ent_coef=0.01, max_grad_norm=0.5, gamma=0.99, lam=0.95):
+                 epochs=10, clip_eps=0.2, vf_coef=0.5, ent_coef=0.01, max_grad_norm=0.5, gamma=0.99, lam=0.95):
         self.agent = agent
         self.rollout_buffer = rollout_buffer
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

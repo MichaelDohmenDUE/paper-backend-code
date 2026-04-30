@@ -19,14 +19,27 @@ class TrainProcessor:
         self.max_norm = max_norm
         self.warmup_steps = warmup_steps
 
+        self.context = {
+            "buffer": buffer,
+            "behavior_net": behavior_net,
+            "target_net": target_net,
+            "optimizer": optimizer,
+            "gamma": gamma,
+            "max_norm": max_norm,
+            "warmup_steps": warmup_steps,
+            "device": device
+        }
+
     def run(self):
         if len(self.buffer) < self.warmup_steps:
-            return
+            return {}
         batch = self.buffer.sample_batch()
         states_tensor, actions_tensor, rewards_tensor, next_states_tensor, dones_tensor = detransition(
             self.buffer.spec.fields,
             batch,
             self.device)
+        states_tensor = states_tensor.squeeze(1)
+        next_states_tensor = next_states_tensor.squeeze(1)
 
         qs_behaviour = self.behavior_net(states_tensor)
         qsa_behavior = indexing(qs_behaviour, actions_tensor).reshape(-1)
@@ -34,7 +47,9 @@ class TrainProcessor:
         with torch.no_grad():
             qs_target = self.target_net(next_states_tensor)
             qsa_target = nl_max(qs_target).reshape(-1)
-            target = bellman(target_Q=qsa_target, reward=rewards_tensor, done=dones_tensor, discount_factor=self.gamma)
+            target = bellman(target_Q=qsa_target, reward=rewards_tensor, done=dones_tensor,
+                             discount_factor=self.gamma)
+
         loss = mean_squared_error(qsa_behavior, target)
 
         metrics = {

@@ -1,12 +1,10 @@
 import numpy as np
 
 from backend.AbstractHandlers.AbstractActionHandler import AbstractActionHandler
-from backend.Utils.src import RolloutBuffer
+from backend.Utils.src.RolloutBuffer import RolloutBuffer
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.NodeLib.NodeLibrary import reset_handler
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
-
 
 def bootstraping_value(done: bool, policy, state):
     if done:
@@ -18,7 +16,7 @@ def bootstraping_value(done: bool, policy, state):
 
 class DataCollectionProcessor:
     def __init__(self, env_handler: EnvironmentHandler, transition_factory: TransitionFactory,
-                 replay_buffer: RolloutBuffer.RolloutBuffer, rollout_size: int,
+                 replay_buffer: RolloutBuffer, rollout_size: int,
                  action_handler: AbstractActionHandler):
         self.env_handler = env_handler
         self.transition_factory = transition_factory
