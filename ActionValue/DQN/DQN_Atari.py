@@ -6,7 +6,7 @@ import wandb
 
 from backend.ActionValue.DQN.src.ActionHandler import EpsilonGreedyPolicy
 from backend.ActionValue.DQN.src.DataCollectionProcessorAtari import DataCollectionProcessor
-from backend.ActionValue.DQN.src.TrainProcessor import TrainProcessor
+from backend.ActionValue.DQN.src.TrainProcessorAtari import TrainProcessor
 from backend.CommonModels.src import BehaviourAtariDQN
 from backend.CommonModels.src.BehaviourAtariDQN import BehaviourAtariDQN
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
@@ -59,7 +59,7 @@ def main(seed, env_name):
     epsilon_final = 0.01
     epsilon_decay = 1_000_000
     batch_size = 32
-    max_buffer_size = 300_000
+    max_buffer_size = 1_000_000//2
     tau = 1.0
     gamma = 0.99
     max_steps = 10_000_000
@@ -78,7 +78,7 @@ def main(seed, env_name):
         tags=["testing", "DQN"],
         config={
             "env_id": env_name,
-            "exp_name": f"DQN_{env_name}_seed{seed}",
+            "exp_name": f"DQN_{env_name}_seed-{seed}",
             "seed": seed,
             "max_buffer_size": max_buffer_size,
             "batch_size": batch_size,

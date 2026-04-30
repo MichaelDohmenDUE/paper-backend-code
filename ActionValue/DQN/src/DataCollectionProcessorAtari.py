@@ -27,7 +27,7 @@ class DataCollectionProcessor:
         self.total_steps = 0
 
         self.context = {
-            "state": np.array(env.reset()),
+            "state": np.array(env.reset()).astype(np.uint8),
             "behaviour_net": behaviour_net,
             "env": env,
             "buffer": buffer,
@@ -48,8 +48,10 @@ class DataCollectionProcessor:
                  function=lambda epsilon_greed, q: epsilon_greed.forward(q_values=q), no_grad=True),
             Node("FormatToArray", ["action_raw"], ["action"],
                  function=to_numpy_array, no_grad=True),
-            Node("EnvStep", ["env", "action"], ["next_state", "reward", "done", "info"],
+            Node("EnvStep", ["env", "action"], ["next_state_raw", "reward", "done", "info"],
                  function=lambda env, a: env.step(a), no_grad=True),
+            Node("FormatNextState", ["next_state_raw"], ["next_state"],
+                 function=lambda ns: np.array(ns).astype(np.uint8), no_grad=True),
             TransitionNode(
                 factory=transition_factory,
                 input_mapping={
@@ -62,7 +64,7 @@ class DataCollectionProcessor:
             ),
             BufferAppendingNode(),
             Node("StateUpdate", ["next_state", "_buffer_updated"], ["state"],
-                 function=lambda ns, signal: np.array(ns)),
+                 function=lambda ns, signal: ns, no_grad = True),
         ]
 
         self.graph = Graph(nodes, initial_keys=list(self.context.keys()))
