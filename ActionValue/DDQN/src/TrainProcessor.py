@@ -2,51 +2,76 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from backend.Utils.src.NodeLib.NodeLibrary import bellman, detransition, indexing, argmax, mean_squared_error
+from backend.Utils.src.NodeLib.Node import Node, Signal, Graph
+from backend.Utils.src.NodeLib.NodeLibrary import bellman, detransition, indexing, argmax, mean_squared_error, \
+    optimizer_normalized
 from backend.Utils.src.NodeLib.NodeLibrary import optimizer_update
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
 class TrainProcessor:
     def __init__(self, buffer: ReplayBuffer, behavior_net: nn.Module, target_net: nn.Module,
-                 optimizer: torch.optim.Optimizer, gamma: float, device: torch.device):
+                 optimizer: torch.optim.Optimizer, gamma: float, device: torch.device, warmup_steps=5000):
         self.buffer = buffer
         self.behavior_net = behavior_net.to(device)
         self.target_net = target_net.to(device)
         self.optimizer = optimizer
         self.gamma = gamma
+        self.warmup_steps = warmup_steps
         self.device = device
 
-    def run(self):
-        if len(self.buffer) < self.buffer.batch_size:
-            return
-
-        batch = self.buffer.sample_batch()
-        states_tensor, actions_tensor, rewards_tensor, next_states_tensor, dones_tensor = detransition(
-            self.buffer.spec.fields,
-            batch,
-            self.device)
-
-        q_values = self.behavior_net(states_tensor)
-        qsa_behavior = indexing(q_values, actions_tensor).reshape(-1)
-
-        # Double DQN target
-        with torch.no_grad():
-            next_q_online = self.behavior_net(next_states_tensor)
-            next_actions = argmax(next_q_online)
-
-            next_q_target = self.target_net(next_states_tensor)
-            qsa_target = indexing(next_q_target, next_actions).reshape(-1)
-            target = bellman(target_Q=qsa_target, reward=rewards_tensor, done=dones_tensor, discount_factor=self.gamma)
-
-        loss = mean_squared_error(qsa_behavior, target)
-        # Optimize
-        optimizer_update(optimizer=self.optimizer, loss=loss)
-
-        metrics = {
-            "losses/td_loss": loss.item(),
-            "losses/q_values": qsa_behavior.mean().item(),
+        self.context = {
+            "buffer": buffer,
+            "behavior_net": behavior_net.to(device),
+            "target_net": target_net.to(device),
+            "optimizer": optimizer,
+            "gamma": gamma,
+            "warmup_steps" : warmup_steps,
+            "device": device,
+            "fields": buffer.spec.fields
         }
 
-        return metrics
+        nodes = [
+            Node("Sample", ["buffer", "warmup_steps"], ["batch"],
+                 function=lambda b, w: b.sample_batch() if len(b) >= w else Signal.NOSIGNAL),
+
+            Node("Detransition", ["fields", "batch", "device"], ["state", "action", "reward", "next_state", "done"],
+                 function=detransition),
+
+            Node("FormatState", ["state"], ["s_sq"],
+                 function=lambda s: s.squeeze(1)),
+            Node("FormatNextState", ["next_state"], ["ns_sq"],
+                 function=lambda s: s.squeeze(1)),
+            Node("BehaviorForward", ["behavior_net", "s_sq"], ["qs_b"],
+                 function=lambda net, s: net(s)),
+            Node("QsaBehavior", ["qs_b", "action"], ["qsa_b"],
+                 function=lambda q, a: indexing(q, a)),
+            Node("BehaviorNextForward", ["behavior_net", "ns_sq"], ["next_qs_b"],
+                 function=lambda net, ns: net(ns), no_grad=True),
+            Node("SelectNextAction", ["next_qs_b"], ["next_actions"],
+                 function=lambda q: torch.argmax(q, dim=1).view(-1, 1), no_grad=True),
+            Node("TargetForward", ["target_net", "ns_sq"], ["qs_t"],
+                 function=lambda net, ns: net(ns), no_grad=True),
+            Node("QsaTarget", ["qs_t", "next_actions"], ["qsa_t"],
+                 function=lambda qt, a: indexing(qt, a.view(-1, 1)).reshape(-1), no_grad=True),
+            Node("Bellman", ["qsa_t", "reward", "done", "gamma"], ["target_val"],
+                 function=lambda q, r, d, g: bellman(target_Q=q, reward=r.reshape(-1), done=d.reshape(-1),
+                                                     discount_factor=g)),
+            Node("Loss", ["qsa_b", "target_val"], ["loss"],
+                 function=lambda q, t: mean_squared_error(q.reshape(-1), t.reshape(-1))),
+            Node("Optimize", ["optimizer", "loss"], ["_opt"],
+                 function=optimizer_update),
+
+            Node("Metrics", ["loss", "qsa_b"], ["train_metrics"],
+                 function=lambda l, q: {
+                     "losses/td_loss": l.item(),
+                     "losses/q_values": q.mean().item()
+                 })
+        ]
+
+        self.graph = Graph(nodes, initial_keys=list(self.context.keys()))
+
+    def run(self):
+        self.graph.run(self.context)
+        return self.context.get("train_metrics", {})
 
