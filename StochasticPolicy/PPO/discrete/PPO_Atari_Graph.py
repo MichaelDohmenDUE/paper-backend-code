@@ -6,8 +6,7 @@ from torch import optim
 
 from backend.CommonModels.src.DiscreteActorPPO import AtariPPOAgent
 from backend.StochasticPolicy.PPO.discrete.src.DataCollectorGraph import DataCollectionProcessor
-from backend.StochasticPolicy.PPO.discrete.src.DiscreteActionHandlerAtari import ActionHandler
-from backend.StochasticPolicy.PPO.discrete.src.PPOTrainerAtari import PPOTrainerProcessor
+from backend.StochasticPolicy.PPO.discrete.src.PPOTrainerAtariGraph import PPOTrainerProcessor
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
 from backend.Utils.src.EnvFactory import AtariEnvFactory
