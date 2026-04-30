@@ -23,7 +23,7 @@ def main():
     start_time = time.time()
     epsilon = 1.0
     env_name = "CartPole-v1"
-    sync_freq = 2000
+    sync_freq = 500
     hidden_size = 64
     batch_size = 128
     max_buffer_size = 100000
