@@ -8,7 +8,7 @@ from backend.Utils.src.NodeLib.Node import Node, Graph
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
-from backend.Utils.src.NodeLib.NodeLibrary import reset_handler, TransitionNode, BufferAppendingNode
+from backend.Utils.src.NodeLib.NodeLibrary import reset_handler, TransitionNode, BufferAppendingNode, to_numpy_array
 
 
 class DataCollectionProcessor:
@@ -33,18 +33,16 @@ class DataCollectionProcessor:
         }
 
         nodes = [
-            Node("ToTensor", ["state", "device"], ["state_t"],
+            Node("FormatToTensor", ["state", "device"], ["state_t"],
                  function=lambda s, d: torch.as_tensor(s, dtype=torch.float32, device=d), no_grad=True),
             Node("BehaviourNet", ["behaviour", "state_t"], ["q_values"],
                  function=lambda net, s: net(s), no_grad=True),
             Node("EpsilonGreedy", ["epsilon_greedy", "q_values"], ["action_raw"],
                  function=lambda epsilon_greed, q: epsilon_greed.forward(q_values=q), no_grad=True),
-
-            Node("FormatAction", ["action_raw"], ["action"],
-                 function=lambda a: np.atleast_1d(a.cpu().numpy() if torch.is_tensor(a) else a)),
-
+            Node("FormatToArray", ["action_raw"], ["action"],
+                 function=to_numpy_array, no_grad=True),
             Node("EnvStep", ["env", "action"], ["next_state", "reward", "done", "info"],
-                 function=lambda env, a: env.step(a)),
+                 function=lambda env, a: env.step(a), no_grad=True ),
 
             TransitionNode(
                 factory=transition_factory,

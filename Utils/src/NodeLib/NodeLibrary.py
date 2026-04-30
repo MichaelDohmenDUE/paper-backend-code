@@ -13,6 +13,17 @@ def action_with_gaussian_noise(action, policy_noise, noise_clip, max_action):
     action_noisy = (action + noise)
     return action_noisy
 
+
+def to_tensor_(state, device: torch.device, dtype=torch.float32) -> torch.Tensor:
+    return torch.as_tensor(state, dtype=dtype, device=device)
+
+def to_numpy_array(action_raw):
+    if torch.is_tensor(action_raw):
+        a = action_raw.detach().cpu().numpy()
+    else:
+        a = action_raw
+    return np.atleast_1d(a)
+
 def clipper(action, max_action):
     return action.clamp(-max_action, max_action)
 
