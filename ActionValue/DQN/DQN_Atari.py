@@ -59,7 +59,7 @@ def main(seed, env_name):
     epsilon_final = 0.01
     epsilon_decay = 1_000_000
     batch_size = 32
-    max_buffer_size = 1_000_000//2
+    max_buffer_size = 1_000_000
     tau = 1.0
     gamma = 0.99
     max_steps = 10_000_000
@@ -89,6 +89,8 @@ def main(seed, env_name):
             "warmup_steps": warmup_steps,
             "max_norm": max_norm,
             "epsilon": epsilon,
+            "epsilon_final": epsilon_final,
+            "epsilon_decay": epsilon_decay,
             "tau": tau,
         }
     )
