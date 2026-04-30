@@ -52,7 +52,7 @@ def create_ppo_minibatch_graph(actor, optimizer):
 
 class KUpdateNode(Node):
     def __init__(self, inner_graph, epochs, batch_size):
-        super().__init__("PPOUpdateLoop",
+        super().__init__("KUpdateLoop",
                          ["states", "actions", "logps", "advantages", "returns", "inner_context"],
                          ["train_metrics"])
         self.inner_graph = inner_graph
