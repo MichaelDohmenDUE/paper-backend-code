@@ -134,4 +134,4 @@ def main(seed, env_name):
 if __name__ == '__main__':
     seeds = [0,1,2]
     for seed in seeds:
-        main(seed, env_name="BreakoutNoFrameskip-v4"")
+        main(seed, env_name="BreakoutNoFrameskip-v4")

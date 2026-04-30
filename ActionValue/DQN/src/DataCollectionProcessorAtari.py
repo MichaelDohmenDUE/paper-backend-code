@@ -19,17 +19,18 @@ class DataCollectionProcessor:
         self.buffer = buffer
         self.state = env.reset()
         self.done = False
-        self.epsilon_greedy = epsilon_greedy
+        self.epsilon_greedy = eps_greedy
         self.transition_factory = transition_factory
         self.device = device
+        self.running_lengths =0
+        self.total_steps = 0
 
         self.context = {
-            # Kept raw to preserve uint8
             "state": np.array(env.reset()),
             "behaviour_net": behaviour_net,
             "env": env,
             "buffer": buffer,
-            "epsilon_greedy": epsilon_greedy,
+            "epsilon_greedy": eps_greedy,
             "transition_factory": transition_factory,
             "device": device,
             "num_envs": self.env.num_envs,
@@ -66,29 +67,29 @@ class DataCollectionProcessor:
         self.graph = Graph(nodes, initial_keys=list(self.context.keys()))
 
 
-def run(self):
-    self.graph.run(self.context)
+    def run(self):
+        self.graph.run(self.context)
 
-    rewards = np.atleast_1d(self.context["reward"])
-    dones = np.atleast_1d(self.context["done"])
+        rewards = np.atleast_1d(self.context["reward"])
+        dones = np.atleast_1d(self.context["done"])
 
-    self.running_rewards += rewards
-    self.running_lengths += 1
-    self.total_steps += self.env.num_envs
+        self.running_rewards += rewards
+        self.running_lengths += 1
+        self.total_steps += self.env.num_envs
 
-    combined_metrics = {}
-    completed_returns = []
-    completed_lengths = []
+        combined_metrics = {}
+        completed_returns = []
+        completed_lengths = []
 
-    for i in range(self.env.num_envs):
-        if dones[i]:
-            completed_returns.append(self.running_rewards[i])
-            completed_lengths.append(self.running_lengths[i])
-            self.running_rewards[i] = 0
-            self.running_lengths[i] = 0
+        for i in range(self.env.num_envs):
+            if dones[i]:
+                completed_returns.append(self.running_rewards[i])
+                completed_lengths.append(self.running_lengths[i])
+                self.running_rewards[i] = 0
+                self.running_lengths[i] = 0
 
-    if completed_returns:
-        combined_metrics["charts/episodic_return"] = np.mean(completed_returns)
-        combined_metrics["charts/episodic_length"] = np.mean(completed_lengths)
+        if completed_returns:
+            combined_metrics["charts/episodic_return"] = np.mean(completed_returns)
+            combined_metrics["charts/episodic_length"] = np.mean(completed_lengths)
 
-    return combined_metrics
+        return combined_metrics
