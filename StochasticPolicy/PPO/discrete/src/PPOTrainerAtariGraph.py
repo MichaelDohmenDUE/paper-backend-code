@@ -29,7 +29,7 @@ def create_ppo_minibatch_graph(actor, optimizer):
         Node("TotalLoss", ["policy_loss", "value_loss", "entropy", "vf_coef", "ent_coef"], ["loss"],
              function=lambda policy_loss, value_loss, ent, value_coef,
                              entropy_coef: policy_loss + value_coef * value_loss - entropy_coef * ent),
-        Node("Optimize", ["actor", "optimizer", "loss", "max_grad_norm"], ["_loss_val"],
+        Node("Optimizer Normalized", ["actor", "optimizer", "loss", "max_grad_norm"], ["_loss_val"],
              function=optimizer_normalized)
     ]
 
