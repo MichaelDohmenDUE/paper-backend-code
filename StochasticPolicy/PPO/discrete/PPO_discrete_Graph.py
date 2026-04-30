@@ -4,13 +4,15 @@ import torch
 import wandb
 from torch import optim
 
-from backend.CommonModels.src.DiscreteActorPPO import AtariPPOAgent
-from backend.StochasticPolicy.PPO.discrete.src.DataCollectorGraph import DataCollectionProcessor
-from backend.StochasticPolicy.PPO.discrete.src.PPOTrainerAtariGraph import PPOTrainerProcessor
+from backend.CommonModels.src.CriticPPO import CriticPPO
+from backend.CommonModels.src.DiscreteActorPPO import DiscreteActorPPO
+from backend.StochasticPolicy.PPO.discrete.src.DataCollectorGraphMujoco import DataCollectionProcessor
+from backend.StochasticPolicy.PPO.discrete.src.DiscreteActionHandler import ActionHandler
+from backend.StochasticPolicy.PPO.discrete.src.PPOTrainerGraph import PPOTrainerProcessor
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
-from backend.Utils.src.EnvFactory import AtariEnvFactory
-from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
+from backend.Utils.src.EnvFactory import GymEnvFactory
+from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 from backend.Utils.src.utils import setting_global_seed
 
@@ -23,14 +25,14 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
         state = env_handler.reset()
         done = False
         while not done:
-            state_t = torch.as_tensor(state, dtype=torch.uint8, device=device)
-            state_t = state_t.float()
+            state_t = torch.as_tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
             with torch.no_grad():
-                dist, value = trainer.agent(state_t)
-                action = dist.probs.argmax(dim=-1).cpu().numpy()
+                dist = trainer.actor(state_t)
+                action = dist.probs.argmax(dim=-1).item()
             next_state, reward, done, _ = env_handler.step(action)
-            avg_reward += reward[0]
+            avg_reward += reward
             state = next_state
+
     avg_reward /= eval_episodes
     print(f"Average Reward over {eval_episodes} episodes: {avg_reward:.3f}")
     return avg_reward
@@ -38,32 +40,29 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
 
 def main(seed):
     start_time = time.time()
-    env_name = "PongNoFrameskip-v4"
+    env_name = "CartPole-v1"
     seed = seed
     rollout_size = 2048
     batch_size = 256
-    epochs = 4
-    max_steps = 10_000_000
-    lr = 2.5e-4
+    epochs = 10
+    max_steps = 1_000_000
+    lr = 3e-4
+    hidden_dim = 64
     gamma = 0.99
     lam = 0.95
-    eval_freq = 100_000
-    eval_episodes = 5
-    algo_name = "PPO_discrete_atari"
-    num_envs = 8
+    eval_freq = 10000
     offset = 100
     setting_global_seed(seed)
+    algo_name = "ppo_discrete_mujoco"
 
     wandb.init(
-        project="my-ppo-benchmarks",
-        group=algo_name,
-        name=f"{algo_name}-seed-{seed}",
-        tags=[env_name, "debugging", algo_name],
-        reinit=True,
         entity="michael_dohmen-",
+        project="my-ppo-benchmarks",
+        name=f"{algo_name}-seed-{seed}",
+        tags=[env_name, "baseline_study", algo_name],
         config={
             "env_id": env_name,
-            "exp_name": "my_ppo_Pong",
+            "exp_name": "my_ppo_cartpole",
             "seed": seed,
             "rollout_size": rollout_size,
             "batch_size": batch_size,
@@ -73,27 +72,26 @@ def main(seed):
             "lam": lam,
             "max_steps": max_steps,
             "offset": offset,
-            "eval_freq": eval_freq,
-            "eval_episodes": eval_episodes,
         }
     )
 
     spec = TransitionSpec(["state", "action", "logp", "reward", "done", "value", "bootstrap_value"])
     transition_factory = TransitionFactory(spec)
-    factory = AtariEnvFactory(env_name)
-    env_handler = VecEnvironmentHandler(factory, seed, num_envs)
-    eval_env_handler = VecEnvironmentHandler(factory, seed + offset, 1)
+    factory = GymEnvFactory(env_name)
+    env_handler = EnvironmentHandler(factory, seed)
+    eval_env_handler = EnvironmentHandler(factory, seed + offset)
     state_dim, action_dim, _ = env_handler.get_env_specs()
-    channels = state_dim[0]
-    agent = AtariPPOAgent(action_dim, channels).to(device)
-    optimizer = optim.Adam(agent.parameters(), lr=lr)
 
-    rollout_buffer = RolloutBuffer(spec, rollout_size)
+    actor = DiscreteActorPPO(state_dim, action_dim, hidden_dim).to(device)
+    critic = CriticPPO(state_dim, hidden_dim).to(device)
+    optimizer = optim.Adam(list(actor.parameters()) + list(critic.parameters()), lr=lr)
 
-    trainer = PPOTrainerProcessor(agent, optimizer, rollout_buffer, batch_size, epochs, gamma=gamma, lam=lam)
+    rollout_buffer = RolloutBuffer(spec)
+
+    trainer = PPOTrainerProcessor(actor, critic, optimizer, rollout_buffer, batch_size, epochs, gamma=gamma, lam=lam)
 
     data_collector = DataCollectionProcessor(env_handler, transition_factory, rollout_buffer, rollout_size,
-                                             agent, device)
+                                             actor, critic)
     steps = 0
     eval_step = 0
     while steps < max_steps:
@@ -104,13 +102,13 @@ def main(seed):
         steps = data_collector.context["total_steps"]
 
         if eval_step <= steps:
-            avg_eval_reward = eval_trainer(trainer, eval_env_handler, eval_episodes=eval_episodes)
+            avg_eval_reward = eval_trainer(trainer, eval_env_handler, eval_episodes=10)
             all_metrics["eval/avg_reward"] = avg_eval_reward
             eval_step += eval_freq
         wandb.log(all_metrics, step=steps)
     wandb.finish()
 
 if __name__ == "__main__":
-    seed = [0,1,2]
-    for seed in seed:
+    seeds = [0, 1, 2]
+    for seed in seeds:
         main(seed)
