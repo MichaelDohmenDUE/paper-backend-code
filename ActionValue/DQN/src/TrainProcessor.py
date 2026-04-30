@@ -56,7 +56,6 @@ class TrainProcessor:
             Node("Optimize", ["behavior_net", "optimizer", "loss", "max_norm"], ["_opt"],
                  function=optimizer_normalized),
 
-            # 6. Metrics
             Node("Metrics", ["loss", "qsa_b"], ["train_metrics"],
                  function=lambda l, q: {
                      "losses/td_loss": l.item(),
