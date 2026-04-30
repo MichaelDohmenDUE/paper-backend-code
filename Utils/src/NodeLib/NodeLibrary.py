@@ -4,9 +4,9 @@ import torch.nn.functional as F
 from torch import nn
 from torch.distributions import Categorical
 
-from backend.Utils.src.RolloutBuffer import RolloutBuffer
 from backend.Utils.src.NodeLib.Node import Node
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
+from backend.Utils.src.RolloutBuffer import RolloutBuffer
+
 
 def action_with_gaussian_noise(action, policy_noise, noise_clip, max_action):
     noise = (torch.randn_like(action) * policy_noise).clamp(-noise_clip, noise_clip)
@@ -14,8 +14,9 @@ def action_with_gaussian_noise(action, policy_noise, noise_clip, max_action):
     return action_noisy
 
 
-def to_tensor_(state, device: torch.device, dtype=torch.float32) -> torch.Tensor:
+def to_tensor(state, device: torch.device, dtype=torch.float32) -> torch.Tensor:
     return torch.as_tensor(state, dtype=dtype, device=device)
+
 
 def to_numpy_array(action_raw):
     if torch.is_tensor(action_raw):
@@ -24,13 +25,16 @@ def to_numpy_array(action_raw):
         a = action_raw
     return np.atleast_1d(a)
 
+
 def clipper(action, max_action):
     return action.clamp(-max_action, max_action)
+
 
 def bellman(target_Q: torch.Tensor, reward: torch.Tensor, done: torch.Tensor, discount_factor: float) -> torch.Tensor:
     valid_transition = 1.0 - done
     target_Q = reward + valid_transition * discount_factor * target_Q
     return target_Q
+
 
 def soft_bellman(target_Q, reward: torch.Tensor, done: torch.Tensor, discount_factor: float,
                  temp: torch.Tensor, logp: torch.Tensor) -> torch.Tensor:
@@ -45,8 +49,10 @@ def reset_handler(env, next_state, done):
         return state
     return state
 
+
 def categorical_distribution(logits: torch.Tensor) -> Categorical:
     return torch.distributions.Categorical(logits=logits)
+
 
 def sample_distribution(dist: Categorical) -> tuple[int, torch.Tensor]:
     action_dist = dist.sample()
@@ -71,20 +77,25 @@ def optimizer_update(optimizer: torch.optim.Optimizer, loss: torch.Tensor) -> di
         "grad/total_parameters": n_params
     }
 
+
 def timed_optimizer_update(optim: torch.optim.Optimizer, loss: torch.Tensor, step: int, syncro_frequency: int):
     if step % syncro_frequency != 0:
         return None
     optimizer_update(optimizer=optim, loss=loss)
     return loss.item()
 
+
 def deterministic_policy_gradient(values: torch.Tensor) -> torch.Tensor:
     return -values.mean()
+
 
 def policy_loss(tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
     return -(tensor_1 * tensor_2).sum()
 
+
 def argmax(tensor: torch.Tensor) -> torch.Tensor:
     return tensor.argmax(dim=1, keepdim=True)
+
 
 def indexing(tensor: torch.Tensor, index) -> torch.Tensor:
     return tensor.gather(1, index)
@@ -93,8 +104,10 @@ def indexing(tensor: torch.Tensor, index) -> torch.Tensor:
 def nl_max(tensor: torch.Tensor, dim: int = 1) -> torch.Tensor:
     return tensor.max(dim=dim, keepdim=True).values
 
+
 def mean_squared_error(tensor: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     return F.mse_loss(tensor, target)
+
 
 def combined_loss(*args):
     if len(args) % 2 == 1:
@@ -103,11 +116,12 @@ def combined_loss(*args):
     return sum(loss * weight for loss, weight in zip(args[0::2], args[1::2]))
 
 
-def action_with_noise(noise,  action_tensor: torch.Tensor, max_action) -> torch.Tensor:
+def action_with_noise(noise, action_tensor: torch.Tensor, max_action) -> torch.Tensor:
     noise = noise.sample()
     action_tensor = action_tensor + noise
     action_tensor = action_tensor.clamp(-max_action, max_action)
     return action_tensor
+
 
 def noise_handler(noise, done: bool):
     if done:
@@ -122,12 +136,14 @@ def optimizer_normalized(net: nn.Module, optimizer: torch.optim.Optimizer, loss:
     optimizer.step()
     return loss
 
-def optimize_step_normalized(optimizer, actor, loss, max_grad_norm): #TODO Unify this later , looks up
+
+def optimize_step_normalized(optimizer, actor, loss, max_grad_norm):  # TODO Unify this later , looks up
     optimizer.zero_grad()
     loss.backward()
     torch.nn.utils.clip_grad_norm_(actor.parameters(), max_grad_norm)
     optimizer.step()
     return True
+
 
 def td_residual(rewards, dones, value, bootstrap_value, gamma):
     next_values = torch.zeros_like(value)
@@ -141,10 +157,12 @@ def td_residual(rewards, dones, value, bootstrap_value, gamma):
     deltas = rewards + gamma * next_values * next_non_terminal - value
     return deltas
 
+
 def normalize(tensor: torch.Tensor) -> torch.Tensor:
     if tensor.numel() <= 1:
         return tensor
     return (tensor - tensor.mean()) / (tensor.std() + 1e-8)
+
 
 def detransition(fields, batch, device: torch.device):
     processed = {}
@@ -153,7 +171,7 @@ def detransition(fields, batch, device: torch.device):
         t = tensor.to(device)
         if "state" in key:
             if t.dtype == torch.uint8:
-                processed[key] = t.contiguous().float() #/ 255.0
+                processed[key] = t.contiguous().float()  # / 255.0
             else:
                 processed[key] = t.float()
         elif "action" in key:
@@ -167,13 +185,13 @@ def detransition(fields, batch, device: torch.device):
 
     return tuple(processed[k] for k in fields)
 
+
 def clipped_surrogate_objective(new_logp, old_logps, advantage, clip_eps):
     ratio = torch.exp(new_logp - old_logps)
     surrogate_objective = ratio * advantage
     surrogate_objective2 = torch.clamp(ratio, 1.0 - clip_eps, 1.0 + clip_eps) * advantage
     policy_loss = -torch.min(surrogate_objective, surrogate_objective2).mean()
     return policy_loss
-
 
 
 class TransitionNode(Node):
@@ -205,6 +223,7 @@ class TransitionNode(Node):
 
         return transitions
 
+
 class BufferAppendingNode(Node):
     def __init__(self):
         super().__init__("BufferAppendingNode", ["buffer", "transitions"], ["_buffer_updated"])
@@ -212,7 +231,7 @@ class BufferAppendingNode(Node):
     def forward(self, buffer, transitions):
         for t in transitions:
             buffer.append(t)
-        return True #DummySignal
+        return True  # DummySignal
 
 
 class BootStrappingNode(Node):

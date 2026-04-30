@@ -1,14 +1,14 @@
 import numpy as np
 import torch
-import wandb
 from torch import nn
 
 from backend.ActionValue.DQN.src.ActionHandler import EpsilonGreedyPolicy
-from backend.Utils.src.NodeLib.Node import Node, Graph
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
-from backend.Utils.src.NodeLib.NodeLibrary import reset_handler, TransitionNode, BufferAppendingNode, to_numpy_array
+from backend.Utils.src.NodeLib.Node import Node, Graph
+from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, to_numpy_array, \
+    to_tensor_, to_tensor
+from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
 class DataCollectionProcessor:
@@ -34,7 +34,7 @@ class DataCollectionProcessor:
 
         nodes = [
             Node("FormatToTensor", ["state", "device"], ["state_t"],
-                 function=lambda s, d: torch.as_tensor(s, dtype=torch.float32, device=d), no_grad=True),
+                 function=to_tensor, no_grad=True),
             Node("BehaviourNet", ["behaviour", "state_t"], ["q_values"],
                  function=lambda net, s: net(s), no_grad=True),
             Node("EpsilonGreedy", ["epsilon_greedy", "q_values"], ["action_raw"],
@@ -42,7 +42,7 @@ class DataCollectionProcessor:
             Node("FormatToArray", ["action_raw"], ["action"],
                  function=to_numpy_array, no_grad=True),
             Node("EnvStep", ["env", "action"], ["next_state", "reward", "done", "info"],
-                 function=lambda env, a: env.step(a), no_grad=True ),
+                 function=lambda env, a: env.step(a), no_grad=True),
 
             TransitionNode(
                 factory=transition_factory,
@@ -87,5 +87,3 @@ class DataCollectionProcessor:
             combined_metrics["charts/episodic_length"] = np.mean(completed_lengths)
 
         return combined_metrics
-
-
