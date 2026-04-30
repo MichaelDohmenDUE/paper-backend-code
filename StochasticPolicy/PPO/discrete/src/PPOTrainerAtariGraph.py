@@ -2,106 +2,136 @@ import numpy as np
 import torch
 from torch import nn
 
+from backend.Utils.src.NodeLib.NodeLibrary import detransition, td_residual, normalize, clipped_surrogate_objective, \
+    optimizer_normalized
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
-from backend.Utils.src.NodeLib.NodeLibrary import detransition, td_residual, normalize, clipped_surrogate_objective
 from backend.Utils.src.utils import gae
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+from backend.Utils.src.NodeLib.Node import Node, Graph, Signal
 
-class PPOTrainerProcessor:
-    def __init__(self, actor, optimizer, rollout_buffer: RolloutBuffer, batch_size: int = 64, epochs: int = 10,
-                 clip_eps=0.2, vf_coef=1.0, ent_coef=0.01, max_grad_norm=0.5, gamma=0.99, lam=0.95):
-        self.actor = actor
-        self.optimizer = optimizer
-        self.rollout_buffer = rollout_buffer
-        self.batch_size = batch_size
+
+def create_ppo_minibatch_graph(actor, optimizer):
+    nodes = [
+        Node("AgentForward", ["actor", "b_states"], ["dist", "value_t"],
+             function=lambda net, s: net(s)),
+        Node("LogProb", ["dist", "b_actions"], ["new_logp"],
+             function=lambda dist, a: dist.log_prob(a)),
+        Node("Entropy", ["dist"], ["entropy"],
+             function=lambda dist: dist.entropy().mean()),
+        Node("SqueezeValue", ["value_t"], ["value_pred"],
+             function=lambda v: v.squeeze(-1)),
+        Node("PolicyLoss", ["new_logp", "b_old_logps", "b_adv", "clip_eps"], ["policy_loss"],
+             function=clipped_surrogate_objective),
+        Node("ValueLoss", ["b_ret", "value_pred"], ["value_loss"],
+             function=lambda ret, v: 0.5 * (ret - v).pow(2).mean()),
+        Node("TotalLoss", ["policy_loss", "value_loss", "entropy", "vf_coef", "ent_coef"], ["loss"],
+             function=lambda policy_loss, value_loss, ent, value_coef,
+                             entropy_coef: policy_loss + value_coef * value_loss - entropy_coef * ent),
+        Node("Optimize", ["actor", "optimizer", "loss", "max_grad_norm"], ["_loss_val"],
+             function=optimizer_normalized)
+    ]
+
+    initial_keys = [
+        "actor", "optimizer", "b_states", "b_actions", "b_old_logps",
+        "b_adv", "b_ret", "clip_eps", "vf_coef", "ent_coef", "max_grad_norm"
+    ]
+    return Graph(nodes, initial_keys=initial_keys)
+
+
+class KUpdateNode(Node):
+    def __init__(self, inner_graph, epochs, batch_size):
+        super().__init__("PPOUpdateLoop",
+                         ["states", "actions", "logps", "advantages", "returns", "inner_context"],
+                         ["train_metrics"])
+        self.inner_graph = inner_graph
         self.epochs = epochs
-        self.clip_eps = clip_eps
-        self.vf_coef = vf_coef
-        self.ent_coef = ent_coef
-        self.max_grad_norm = max_grad_norm
-        self.use_value_clip = True  # TODO: Spinup Implementation uses value Clipping, original PPO Paper does not
-        self.gamma = gamma
-        self.lam = lam
-        self.device = device
+        self.batch_size = batch_size
 
-    def run(self):
-        # Logging
-        all_policy_losses = []
-        all_value_losses = []
-        all_entropies = []
-        all_approx_kls = []
-
-        #######
-        if not self.rollout_buffer.reached_rollout_size():
-            return {}
-
-        rollout = self.rollout_buffer.sample()
-        states, actions, logps, rewards, dones, values, bootstrap_values = detransition(
-            self.rollout_buffer.spec.fields, rollout, self.device
-        )
-        #print("#######", states.shape, actions.shape, logps.shape, rewards.shape, values.shape, bootstrap_values.shape)
-        r = rewards.view(-1, self.rollout_buffer.num_envs)
-        d = dones.view(-1, self.rollout_buffer.num_envs)
-        v = values.view(-1, self.rollout_buffer.num_envs)
-        b_vals = bootstrap_values.view(-1, self.rollout_buffer.num_envs)
-        all_advantages = torch.zeros_like(v)
-        for i in range(self.rollout_buffer.num_envs):
-            boot_value = b_vals[-1, i].unsqueeze(0)
-            deltas = td_residual(r[:, i], d[:, i], v[:, i], boot_value, self.gamma)
-            all_advantages[:, i] = gae(self.gamma, self.lam, deltas, d[:, i])
-
-        advantages = all_advantages.reshape(-1)
-        returns = advantages + values
-        advantages = normalize(advantages)
-
+    def forward(self, states, actions, logps, advantages, returns, context):
         dataset_size = len(states)
         indices = np.arange(dataset_size)
+        p_losses, v_losses, entropies = [], [], []
 
-        for epoch in range(self.epochs):
+        for _ in range(self.epochs):
             np.random.shuffle(indices)
-
             for start in range(0, dataset_size, self.batch_size):
-                batch_idx = indices[start:start + self.batch_size]
-                b_states = states[batch_idx]
-                b_actions = actions[batch_idx]
-                b_old_logps = logps[batch_idx]
-                b_adv = advantages[batch_idx]
-                b_ret = returns[batch_idx]
+                idx = indices[start: start + self.batch_size]
 
-                dist, value = self.actor(b_states)
-                new_logp = dist.log_prob(b_actions)
-                entropy = dist.entropy().mean()
-                value_pred = value.squeeze(-1)
+                #Constructing the Inner graph needs context, copy enusres a clean start
+                inner_context = context.copy()
+                inner_context.update({
+                    "b_states": states[idx],
+                    "b_actions": actions[idx],
+                    "b_old_logps": logps[idx],
+                    "b_adv": advantages[idx],
+                    "b_ret": returns[idx]
+                })
 
-                # Policy Losses
-                # print(new_logp.shape, b_old_logps.shape, b_adv.shape, value_pred.shape)
-                policy_loss = clipped_surrogate_objective(new_logp, b_old_logps, b_adv, self.clip_eps)
-
-                # value loss
-                # print(b_ret.shape, value_pred.shape, entropy.shape)
-                value_loss = 0.5 * (b_ret - value_pred).pow(2).mean()
-
-                loss = policy_loss + self.vf_coef * value_loss - self.ent_coef * entropy
-
-                # Backprop
-                self.optimizer.zero_grad()
-                loss.backward()
-
-                nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
-                self.optimizer.step()
-
-                # with torch.no_grad():
-                #    approx_kl = ((ratio - 1) - torch.log(ratio)).mean().item()
-
-                all_policy_losses.append(policy_loss.item())
-                all_value_losses.append(value_loss.item())
-                all_entropies.append(entropy.item())
-                # all_approx_kls.append(approx_kl)
+                self.inner_graph.run(inner_context)
+                # Logging Losses
+                p_losses.append(inner_context["policy_loss"].item())
+                v_losses.append(inner_context["value_loss"].item())
+                entropies.append(inner_context["entropy"].item())
 
         return {
-            "losses/value_loss": np.mean(all_value_losses),
-            "losses/policy_loss": np.mean(all_policy_losses),
-            "losses/entropy": np.mean(all_entropies),
+            "losses/policy_loss": np.mean(p_losses),
+            "losses/value_loss": np.mean(v_losses),
+            "losses/entropy": np.mean(entropies)
         }
+
+class PPOTrainerProcessor:
+    def __init__(self, actor, optimizer, rollout_buffer, batch_size=64, epochs=10,
+                 clip_eps=0.2, vf_coef=1.0, ent_coef=0.01, max_grad_norm=0.5, gamma=0.99, lam=0.95):
+        self.agent = actor
+        self.rollout_buffer = rollout_buffer
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        self.context = {
+            "actor": actor, "optimizer": optimizer, "buffer": rollout_buffer,
+            "device": self.device, "gamma": gamma, "lam": lam,
+            "num_envs": rollout_buffer.num_envs, "fields": rollout_buffer.spec.fields,
+            "inner_context": {
+                "actor": actor, "optimizer": optimizer, "clip_eps": clip_eps,
+                "vf_coef": vf_coef, "ent_coef": ent_coef, "max_grad_norm": max_grad_norm
+            }
+        }
+
+        minibatch_graph = create_ppo_minibatch_graph(actor, optimizer)
+
+        nodes = [
+            Node("Sample", ["buffer"],["rollout"],
+                 function=lambda b: b.sample() if b.reached_rollout_size() else Signal.NOSIGNAL),
+            Node("Detransition", ["fields", "rollout", "device"],
+                 ["states", "actions", "logps", "rewards", "dones", "values", "bootstraps"],
+                 function=detransition),
+
+            Node("GAE", ["rewards", "dones", "values", "bootstraps", "gamma", "lam", "num_envs"],
+                 ["advantages", "returns"], function=self._gae_helper),
+
+            KUpdateNode(minibatch_graph, epochs, batch_size)]
+
+        self.graph = Graph(nodes, initial_keys=list(self.context.keys()))
+
+    @staticmethod
+    def _gae_helper(r, d, v, boot_vals, gamma, lam, num_envs):
+        r, d, v, boot_vals = [x.view(-1, num_envs) for x in [r, d, v, boot_vals]]
+        all_advantages = torch.zeros_like(v)
+
+        for i in range(num_envs):
+            boot_value = boot_vals[-1, i].unsqueeze(0)
+            deltas = td_residual(r[:, i], d[:, i], v[:, i], boot_value, gamma)
+            gae_adv = torch.zeros_like(deltas)
+            last_gae = 0
+            for t in reversed(range(len(deltas))):
+                gae_adv[t] = last_gae = deltas[t] + gamma * lam * (1.0 - d[t, i]) * last_gae
+            all_advantages[:, i] = gae_adv
+
+        advantages = all_advantages.reshape(-1)
+        returns = advantages + v.reshape(-1)
+        return normalize(advantages), returns
+
+    def run(self):
+        self.graph.run(self.context)
+        return self.context.get("train_metrics", {})

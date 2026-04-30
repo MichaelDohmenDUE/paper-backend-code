@@ -1,8 +1,10 @@
+import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import nn
 from torch.distributions import Categorical
 
+from backend.Utils.src.RolloutBuffer import RolloutBuffer
 from backend.Utils.src.NodeLib.Node import Node
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
@@ -108,6 +110,13 @@ def optimizer_normalized(net: nn.Module, optimizer: torch.optim.Optimizer, loss:
     torch.nn.utils.clip_grad_norm_(net.parameters(), max_norm)
     optimizer.step()
     return loss
+
+def optimize_step_normalized(optimizer, actor, loss, max_grad_norm): #TODO Unify this later , looks up
+    optimizer.zero_grad()
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(actor.parameters(), max_grad_norm)
+    optimizer.step()
+    return True
 
 def td_residual(rewards, dones, value, bootstrap_value, gamma):
     next_values = torch.zeros_like(value)

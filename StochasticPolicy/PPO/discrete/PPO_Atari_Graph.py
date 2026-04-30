@@ -26,7 +26,7 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
             state_t = torch.as_tensor(state, dtype=torch.uint8, device=device)
             state_t = state_t.float()
             with torch.no_grad():
-                dist, value = trainer.actor(state_t)
+                dist, value = trainer.agent(state_t)
                 action = dist.probs.argmax(dim=-1).cpu().numpy()
             next_state, reward, done, _ = env_handler.step(action)
             avg_reward += reward[0]
@@ -111,6 +111,6 @@ def main(seed):
     wandb.finish()
 
 if __name__ == "__main__":
-    seed = [0,1,2]
+    seed = [3,4,5]
     for seed in seed:
         main(seed)
