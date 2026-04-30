@@ -19,7 +19,7 @@ def dual_optimizer_step(actor, critic, optimizer, loss, max_norm):
     optimizer.step()
     return loss.item()
 
-def create_ppo_minibatch_graph(actor, optimizer):
+def create_ppo_minibatch_graph():
     nodes = [
         Node("ActorForward", ["actor", "b_states"], ["dist"],
              function=lambda net, s: net(s)),
@@ -109,7 +109,7 @@ class PPOTrainerProcessor:
             }
         }
 
-        minibatch_graph = create_ppo_minibatch_graph(actor, optimizer)
+        minibatch_graph = create_ppo_minibatch_graph()
 
         nodes = [
             Node("Sample", ["buffer"],["rollout"],

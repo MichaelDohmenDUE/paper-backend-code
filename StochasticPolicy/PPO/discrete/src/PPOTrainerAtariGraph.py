@@ -12,7 +12,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 from backend.Utils.src.NodeLib.Node import Node, Graph, Signal
 
 
-def create_ppo_minibatch_graph(actor, optimizer):
+def create_ppo_minibatch_graph():
     nodes = [
         Node("AgentForward", ["actor", "b_states"], ["dist", "value_t"],
              function=lambda net, s: net(s)),
@@ -42,7 +42,7 @@ def create_ppo_minibatch_graph(actor, optimizer):
 
 class KUpdateNode(Node):
     def __init__(self, inner_graph, epochs, batch_size):
-        super().__init__("PPOUpdateLoop",
+        super().__init__("KUpdateLoop",
                          ["states", "actions", "logps", "advantages", "returns", "inner_context"],
                          ["train_metrics"])
         self.inner_graph = inner_graph
