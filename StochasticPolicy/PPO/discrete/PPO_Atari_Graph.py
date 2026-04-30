@@ -40,16 +40,16 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
 def main(seed):
     start_time = time.time()
     env_name = "PongNoFrameskip-v4"
-    seed = 1
+    seed = seed
     rollout_size = 2048
     batch_size = 256
     epochs = 4
     max_steps = 10_000_000
     lr = 2.5e-4
-    hidden_dim = 64
     gamma = 0.99
     lam = 0.95
     eval_freq = 100_000
+    eval_episodes = 5
     algo_name = "PPO_discrete_atari"
     num_envs = 8
     offset = 100
@@ -74,6 +74,8 @@ def main(seed):
             "lam": lam,
             "max_steps": max_steps,
             "offset": offset,
+            "eval_freq": eval_freq,
+            "eval_episodes": eval_episodes,
         }
     )
 
@@ -103,7 +105,7 @@ def main(seed):
         steps = data_collector.context["total_steps"]
 
         if eval_step <= steps:
-            avg_eval_reward = eval_trainer(trainer, eval_env_handler, eval_episodes=5)
+            avg_eval_reward = eval_trainer(trainer, eval_env_handler, eval_episodes=eval_episodes)
             all_metrics["eval/avg_reward"] = avg_eval_reward
             eval_step += eval_freq
         wandb.log(all_metrics, step=steps)
