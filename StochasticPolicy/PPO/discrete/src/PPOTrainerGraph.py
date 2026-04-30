@@ -11,10 +11,19 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 from backend.Utils.src.NodeLib.Node import Node, Graph, Signal
 
+def dual_optimizer_step(actor, critic, optimizer, loss, max_norm):
+    optimizer.zero_grad()
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(actor.parameters(), max_norm)
+    torch.nn.utils.clip_grad_norm_(critic.parameters(), max_norm)
+    optimizer.step()
+    return loss.item()
 
 def create_ppo_minibatch_graph(actor, optimizer):
     nodes = [
-        Node("AgentForward", ["actor", "b_states"], ["dist", "value_t"],
+        Node("ActorForward", ["actor", "b_states"], ["dist"],
+             function=lambda net, s: net(s)),
+        Node("CriticForward", ["critic", "b_states"], ["value_t"],
              function=lambda net, s: net(s)),
         Node("LogProb", ["dist", "b_actions"], ["new_logp"],
              function=lambda dist, a: dist.log_prob(a)),
@@ -29,12 +38,13 @@ def create_ppo_minibatch_graph(actor, optimizer):
         Node("TotalLoss", ["policy_loss", "value_loss", "entropy", "vf_coef", "ent_coef"], ["loss"],
              function=lambda policy_loss, value_loss, ent, value_coef,
                              entropy_coef: policy_loss + value_coef * value_loss - entropy_coef * ent),
-        Node("Optimize", ["actor", "optimizer", "loss", "max_grad_norm"], ["_loss_val"],
-             function=optimizer_normalized)
+        Node("Optimize", ["actor", "critic", "optimizer", "loss", "max_grad_norm"], ["_loss_val"],
+             function=dual_optimizer_step)
     ]
 
     initial_keys = [
-        "actor", "optimizer", "b_states", "b_actions", "b_old_logps",
+        "actor", "critic", "optimizer",  # Add critic here
+        "b_states", "b_actions", "b_old_logps",
         "b_adv", "b_ret", "clip_eps", "vf_coef", "ent_coef", "max_grad_norm"
     ]
     return Graph(nodes, initial_keys=initial_keys)
@@ -82,18 +92,19 @@ class KUpdateNode(Node):
         }
 
 class PPOTrainerProcessor:
-    def __init__(self, actor, optimizer, rollout_buffer, batch_size=64, epochs=10,
+    def __init__(self, actor, critic, optimizer, rollout_buffer, batch_size=64, epochs=10,
                  clip_eps=0.2, vf_coef=1.0, ent_coef=0.01, max_grad_norm=0.5, gamma=0.99, lam=0.95):
-        self.agent = actor
+        self.actor = actor
+        self.critic = critic
         self.rollout_buffer = rollout_buffer
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.context = {
-            "actor": actor, "optimizer": optimizer, "buffer": rollout_buffer,
+            "actor": actor, "critic": critic, "optimizer": optimizer, "buffer": rollout_buffer,
             "device": self.device, "gamma": gamma, "lam": lam,
             "num_envs": rollout_buffer.num_envs, "fields": rollout_buffer.spec.fields,
             "inner_context": {
-                "actor": actor, "optimizer": optimizer, "clip_eps": clip_eps,
+                "actor": actor, "critic": critic, "optimizer": optimizer, "clip_eps": clip_eps,
                 "vf_coef": vf_coef, "ent_coef": ent_coef, "max_grad_norm": max_grad_norm
             }
         }

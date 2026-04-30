@@ -229,3 +229,30 @@ class BootStrappingNode(Node):
         for i in range(num_envs):
             boot_val = 0.0 if done[i] else final_values[i]
             buffer.buffer[-(num_envs - i)].bootstrap_value = boot_val
+
+
+class BootStrappingNodeMujoco(Node):
+    def __init__(self, rollout_size):
+        super().__init__("Bootstrapping",
+                         ["buffer", "next_state", "done", "critic", "device", "_buffer_updated"],
+                         [], no_grad=True)
+        self.rollout_size = rollout_size
+
+    def forward(self, buffer: RolloutBuffer, next_state, done, critic, device, _buffer_updated):
+        if not buffer.reached_rollout_size():
+            return
+
+        state_t = torch.as_tensor(next_state, dtype=torch.float32, device=device)
+        if state_t.dim() == 1:
+            state_t = state_t.unsqueeze(0)
+        final_values = critic(state_t)
+        final_values = final_values.squeeze(-1).cpu().numpy()
+
+        is_vectorized = isinstance(done, (np.ndarray, list)) and len(np.atleast_1d(done)) > 1
+        if not is_vectorized:
+            done, final_values = [done], [final_values]
+
+        num_envs = len(done)
+        for i in range(num_envs):
+            boot_val = 0.0 if done[i] else final_values[i]
+            buffer.buffer[-(num_envs - i)].bootstrap_value = boot_val

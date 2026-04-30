@@ -83,7 +83,7 @@ class KUpdateNode(Node):
 
 class PPOTrainerProcessor:
     def __init__(self, actor, optimizer, rollout_buffer, batch_size=64, epochs=10,
-                 clip_eps=0.2, vf_coef=1.0, ent_coef=0.01, max_grad_norm=0.5, gamma=0.99, lam=0.95):
+                 clip_eps=0.2, vf_coef=0.5, ent_coef=0.01, max_grad_norm=0.5, gamma=0.99, lam=0.95):
         self.agent = actor
         self.rollout_buffer = rollout_buffer
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

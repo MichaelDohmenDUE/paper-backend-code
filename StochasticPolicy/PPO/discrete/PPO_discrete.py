@@ -88,7 +88,7 @@ def main(seed):
 
     action_handler = ActionHandler(actor, critic, device)
 
-    rollout_buffer = RolloutBuffer(spec)
+    rollout_buffer = RolloutBuffer(spec, rollout_size)
 
     trainer = PPOTrainerProcessor(actor, critic, optimizer, rollout_buffer, batch_size, epochs, gamma=gamma, lam=lam)
 

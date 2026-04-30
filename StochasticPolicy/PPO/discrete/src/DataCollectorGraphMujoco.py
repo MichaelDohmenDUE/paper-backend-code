@@ -1,37 +1,23 @@
 import numpy as np
 import torch
 
-from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, BootStrappingNode
-from backend.Utils.src.RolloutBuffer import RolloutBuffer
+from backend.StochasticPolicy.PPO.discrete.src.DataCollectorGraph import EpisodicMetricsNode
 from backend.Utils.src.NodeLib.Node import Node, Graph
-
-
-class EpisodicMetricsNode(Node):
-    def __init__(self):
-        super().__init__("EpisodicMetrics", ["running_rewards", "metrics_queue", "reward", "done"], [])
-
-    def forward(self, running_rewards, metrics_queue, reward, done):
-        reward = np.atleast_1d(reward)
-        done = np.atleast_1d(done)
-
-        running_rewards += reward
-
-        for i in range(len(done)):
-            if done[i]:
-                metrics_queue.append({
-                    "charts/episodic_return": running_rewards[i]
-                })
-                running_rewards[i] = 0
+from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, BootStrappingNode, \
+    BootStrappingNodeMujoco
+from backend.Utils.src.RolloutBuffer import RolloutBuffer
 
 class DataCollectionProcessor:
-    def __init__(self, env_handler, transition_factory, rollout_buffer: RolloutBuffer, rollout_size, agent, device):
+    def __init__(self, env_handler, transition_factory, rollout_buffer: RolloutBuffer, rollout_size, actor, critic,
+                 device):
         self.num_envs = getattr(env_handler, "num_envs", 1)
 
         self.context = {
             "state": np.array(env_handler.reset()).astype(np.float32),
             "buffer": rollout_buffer,
             "env": env_handler,
-            "agent": agent,
+            "actor": actor,
+            "critic": critic,
             "device": device,
             "running_rewards": np.zeros(self.num_envs),
             "metrics_queue": [],
@@ -42,7 +28,8 @@ class DataCollectionProcessor:
         nodes = [
             Node("ToTensor", ["state", "device"], ["state_t"],
                  function=lambda s, d: torch.as_tensor(s, dtype=torch.float32, device=d), no_grad=True),
-            Node("AgentForward", ["agent", "state_t"], ["dist", "value_t"], function=lambda net, s: net(s), no_grad=True),
+            Node("ActorForward", ["actor", "state_t"], ["dist"], function=lambda net, s: net(s)),
+            Node("CriticForward", ["critic", "state_t"], ["value_t"], function=lambda net, s: net(s)),
             Node("SampleAction", ["dist"], ["action_t"], function=lambda dist: dist.sample(), no_grad=True),
             Node("LogProb", ["dist", "action_t"], ["logp_t"], function=lambda dist, a: dist.log_prob(a), no_grad=True),
             Node("SqueezeValue", ["value_t"], ["value_t_sq"], function=lambda v: v.squeeze(-1), no_grad=True),
@@ -72,7 +59,7 @@ class DataCollectionProcessor:
             EpisodicMetricsNode(),
             Node("CountSteps", ["total_steps", "num_envs"], ["total_steps"], function=lambda steps, n: steps + n),
 
-            BootStrappingNode(rollout_size),
+            BootStrappingNodeMujoco(rollout_size),
             Node("State", ["next_state", "_buffer_updated"], ["state"],
                  function=lambda ns, _: np.array(ns).astype(np.float32))
         ]
