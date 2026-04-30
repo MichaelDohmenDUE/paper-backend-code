@@ -98,7 +98,7 @@ def main():
 
     buffer = ReplayBuffer(spec, max_buffer_size, batch_size)
 
-    eps_greedy =EpsilonGreedyPolicy(epsilon_start=epsilon, epsilon_final=0.1, epsilon_decay=1_000_000)
+    eps_greedy = EpsilonGreedyPolicy(epsilon_start=epsilon, epsilon_final=0.1, epsilon_decay=1_000_000)
     collector = DataCollectionProcessor(behavior_net, env, buffer, eps_greedy, factory, device)
     train_process = TrainProcessor(buffer, behavior_net, target_net, optimizer, gamma, max_norm, warmup_steps, device)
     sync_process = SyncProcessor(behavior_net, target_net, tau, sync_freq)

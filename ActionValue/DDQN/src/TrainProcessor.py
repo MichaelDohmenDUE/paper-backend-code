@@ -11,7 +11,7 @@ from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 class TrainProcessor:
     def __init__(self, buffer: ReplayBuffer, behavior_net: nn.Module, target_net: nn.Module,
-                 optimizer: torch.optim.Optimizer, gamma: float, device: torch.device, warmup_steps=5000):
+                 optimizer: torch.optim.Optimizer, gamma: float, device: torch.device, warmup_steps=500):
         self.buffer = buffer
         self.behavior_net = behavior_net.to(device)
         self.target_net = target_net.to(device)

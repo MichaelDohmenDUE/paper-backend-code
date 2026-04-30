@@ -20,7 +20,7 @@ class TrainProcessor:
 
     def run(self):
         if len(self.buffer) < self.buffer.batch_size:
-            return
+            return {}
 
         batch = self.buffer.sample_batch()
         states_tensor, actions_tensor, rewards_tensor, next_states_tensor, dones_tensor = detransition(
