@@ -14,6 +14,7 @@ from backend.Utils.src.EnvFactory import AtariEnvFactory
 from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
+from utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -48,14 +49,15 @@ def evaluate_policy(policy, env_handler, episodes=5, device="cpu"):
     return total_reward / episodes
 
 
-def main():
+def main(seed, env_name):
     # initialization
     start_time = time.time()
-    lr = 2.5e-4
-    epsilon = 1.0
-    env_name = "BreakoutNoFrameskip-v4"
+    lr = 1e-4
+    env_name = env_name
     sync_freq = 10_000
-    hidden_size = 512
+    epsilon = 1.0
+    epsilon_final = 0.01
+    epsilon_decay = 1_000_000
     batch_size = 32
     max_buffer_size = 300_000
     tau = 1.0
@@ -65,15 +67,17 @@ def main():
     gym_factory = AtariEnvFactory(env_name)
     factory = TransitionFactory(spec)
     max_norm = 5
-    seed = 2
+    seed = seed
     warmup_steps = 50000
+    setting_global_seed(seed)
 
     wandb.init(
         entity="michael_dohmen-",
         project="my-dqn-benchmarks",
+        name=f"DQN_{env_name}_seed{seed}",
         config={
             "env_id": env_name,
-            "exp_name": "DQN-BreakoutNoFrameskip-v4",
+            "exp_name": f"DQN_{env_name}_seed{seed}",
             "seed": seed,
             "max_buffer_size": max_buffer_size,
             "batch_size": batch_size,
@@ -93,33 +97,41 @@ def main():
     obs_size, action_size, max_action = env.get_env_specs()
 
     behavior_net = BehaviourAtariDQN(action_size).to(device)
-    optimizer = torch.optim.Adam(behavior_net.parameters(), lr=1e-4,
-                                 eps=1e-8)  # torch.optim.RMSprop(behavior_net.parameters(), lr=lr, momentum=0.95, eps=0.01, alpha=0.95)
+    optimizer = torch.optim.Adam(behavior_net.parameters(), lr=lr)
 
     target_net = deepcopy(behavior_net).to(device)
 
     buffer = ReplayBuffer(spec, max_buffer_size, batch_size)
 
-    eps_greedy = EpsilonGreedyPolicy(epsilon_start=epsilon, epsilon_final=0.1, epsilon_decay=1_000_000)
+    eps_greedy = EpsilonGreedyPolicy(epsilon_start=epsilon, epsilon_final=epsilon_final, epsilon_decay=epsilon_decay)
     collector = DataCollectionProcessor(behavior_net, env, buffer, eps_greedy, factory, device)
     train_process = TrainProcessor(buffer, behavior_net, target_net, optimizer, gamma, max_norm, warmup_steps, device)
     sync_process = SyncProcessor(behavior_net, target_net, tau, sync_freq)
 
     for step in range(max_steps):
-        collector.run()
-        metrics = None
-        if step % 4 == 0:
-            metrics = train_process.run()
+        metrics = {"global_step": step}
+        metrics_data = collector.run()
+        if metrics_data:
+            metrics.update(metrics_data)
+
+        if step % 4 == 0 and step >= warmup_steps:
+            metrics_train = train_process.run()
+            if metrics_train:
+                metrics.update(metrics_train)
         sync_process.run()
 
-        if metrics and step % 400 == 0:
-            metrics["charts/SPS"] = int(step / (time.time() - start_time))
-            metrics["charts/epsilon"] = collector.eps_greedy.epsilon
-            wandb.log(metrics, step=step)
-        if step % 10_000 == 0 and step > warmup_steps:
-            avg_score = evaluate_policy(behavior_net, eval_env, episodes=5, device=device)
-            wandb.log({"charts/eval_avg_score": avg_score}, step=step)
+        if step % 400 == 0:
+            metrics["charts/SPS"] = int(step / max(time.time() - start_time, 1e-6))
+            metrics["charts/epsilon"] = collector.epsilon_greedy.epsilon
 
+        if step % 10_000 == 0 and step > warmup_steps:
+            metrics["charts/eval_avg_score"] = evaluate_policy(behavior_net, eval_env, episodes=5, device=device)
+
+        if len(metrics) > 1:
+            wandb.log(metrics, step=step)
+    wandb.finish()
 
 if __name__ == '__main__':
-    main()
+    seeds = [0,1,2]
+    for seed in seeds:
+        main(seed, env_name="BreakoutNoFrameskip-v4"")
