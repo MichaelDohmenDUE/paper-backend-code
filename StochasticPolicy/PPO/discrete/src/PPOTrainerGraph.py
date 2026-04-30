@@ -43,7 +43,7 @@ def create_ppo_minibatch_graph():
     ]
 
     initial_keys = [
-        "actor", "critic", "optimizer",  # Add critic here
+        "actor", "critic", "optimizer",
         "b_states", "b_actions", "b_old_logps",
         "b_adv", "b_ret", "clip_eps", "vf_coef", "ent_coef", "max_grad_norm"
     ]
@@ -69,7 +69,7 @@ class KUpdateNode(Node):
             for start in range(0, dataset_size, self.batch_size):
                 idx = indices[start: start + self.batch_size]
 
-                #Constructing the Inner graph needs context, copy enusres a clean start
+                #Constructing the Inner graph needs context, copy ensures a clean start
                 inner_context = context.copy()
                 inner_context.update({
                     "b_states": states[idx],

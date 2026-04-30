@@ -5,7 +5,6 @@ from torch import nn
 from backend.Utils.src.NodeLib.NodeLibrary import detransition, td_residual, normalize, clipped_surrogate_objective, \
     optimizer_normalized
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
-from backend.Utils.src.utils import gae
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -14,7 +13,7 @@ from backend.Utils.src.NodeLib.Node import Node, Graph, Signal
 
 def create_ppo_minibatch_graph():
     nodes = [
-        Node("AgentForward", ["actor", "b_states"], ["dist", "value_t"],
+        Node("AgentForward", ["agent", "b_states"], ["dist", "value_t"],
              function=lambda net, s: net(s)),
         Node("LogProb", ["dist", "b_actions"], ["new_logp"],
              function=lambda dist, a: dist.log_prob(a)),
@@ -29,12 +28,12 @@ def create_ppo_minibatch_graph():
         Node("TotalLoss", ["policy_loss", "value_loss", "entropy", "vf_coef", "ent_coef"], ["loss"],
              function=lambda policy_loss, value_loss, ent, value_coef,
                              entropy_coef: policy_loss + value_coef * value_loss - entropy_coef * ent),
-        Node("Optimizer Normalized", ["actor", "optimizer", "loss", "max_grad_norm"], ["_loss_val"],
+        Node("Optimizer Normalized", ["agent", "optimizer", "loss", "max_grad_norm"], ["_loss_val"],
              function=optimizer_normalized)
     ]
 
     initial_keys = [
-        "actor", "optimizer", "b_states", "b_actions", "b_old_logps",
+        "agent", "optimizer", "b_states", "b_actions", "b_old_logps",
         "b_adv", "b_ret", "clip_eps", "vf_coef", "ent_coef", "max_grad_norm"
     ]
     return Graph(nodes, initial_keys=initial_keys)
@@ -59,7 +58,7 @@ class KUpdateNode(Node):
             for start in range(0, dataset_size, self.batch_size):
                 idx = indices[start: start + self.batch_size]
 
-                #Constructing the Inner graph needs context, copy enusres a clean start
+                # Constructing the Inner graph needs context, copy enusres a clean start
                 inner_context = context.copy()
                 inner_context.update({
                     "b_states": states[idx],
@@ -81,27 +80,29 @@ class KUpdateNode(Node):
             "losses/entropy": np.mean(entropies)
         }
 
+
 class PPOTrainerProcessor:
-    def __init__(self, actor, optimizer, rollout_buffer, batch_size=64, epochs=10,
+    def __init__(self, agent: nn.Module, optimizer: torch.optim.Optimizer, rollout_buffer: RolloutBuffer, batch_size=64,
+                 epochs=10,
                  clip_eps=0.2, vf_coef=0.5, ent_coef=0.01, max_grad_norm=0.5, gamma=0.99, lam=0.95):
-        self.agent = actor
+        self.agent = agent
         self.rollout_buffer = rollout_buffer
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.context = {
-            "actor": actor, "optimizer": optimizer, "buffer": rollout_buffer,
+            "agent": agent, "optimizer": optimizer, "buffer": rollout_buffer,
             "device": self.device, "gamma": gamma, "lam": lam,
             "num_envs": rollout_buffer.num_envs, "fields": rollout_buffer.spec.fields,
             "inner_context": {
-                "actor": actor, "optimizer": optimizer, "clip_eps": clip_eps,
+                "agent": agent, "optimizer": optimizer, "clip_eps": clip_eps,
                 "vf_coef": vf_coef, "ent_coef": ent_coef, "max_grad_norm": max_grad_norm
             }
         }
 
-        minibatch_graph = create_ppo_minibatch_graph(actor, optimizer)
+        minibatch_graph = create_ppo_minibatch_graph(agent, optimizer)
 
         nodes = [
-            Node("Sample", ["buffer"],["rollout"],
+            Node("Sample", ["buffer"], ["rollout"],
                  function=lambda b: b.sample() if b.reached_rollout_size() else Signal.NOSIGNAL),
             Node("Detransition", ["fields", "rollout", "device"],
                  ["states", "actions", "logps", "rewards", "dones", "values", "bootstraps"],
