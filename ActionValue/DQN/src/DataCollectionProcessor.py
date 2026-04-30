@@ -6,8 +6,7 @@ from backend.ActionValue.DQN.src.ActionHandler import EpsilonGreedyPolicy
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
 from backend.Utils.src.NodeLib.Node import Node, Graph
-from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, to_numpy_array, \
-    to_tensor_, to_tensor
+from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, to_numpy_array, to_tensor
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 

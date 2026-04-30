@@ -1,21 +1,22 @@
+import time
 from copy import deepcopy
 
 import torch
 import wandb
-from torch import nn
-import time
 
 from backend.ActionValue.DQN.src.ActionHandler import EpsilonGreedyPolicy
 from backend.ActionValue.DQN.src.DataCollectionProcessorAtari import DataCollectionProcessor
 from backend.ActionValue.DQN.src.TrainProcessor import TrainProcessor
 from backend.CommonModels.src import BehaviourAtariDQN
+from backend.CommonModels.src.BehaviourAtariDQN import BehaviourAtariDQN
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnvFactory import AtariEnvFactory
-from backend.Utils.src.EnviromentHandler import EnvironmentHandler
+from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
-from backend.CommonModels.src.BehaviourAtariDQN import BehaviourAtariDQN
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 def evaluate_policy(policy, env_handler, episodes=5, device="cpu"):
     """
@@ -45,6 +46,7 @@ def evaluate_policy(policy, env_handler, episodes=5, device="cpu"):
 
     policy.train()
     return total_reward / episodes
+
 
 def main():
     # initialization
@@ -86,13 +88,13 @@ def main():
         }
     )
 
-    env = EnvironmentHandler(gym_factory, seed)
-    eval_env = EnvironmentHandler(gym_factory, seed + 1)
+    env = VecEnvironmentHandler(gym_factory, seed, num_envs=1)
+    eval_env = VecEnvironmentHandler(gym_factory, seed + 1, num_envs=1)
     obs_size, action_size, max_action = env.get_env_specs()
 
     behavior_net = BehaviourAtariDQN(action_size).to(device)
     optimizer = torch.optim.Adam(behavior_net.parameters(), lr=1e-4,
-                                 eps=1e-8)  #torch.optim.RMSprop(behavior_net.parameters(), lr=lr, momentum=0.95, eps=0.01, alpha=0.95)
+                                 eps=1e-8)  # torch.optim.RMSprop(behavior_net.parameters(), lr=lr, momentum=0.95, eps=0.01, alpha=0.95)
 
     target_net = deepcopy(behavior_net).to(device)
 
@@ -117,6 +119,7 @@ def main():
         if step % 10_000 == 0 and step > warmup_steps:
             avg_score = evaluate_policy(behavior_net, eval_env, episodes=5, device=device)
             wandb.log({"charts/eval_avg_score": avg_score}, step=step)
+
 
 if __name__ == '__main__':
     main()

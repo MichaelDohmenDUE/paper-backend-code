@@ -178,7 +178,7 @@ def detransition(fields, batch, device: torch.device):
             is_discrete = not t.is_floating_point() or torch.all(t == t.long())
             processed[key] = t.long() if is_discrete else t.float()
         elif key in ["reward", "done"]:
-            processed[key] = t.float().flatten()
+            processed[key] = t.float().view(-1)
 
         else:
             processed[key] = t
@@ -229,6 +229,7 @@ class BufferAppendingNode(Node):
         super().__init__("BufferAppendingNode", ["buffer", "transitions"], ["_buffer_updated"])
 
     def forward(self, buffer, transitions):
+        #print(transitions)
         for t in transitions:
             buffer.append(t)
         return True  # DummySignal

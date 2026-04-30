@@ -1,11 +1,11 @@
 import torch
-import torch.nn.functional as F
 from torch import nn
 
 from backend.Utils.src.NodeLib.Node import Graph, Node, Signal
 from backend.Utils.src.NodeLib.NodeLibrary import bellman, mean_squared_error, detransition
 from backend.Utils.src.NodeLib.NodeLibrary import indexing, nl_max, optimizer_normalized
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
+
 
 class TrainProcessor:
     def __init__(self, buffer: ReplayBuffer, behavior_net: nn.Module, target_net: nn.Module,
@@ -37,16 +37,12 @@ class TrainProcessor:
                  function=lambda b, w: b.sample_batch() if len(b) >= w else Signal.NOSIGNAL),
             Node("Detransition", ["fields", "batch", "device"], ["state", "action", "reward", "next_state", "done"],
                  function=detransition),
-            Node("SqueezeDimsState", ["state"], ["s_sq"],
-                 function=lambda s: s.squeeze(1)),
-            Node("SqueezeDimsNextState", ["next_state"], ["ns_sq"],
-                 function=lambda s: s.squeeze(1)),
-            Node("BehaviorForward", ["behavior_net", "s_sq"], ["qs_b"],
-                 function=lambda net, s: net(s)),
+            Node("BehaviorForward", ["behavior_net", "state"], ["qs_b"],
+                 function=lambda net, s: net(s.squeeze(1))),
             Node("QsaBehavior", ["qs_b", "action"], ["qsa_b"],
                  function=lambda q, a: indexing(q, a).reshape(-1)),
-            Node("TargetForward", ["target_net", "ns_sq"], ["qs_t"],
-                 function=lambda net, ns: net(ns), no_grad=True),
+            Node("TargetForward", ["target_net", "next_state"], ["qs_t"],
+                 function=lambda net, ns: net(ns.squeeze(1)), no_grad=True),
             Node("Max", ["qs_t"], ["max_q_t"],
                  function=lambda qt: nl_max(qt).reshape(-1), no_grad=True),
             Node("Bellman", ["max_q_t", "reward", "done", "gamma"], ["target_val"],
@@ -56,7 +52,7 @@ class TrainProcessor:
             Node("Optimize", ["behavior_net", "optimizer", "loss", "max_norm"], ["_opt"],
                  function=optimizer_normalized),
 
-            #Logging
+            # Logging
             Node("Metrics", ["loss", "qsa_b"], ["train_metrics"],
                  function=lambda l, q: {
                      "losses/td_loss": l.item(),
