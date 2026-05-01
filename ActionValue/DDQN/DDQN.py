@@ -23,7 +23,7 @@ def main(seed):
     start_time = time.time()
     epsilon = 1.0
     epsilon_final = 0.05
-    epsilon_decay = 20000
+    epsilon_decay = 1_000
     eval_episodes = 10
     env_name = "CartPole-v1"
     sync_freq = 500
@@ -35,8 +35,8 @@ def main(seed):
     max_steps = 1_000_000
     seed = seed
     offset = 100
-    lr = 2.5e-4
-    warmup_steps = 2000
+    lr = 1e-4
+    warmup_steps = 500
     setting_global_seed(seed)
 
     wandb.init(
@@ -112,6 +112,6 @@ def main(seed):
     wandb.log(metrics, step=step)
     wandb.finish()
 if __name__ == '__main__':
-    seeds = [0, 1, 2]
+    seeds = [1,2,3]
     for seed in seeds:
         main(seed)
