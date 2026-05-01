@@ -1,12 +1,19 @@
 [project]
-name = "backend"
+name = "deeprlwebplayground-backend"
 version = "0.1.0"
-description = "Add your description here"
-requires-python = ">=3.11"
 dependencies = [
-    "ale-py>=0.8.1",
-    "autorom[accept-rom-license]>=0.6.1",
-    "gymnasium[atari,mujoco,other]==0.29.1",
-    "torch>=2.10.0",
-    "wandb>=0.25.1",
+    "torch",
+    "numpy",
+    "wandb",
+    "gymnasium[atari,accept-rom-license]==0.29.1",
+    "opencv-python",
+    "shimmy>=0.2.1",
 ]
+
+[tool.setuptools]
+packages = ["backend", "NodeLib"]
+package-dir = {"backend" = ".", "NodeLib" = "Utils/src/NodeLib"}
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
