@@ -4,14 +4,14 @@ from copy import deepcopy
 import torch
 import wandb
 
+from CommonModels.src.DuellingDQN import DuellingAtariDQN
+from EnvFactory import AtariEnvFactory
 from backend.ActionValue.DQN.DQN import evaluate_policy
-from backend.CommonModels.src.Policy import Policy
-from backend.ActionValue.DDQN.src.TrainProcessor import TrainProcessor
 from backend.ActionValue.DQN.src.ActionHandler import EpsilonGreedyPolicy
-from backend.ActionValue.DQN.src.DataCollectionProcessor import DataCollectionProcessor
+from backend.ActionValue.DQN.src.DataCollectionProcessorAtari import DataCollectionProcessor
+from backend.ActionValue.DDQN.src.TrainProcessorAtari import TrainProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
-from backend.Utils.src.EnvFactory import GymEnvFactory
-from backend.Utils.src.EnviromentHandler import EnvironmentHandler, VecEnvironmentHandler
+from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
 from backend.Utils.src.utils import setting_global_seed
@@ -19,34 +19,34 @@ from backend.Utils.src.utils import setting_global_seed
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def main(seed):
+def main(seed, evn_name):
     start_time = time.time()
     epsilon = 1.0
     epsilon_final = 0.05
-    epsilon_decay = 1_000
+    epsilon_decay = 250_000
     eval_episodes = 10
-    env_name = "CartPole-v1"
-    sync_freq = 500
-    hidden_size = 64
-    batch_size = 128
-    max_buffer_size = 100000
+    env_name = evn_name
+    sync_freq = 2000
+    hidden_size = 128
+    batch_size = 32
+    max_buffer_size = 300_000
     tau = 1.0
     gamma = 0.99
     max_steps = 1_000_000
     seed = seed
     offset = 100
     lr = 1e-4
-    warmup_steps = min(batch_size,500)
+    warmup_steps = 50_000
     setting_global_seed(seed)
 
     wandb.init(
         entity="michael_dohmen-",
-        project="my-ddqn-benchmarks",
-        name=f"DDQN_{env_name}_seed{seed}",
-        tags=["benchmarking", "DQDN"],
+        project="my-DuelingDQN-benchmarks",
+        name=f"DuelingDQN{env_name}_seed-{seed}",
+        tags=["benchmarking", "DuelingDQN"],
         config={
             "env_id": env_name,
-            "exp_name": f"DDQN_{env_name}_seed-{seed}",
+            "exp_name": f"DuelingDQN{env_name}_seed-{seed}",
             "seed": seed,
             "max_buffer_size": max_buffer_size,
             "batch_size": batch_size,
@@ -67,13 +67,12 @@ def main(seed):
     spec = TransitionSpec(["state", "action", "reward", "next_state", "done"])
     factory = TransitionFactory(spec)
 
-    gym_factory = GymEnvFactory(env_name)
+    gym_factory = AtariEnvFactory(env_name)
 
     env = VecEnvironmentHandler(gym_factory, seed, num_envs=1)
     eval_env = VecEnvironmentHandler(gym_factory, seed + offset, num_envs=1)
     obs_size, action_size, _ = env.get_env_specs()
-    obs_size = obs_size[0]
-    behavior_net = Policy(obs_size, action_size, hidden_size).to(device)
+    behavior_net = DuellingAtariDQN( action_size).to(device)
     target_net = deepcopy(behavior_net).to(device)
 
     optimizer = torch.optim.Adam(behavior_net.parameters(), lr)
@@ -112,6 +111,7 @@ def main(seed):
     wandb.log(metrics, step=step)
     wandb.finish()
 if __name__ == '__main__':
-    seeds = [0,1,2]
+    seeds = [0, 1, 2]
+    evn_name = "PongNoFrameskip-v4"
     for seed in seeds:
-        main(seed)
+        main(seed, evn_name)
