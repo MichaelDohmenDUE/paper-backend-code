@@ -57,13 +57,13 @@ def main(seed):
     wandb.init(
         project="my-ppo-benchmarks",
         group=algo_name,
-        name=f"{algo_name}-seed-{seed}",
+        name=f"{algo_name}-{env_name}-seed-{seed}",
         tags=[env_name, "debugging", algo_name],
         reinit=True,
         entity="michael_dohmen-",
         config={
             "env_id": env_name,
-            "exp_name": "my_ppo_Pong",
+            "exp_name": f"PPO_{env_name}_seed-{seed}",
             "seed": seed,
             "rollout_size": rollout_size,
             "batch_size": batch_size,
@@ -75,6 +75,7 @@ def main(seed):
             "offset": offset,
             "eval_freq": eval_freq,
             "eval_episodes": eval_episodes,
+            "device": device
         }
     )
 
@@ -94,22 +95,34 @@ def main(seed):
 
     data_collector = DataCollectionProcessor(env_handler, transition_factory, rollout_buffer, rollout_size,
                                              agent, device)
-    steps = 0
+    step = 0
     eval_step = 0
-    while steps < max_steps:
+    while step < max_steps:
+        metrics = {}
         metrics_ep = data_collector.run()
-        metrics_train = trainer.run()
-        all_metrics = {**metrics_ep, **metrics_train, "charts/SPS": int(steps / (time.time() - start_time)),
-                       "global_step": data_collector.context["total_steps"]}
+        if metrics_ep:
+            metrics.update(metrics_data)
+        metrics_train = train_process.run()
+        if metrics_train:
+            metrics.update(metrics_train)
         steps = data_collector.context["total_steps"]
+        metrics["global_step"] = step
 
+        elapsed_time = time.time() - start_time
+        if elapsed_time > 0:
+            sps = int(step / elapsed_time)
+            metrics["charts/SPS"] = sps
         if eval_step <= steps:
             avg_eval_reward = eval_trainer(trainer, eval_env_handler, eval_episodes=eval_episodes)
-            all_metrics["eval/avg_reward"] = avg_eval_reward
+            metrics["eval/avg_reward"] = avg_eval_reward
             eval_step += eval_freq
-        wandb.log(all_metrics, step=steps)
+        if len(metrics) > 1:
+            wandb.log(metrics, step=step)
+    # Final Eval
+    metrics = {"global_step": step,
+               "charts/eval_avg_score":  eval_trainer(trainer, eval_env_handler, eval_episodes=eval_episodes)}
+    wandb.log(metrics, step=step)
     wandb.finish()
-
 if __name__ == "__main__":
     seed = [0,1,2]
     for seed in seed:
