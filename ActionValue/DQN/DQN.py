@@ -136,6 +136,6 @@ def main(seed):
     wandb.log(metrics, step=step)
     wandb.finish()
 if __name__ == '__main__':
-    seeds = [0,1,2]
+    seeds = [1,2,3]
     for seed in seeds:
         main(seed)

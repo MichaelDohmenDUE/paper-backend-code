@@ -38,7 +38,7 @@ class TrainProcessor:
             Node("Detransition", ["fields", "batch", "device"], ["state", "action", "reward", "next_state", "done"],
                  function=detransition),
             Node("BehaviorForward", ["behavior_net", "state"], ["qs_b"],
-                 function=lambda net, s: net(s.squeeze(1))),
+                 function=lambda net, s: net(s.float().squeeze(1))),
             Node("QsaBehavior", ["qs_b", "action"], ["qsa_b"],
                  function=lambda q, a: indexing(q, a).reshape(-1)),
             Node("TargetForward", ["target_net", "next_state"], ["qs_t"],
