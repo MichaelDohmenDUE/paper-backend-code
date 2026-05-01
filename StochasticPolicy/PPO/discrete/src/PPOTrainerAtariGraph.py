@@ -1,9 +1,11 @@
+import numpy as np
 import torch
 from torch import nn
 
 from StochasticPolicy.PPO.discrete.src.PPOTrainerGraph import compute_raw_gae
 from backend.Utils.src.NodeLib.NodeLibrary import detransition, normalize, clipped_surrogate_objective, \
-    optimizer_normalized, td_residual, compute_returns, KUpdateNode
+    optimizer_normalized, td_residual, compute_returns, KUpdateNode, unpack_minibatch, record_metrics, \
+    create_batch_generator, RepeatNode
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -13,6 +15,11 @@ from backend.Utils.src.NodeLib.Node import Node, Graph, Signal
 
 def create_ppo_minibatch_graph():
     nodes = [
+
+        Node("GetBatch", ["batch_generator"],
+             ["b_states", "b_actions", "b_old_logps", "b_adv", "b_ret"],
+             function=lambda gen: next(gen)),
+
         Node("AgentForward", ["agent", "b_states"], ["dist", "value_tensor"],
              function=lambda net, s: net(s)),
         Node("LogProb", ["dist", "b_actions"], ["new_logp"],
@@ -29,12 +36,16 @@ def create_ppo_minibatch_graph():
              function=lambda policy_loss, value_loss, ent, value_coef,
                              entropy_coef: policy_loss + value_coef * value_loss - entropy_coef * ent),
         Node("Optimizer Normalized", ["agent", "optimizer", "loss", "max_grad_norm"], ["_loss_val"],
-             function=optimizer_normalized)
+             function=optimizer_normalized),
+        #LoggingNode
+        Node("RecordMetrics", ["metric_history", "policy_loss", "value_loss", "entropy"],
+             ["metric_history"],
+             function=record_metrics)
     ]
 
     initial_keys = [
-        "agent", "optimizer", "b_states", "b_actions", "b_old_logps",
-        "b_adv", "b_ret", "clip_eps", "vf_coef", "ent_coef", "max_grad_norm"
+        "agent", "optimizer", "clip_eps", "vf_coef", "ent_coef", "max_grad_norm",
+        "batch_generator", "metric_history"
     ]
     return Graph(nodes, initial_keys=initial_keys)
 
@@ -79,10 +90,44 @@ class PPOTrainerProcessor:
                  ["advantages"],
                  function=normalize),
 
-            KUpdateNode(minibatch_graph, epochs, batch_size)]
+            Node("PackDataset", ["states", "actions", "logps", "advantages", "returns"],
+                 ["dataset_dict"],
+                 function=lambda s, a, lp, adv, ret: {
+                     "states": s, "actions": a, "logps": lp,
+                     "advantages": adv, "returns": ret
+                 }),
+
+            Node("InitGenerator", ["dataset_dict"], ["batch_generator"],
+                 function=lambda data: create_batch_generator(data, batch_size, epochs)),
+
+            #Logging
+            Node("InitMetrics", [], ["metric_history"],
+                 function=lambda: {"policy_loss": [], "value_loss": [], "entropy": []}),
+
+            Node("PrepInnerContext", ["inner_context", "batch_generator", "metric_history"],
+                 ["ready_inner_context"],
+                 function=lambda ctx, gen, hist: {**ctx, "batch_generator": gen, "metric_history": hist}),
+
+            RepeatNode("KUpdateLoop",
+                       inputs=["ready_inner_context"],
+                       outputs=["final_inner_context"],
+                       inner_graph=minibatch_graph,
+                       iterations=(rollout_buffer.rollout_size // batch_size) * epochs)
+        ]
 
         self.graph = Graph(nodes, initial_keys=list(self.context.keys()))
 
     def run(self):
         self.graph.run(self.context)
-        return self.context.get("train_metrics", {})
+
+        if "final_inner_context" in self.context:
+            history = self.context["final_inner_context"]["metric_history"]
+
+            train_metrics = {
+                "losses/policy_loss": np.mean(history["policy_loss"]) if history["policy_loss"] else 0,
+                "losses/value_loss": np.mean(history["value_loss"]) if history["value_loss"] else 0,
+                "losses/entropy": np.mean(history["entropy"]) if history["entropy"] else 0
+            }
+            return train_metrics
+
+        return {}

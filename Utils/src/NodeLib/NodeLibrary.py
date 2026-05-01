@@ -8,6 +8,25 @@ from backend.Utils.src.NodeLib.Node import Node
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 
 
+def create_batch_generator(dataset_dict, batch_size, epochs):
+    dataset_size = len(next(iter(dataset_dict.values())))
+    indices = np.arange(dataset_size)
+
+    for _ in range(epochs):
+        np.random.shuffle(indices)
+        for start in range(0, dataset_size, batch_size):
+            idx = indices[start: start + batch_size]
+            # Yield exactly the fields the minibatch graph expects
+            yield tuple(dataset_dict[k][idx] for k in ["states", "actions", "logps", "advantages", "returns"])
+
+
+def record_metrics(history, p_loss, v_loss, entropy):
+    """Appends the current step's losses to the tracking dictionary."""
+    history["policy_loss"].append(p_loss.item())
+    history["value_loss"].append(v_loss.item())
+    history["entropy"].append(entropy.item())
+    return history
+
 def action_with_gaussian_noise(action, policy_noise, noise_clip, max_action):
     noise = (torch.randn_like(action) * policy_noise).clamp(-noise_clip, noise_clip)
     action_noisy = (action + noise)
@@ -206,6 +225,8 @@ def detransition(fields, batch, device: torch.device):
 
     return tuple(processed[k] for k in fields)
 
+def unpack_minibatch(minibatch_dict, fields):
+    return tuple(minibatch_dict[k] for k in fields)
 
 def clipped_surrogate_objective(new_logp, old_logps, advantage, clip_eps):
     ratio = torch.exp(new_logp - old_logps)
@@ -310,44 +331,55 @@ class BootStrappingNodeMujoco(Node):
             buffer.buffer[-(num_envs - i)].bootstrap_value = boot_val
 
 
-
 class KUpdateNode(Node):
-    def __init__(self, inner_graph, epochs, batch_size):
-        super().__init__("KUpdateLoop",
-                         ["states", "actions", "logps", "advantages", "returns", "inner_context"],
-                         ["train_metrics"])
+    def __init__(self, name, inputs, outputs, inner_graph, iterations, batch_size):
+        super().__init__(name, inputs, outputs)
         self.inner_graph = inner_graph
-        self.epochs = epochs
+        self.iterations = iterations
         self.batch_size = batch_size
 
-    def forward(self, states, actions, logps, advantages, returns, context):
-        dataset_size = len(states)
+    def forward(self, dataset_dict, inner_context):
+        dataset_size = len(next(iter(dataset_dict.values())))
         indices = np.arange(dataset_size)
         p_losses, v_losses, entropies = [], [], []
 
-        for _ in range(self.epochs):
+        for _ in range(self.iterations):
             np.random.shuffle(indices)
             for start in range(0, dataset_size, self.batch_size):
                 idx = indices[start: start + self.batch_size]
 
-                #Constructing the Inner graph needs context, copy ensures a clean start
-                inner_context = context.copy()
-                inner_context.update({
-                    "b_states": states[idx],
-                    "b_actions": actions[idx],
-                    "b_old_logps": logps[idx],
-                    "b_adv": advantages[idx],
-                    "b_ret": returns[idx]
+                current_inner_context = inner_context.copy()
+
+                minibatch_dict = {key: tensor[idx] for key, tensor in dataset_dict.items()}
+
+                current_inner_context.update({
+                    "minibatch_dict": minibatch_dict,
+                    "minibatch_fields": ["states", "actions", "logps", "advantages", "returns"]
                 })
 
-                self.inner_graph.run(inner_context)
-                # Logging Losses
-                p_losses.append(inner_context["policy_loss"].item())
-                v_losses.append(inner_context["value_loss"].item())
-                entropies.append(inner_context["entropy"].item())
+                self.inner_graph.run(current_inner_context)
+
+                p_losses.append(current_inner_context["policy_loss"].item())
+                v_losses.append(current_inner_context["value_loss"].item())
+                entropies.append(current_inner_context["entropy"].item())
 
         return {
             "losses/policy_loss": np.mean(p_losses),
             "losses/value_loss": np.mean(v_losses),
             "losses/entropy": np.mean(entropies)
         }
+
+
+class RepeatNode(Node):
+    def __init__(self, name, inputs, outputs, inner_graph, iterations):
+        super().__init__(name, inputs, outputs)
+        self.inner_graph = inner_graph
+        self.iterations = iterations
+
+    def forward(self, loop_context):
+        current_context = loop_context.copy()
+
+        for i in range(self.iterations):
+            self.inner_graph.run(current_context)
+
+        return current_context
