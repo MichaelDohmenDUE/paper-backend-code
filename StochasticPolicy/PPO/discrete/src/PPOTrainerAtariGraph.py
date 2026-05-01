@@ -13,13 +13,13 @@ from backend.Utils.src.NodeLib.Node import Node, Graph, Signal
 
 def create_ppo_minibatch_graph():
     nodes = [
-        Node("AgentForward", ["agent", "b_states"], ["dist", "value_t"],
+        Node("AgentForward", ["agent", "b_states"], ["dist", "value_tensor"],
              function=lambda net, s: net(s)),
         Node("LogProb", ["dist", "b_actions"], ["new_logp"],
              function=lambda dist, a: dist.log_prob(a)),
         Node("Entropy", ["dist"], ["entropy"],
              function=lambda dist: dist.entropy().mean()),
-        Node("SqueezeValue", ["value_t"], ["value_pred"],
+        Node("SqueezeValue", ["value_tensor"], ["value_pred"],
              function=lambda v: v.squeeze(-1)),
         Node("PolicyLoss", ["new_logp", "b_old_logps", "b_adv", "clip_eps"], ["policy_loss"],
              function=clipped_surrogate_objective),
@@ -130,7 +130,7 @@ class PPOTrainerProcessor:
 
         advantages = all_advantages.reshape(-1)
         returns = advantages + v.reshape(-1)
-        return normalize(advantages), returns
+        return normalize(advantages), returns # TODO REmove Return into later block
 
     def run(self):
         self.graph.run(self.context)

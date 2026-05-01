@@ -28,13 +28,13 @@ class DataCollectionProcessor:
 
         nodes = [
             Node("ToTensor", ["state", "device"], ["state_t"], function=to_tensor, no_grad=True),
-            Node("ActorForward", ["actor", "state_t"], ["dist"], function=lambda net, s: net(s)),
-            Node("CriticForward", ["critic", "state_t"], ["value_t"], function=lambda net, s: net(s)),
-            Node("SampleAction", ["dist"], ["action_t"], function=lambda dist: dist.sample(), no_grad=True),
-            Node("LogProb", ["dist", "action_t"], ["logp_t"], function=lambda dist, a: dist.log_prob(a), no_grad=True),
-            Node("SqueezeValue", ["value_t"], ["value_t_sq"], function=lambda v: v.squeeze(-1), no_grad=True),
-            Node("ToNumpy_a", ["action_t"], ["action"], function=to_numpy_array, no_grad=True),
-            Node("ToNumpy_l", ["logp_t"], ["logp"], function=to_numpy_array, no_grad=True),
+            Node("ActorForward", ["actor", "state_tensor"], ["dist"], function=lambda net, s: net(s)),
+            Node("CriticForward", ["critic", "state_tensor"], ["value_tensor"], function=lambda net, s: net(s)),
+            Node("SampleAction", ["dist"], ["action_tensor"], function=lambda dist: dist.sample(), no_grad=True),
+            Node("LogProb", ["dist", "action_tensor"], ["logp_tensor"], function=lambda dist, a: dist.log_prob(a), no_grad=True),
+            Node("SqueezeValue", ["value_tensor"], ["value_t_sq"], function=lambda v: v.squeeze(-1), no_grad=True),# TODO: Rewirte
+            Node("ToNumpy_a", ["action_tensor"], ["action"], function=to_numpy_array, no_grad=True),
+            Node("ToNumpy_l", ["logp_tensor"], ["logp"], function=to_numpy_array, no_grad=True),
             Node("ToNumpy_v", ["value_t_sq"], ["value"], function=to_numpy_array, no_grad=True),
             Node("EnvStep", ["env", "action"], ["next_state", "reward", "done", "info"],
                  function=lambda env, a: env.step(a)),
