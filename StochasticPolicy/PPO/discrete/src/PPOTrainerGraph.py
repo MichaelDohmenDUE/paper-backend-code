@@ -20,9 +20,10 @@ def dual_optimizer_step(actor, critic, optimizer, loss, max_norm):
     return loss.item()
 
 
-
-def gae_helper(r, d, v, boot_vals, gamma, lam, num_envs):
+def compute_raw_gae(r, d, v, boot_vals, gamma, lam, num_envs):
+    #Reshape depending on the number of envs
     r, d, v, boot_vals = [x.view(-1, num_envs) for x in [r, d, v, boot_vals]]
+
     all_advantages = torch.zeros_like(v)
 
     for i in range(num_envs):
@@ -34,9 +35,10 @@ def gae_helper(r, d, v, boot_vals, gamma, lam, num_envs):
             gae_adv[t] = last_gae = deltas[t] + gamma * lam * (1.0 - d[t, i]) * last_gae
         all_advantages[:, i] = gae_adv
 
-    advantages = all_advantages.reshape(-1)
-    returns = advantages + v.reshape(-1)
-    return normalize(advantages), returns
+    return all_advantages.reshape(-1)
+
+def compute_returns(advantages, values):
+    return advantages + values.view(-1)
 
 def create_ppo_minibatch_graph():
     nodes = [
@@ -137,13 +139,18 @@ class PPOTrainerProcessor:
                  ["states", "actions", "logps", "rewards", "dones", "values", "bootstraps"],
                  function=detransition),
 
-            Node("GAE", ["rewards", "dones", "values", "bootstraps", "gamma", "lam", "num_envs"],
-                 ["advantages", "returns"], function=gae_helper),
-
+            Node("RawGAE", ["rewards", "dones", "values", "bootstraps", "gamma", "lam", "num_envs"],
+                 ["raw_advantages"],
+                 function=compute_raw_gae),
+            Node("ComputeReturns", ["raw_advantages", "values"],
+                 ["returns"],
+                 function=compute_returns),
+            Node("NormalizeAdvantages", ["raw_advantages"],
+                 ["advantages"],
+                 function=normalize),
             KUpdateNode(minibatch_graph, epochs, batch_size)]
 
         self.graph = Graph(nodes, initial_keys=list(self.context.keys()))
-
 
     def run(self):
         self.graph.run(self.context)

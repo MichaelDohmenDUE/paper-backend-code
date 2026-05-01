@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch import nn
 
-from StochasticPolicy.PPO.discrete.src.PPOTrainerGraph import gae_helper
+from StochasticPolicy.PPO.discrete.src.PPOTrainerGraph import  compute_returns, compute_raw_gae
 from backend.Utils.src.NodeLib.NodeLibrary import detransition, td_residual, normalize, clipped_surrogate_objective, \
     optimizer_normalized
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
@@ -108,13 +108,19 @@ class PPOTrainerProcessor:
                  ["states", "actions", "logps", "rewards", "dones", "values", "bootstraps"],
                  function=detransition),
 
-            Node("GAE", ["rewards", "dones", "values", "bootstraps", "gamma", "lam", "num_envs"],
-                 ["advantages", "returns"], function=gae_helper),
+            Node("RawGAE", ["rewards", "dones", "values", "bootstraps", "gamma", "lam", "num_envs"],
+                 ["raw_advantages"],
+                 function=compute_raw_gae),
+            Node("ComputeReturns", ["raw_advantages", "values"],
+                 ["returns"],
+                 function=compute_returns),
+            Node("NormalizeAdvantages", ["raw_advantages"],
+                 ["advantages"],
+                 function=normalize),
 
             KUpdateNode(minibatch_graph, epochs, batch_size)]
 
         self.graph = Graph(nodes, initial_keys=list(self.context.keys()))
-
 
     def run(self):
         self.graph.run(self.context)
