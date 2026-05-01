@@ -24,8 +24,9 @@ class EpisodicMetricsNode(Node):
                 })
                 running_rewards[i] = 0
 
+
 class DataCollectionProcessor:
-    def __init__(self, env_handler, transition_factory, rollout_buffer: RolloutBuffer, rollout_size, agent,device):
+    def __init__(self, env_handler, transition_factory, rollout_buffer: RolloutBuffer, rollout_size, agent, device):
         self.num_envs = getattr(env_handler, "num_envs", 1)
 
         self.context = {
@@ -43,9 +44,11 @@ class DataCollectionProcessor:
 
         nodes = [
             Node("ToTensor", ["state", "device"], ["state_tensor"], function=to_tensor, no_grad=True),
-            Node("AgentForward", ["agent", "state_tensor"], ["dist", "value_tensor"], function=lambda net, s: net(s), no_grad=True),
+            Node("AgentForward", ["agent", "state_tensor"], ["dist", "value_tensor"], function=lambda net, s: net(s),
+                 no_grad=True),
             Node("SampleAction", ["dist"], ["action_tensor"], function=lambda dist: dist.sample(), no_grad=True),
-            Node("LogProb", ["dist", "action_tensor"], ["logp_tensor"], function=lambda dist, a: dist.log_prob(a), no_grad=True),
+            Node("LogProb", ["dist", "action_tensor"], ["logp_tensor"], function=lambda dist, a: dist.log_prob(a),
+                 no_grad=True),
             Node("SqueezeValue", ["value_tensor"], ["value_t_sq"], function=lambda v: v.squeeze(-1), no_grad=True),
             Node("ToNumpy_a", ["action_tensor"], ["action"], function=to_numpy_array, no_grad=True),
             Node("ToNumpy_l", ["logp_tensor"], ["logp"], function=to_numpy_array, no_grad=True),

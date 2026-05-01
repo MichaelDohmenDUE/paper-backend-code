@@ -46,6 +46,7 @@ def main(seed):
     rollout_size = 2048
     batch_size = 256
     epochs = 4
+    eval_episodes = 10
     max_steps = 1_000_000
     lr = 1e-4
     hidden_dim = 64
