@@ -132,6 +132,8 @@ def main(seed, env_name):
 
         if len(metrics) > 1:
             wandb.log(metrics, step=step)
+    metrics["charts/eval_avg_score"] = evaluate_policy(behavior_net, eval_env, episodes=5, device=device)
+    wandb.log(metrics, step=step)
     wandb.finish()
 
 if __name__ == '__main__':

@@ -22,6 +22,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def main():
     start_time = time.time()
     epsilon = 1.0
+    epsilon_final = 0.05
+    epsilon_decay = 20000
+    eval_episodes = 10
     env_name = "CartPole-v1"
     sync_freq = 500
     hidden_size = 64
@@ -39,9 +42,11 @@ def main():
     wandb.init(
         entity="michael_dohmen-",
         project="my-ddqn-benchmarks",
+        name=f"DDQN_{env_name}_seed{seed}",
+        tags=["testing", "DQDN"],
         config={
             "env_id": env_name,
-            "exp_name": "DDQN-CartPole-v1",
+            "exp_name": f"DDQN_{env_name}_seed-{seed}",
             "seed": seed,
             "max_buffer_size": max_buffer_size,
             "batch_size": batch_size,
@@ -49,10 +54,13 @@ def main():
             "lr": lr,
             "gamma": gamma,
             "sync_freq": sync_freq,
+            "warmup_steps": warmup_steps,
             "epsilon": epsilon,
             "tau": tau,
-            "warmup_steps": warmup_steps,
-            "offset": offset,
+            "eval_episodes": eval_episodes,
+            "device": device,
+            "epsilon_decay": epsilon_decay,
+            "epsilon_final": epsilon_final,
         }
     )
 
@@ -82,17 +90,28 @@ def main():
     for step in range(max_steps):
         metrics = {"global_step": step}
         metrics_data = collector.run()
+        if metrics_data:
+            metrics.update(metrics_data)
         metrics_train = train_process.run()
-        metrics = metrics_data | metrics_train
+        if metrics_train:
+            metrics.update(metrics_train)
         sync_process.run()
         metrics["charts/epsilon"] = collector.epsilon_greedy.epsilon
         metrics["global_step"] = step
         if step % 400 == 0:
             metrics["charts/SPS"] = int(step / max(time.time() - start_time, 1e-6))
-        if step % 10_000 == 0 and step > warmup_steps:
-            metrics["charts/eval_avg_score"] = evaluate_policy(behavior_net, eval_env, episodes=5, device=device)
-        if metrics:
-            wandb.log(metrics, step=step)
+            metrics["charts/epsilon"] = collector.epsilon_greedy.epsilon
 
-if __name__ == "__main__":
-    main()
+        if step % 10_000 == 0 and step > warmup_steps:
+            metrics["charts/eval_avg_score"] = evaluate_policy(behavior_net, eval_env, episodes=eval_episodes, device=device)
+
+        if len(metrics) > 1:
+            wandb.log(metrics, step=step)
+    metrics = {"global_step": step}
+    metrics["charts/eval_avg_score"] = evaluate_policy(behavior_net, eval_env, episodes=eval_episodes, device=device)
+    wandb.log(metrics, step=step)
+    wandb.finish()
+if __name__ == '__main__':
+    seeds = [0,1,2]
+    for seed in seeds:
+        main(seed)

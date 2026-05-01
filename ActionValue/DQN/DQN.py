@@ -47,17 +47,17 @@ def evaluate_policy(policy, env_handler, episodes=5, device="cpu"):
     policy.train()
     return total_reward / episodes
 
-def main():
+def main(seed):
     # initialization
     start_time = time.time()
     lr = 2.5e-4
     epsilon = 1.0
     epsilon_final = 0.05
-    epsilon_decay = 50000
+    epsilon_decay = 20000
     eval_episodes = 10
     env_name = "CartPole-v1"
     sync_freq = 1000
-    hidden_size = 120
+    hidden_size = 64
     batch_size = 128
     max_buffer_size = 100_000
     tau = 1.0
@@ -67,8 +67,8 @@ def main():
     spec = TransitionSpec(["state", "action", "reward", "next_state", "done"])
     gym_factory = GymEnvFactory(env_name)
     factory = TransitionFactory(spec)
-    seed = 1
-    warmup_steps = 10000
+    seed = seed
+    warmup_steps = 500
 
     wandb.init(
         entity="michael_dohmen-",
@@ -89,6 +89,10 @@ def main():
             "max_norm": max_norm,
             "epsilon": epsilon,
             "tau": tau,
+            "eval_episodes": eval_episodes,
+            "device": device,
+            "epsilon_decay": epsilon_decay,
+            "epsilon_final": epsilon_final,
         }
     )
 
@@ -96,8 +100,8 @@ def main():
     eval_env = VecEnvironmentHandler(gym_factory, seed + 100, num_envs=1)
     obs_size, action_size, max_action = env.get_env_specs()
     obs_size = obs_size[0]
-    behavior_net = nn.Sequential(nn.Linear(obs_size, hidden_size), nn.ReLU(), nn.Linear(hidden_size, action_size)).to(
-        device)
+    behavior_net = nn.Sequential(nn.Linear(obs_size, hidden_size), nn.ReLU(), nn.Linear(hidden_size, hidden_size),
+                                 nn.ReLU(), nn.Linear(hidden_size, action_size)).to(device)
     optimizer = torch.optim.Adam(behavior_net.parameters(), lr)
 
     target_net = deepcopy(behavior_net).to(device)
@@ -127,7 +131,11 @@ def main():
 
         if len(metrics) > 1:
             wandb.log(metrics, step=step)
+    metrics = {"global_step": step}
     metrics["charts/eval_avg_score"] = evaluate_policy(behavior_net, eval_env, episodes=eval_episodes, device=device)
     wandb.log(metrics, step=step)
+    wandb.finish()
 if __name__ == '__main__':
-    main()
+    seeds = [0,1,2]
+    for seed in seeds:
+        main(seed)
