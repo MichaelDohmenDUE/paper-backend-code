@@ -105,14 +105,14 @@ def main(seed):
         metrics_train = trainer.run()
         if metrics_train:
             metrics.update(metrics_train)
-        steps = data_collector.context["total_steps"]
+        step = data_collector.context["total_steps"]
         metrics["global_step"] = step
 
         elapsed_time = time.time() - start_time
         if elapsed_time > 0:
             sps = int(step / elapsed_time)
             metrics["charts/SPS"] = sps
-        if eval_step <= steps:
+        if eval_step <= step:
             avg_eval_reward = eval_trainer(trainer, eval_env_handler, eval_episodes=eval_episodes)
             metrics["eval/avg_reward"] = avg_eval_reward
             eval_step += eval_freq
