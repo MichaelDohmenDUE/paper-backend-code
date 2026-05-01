@@ -54,7 +54,7 @@ class TrainProcessor:
             Node("Bellman", ["qsa_t", "reward", "done", "gamma"], ["target_val"],
                  function=bellman),
             Node("Loss", ["qsa_b", "target_val"], ["loss"],
-                 function=lambda q, t: F.smooth_l1_loss(q, t)),
+                 function=mean_squared_error),
 
             Node("Optimize", ["behavior_net", "optimizer", "loss", "max_norm"], ["_opt"],
                  function=optimizer_normalized),

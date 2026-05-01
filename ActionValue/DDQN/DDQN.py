@@ -36,7 +36,7 @@ def main(seed):
     seed = seed
     offset = 100
     lr = 1e-4
-    warmup_steps = 500
+    warmup_steps = min(batch_size,500)
     setting_global_seed(seed)
 
     wandb.init(
