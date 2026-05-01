@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, BootStrappingNode, \
-    to_numpy_array, to_tensor
+    to_numpy_array, to_tensor, clipper
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 from backend.Utils.src.NodeLib.Node import Node, Graph
 
@@ -38,6 +38,7 @@ class DataCollectionProcessor:
             "metrics_queue": [],
             "total_steps": 0,
             "num_envs": self.num_envs,
+            "max_R": 1,
         }
 
         nodes = [
@@ -51,7 +52,7 @@ class DataCollectionProcessor:
             Node("ToNumpy_v", ["value_t_sq"], ["value"], function=to_numpy_array, no_grad=True),
             Node("EnvStep", ["env", "action"], ["next_state", "reward", "done", "info"],
                  function=lambda env, a: env.step(a)),
-            Node("ClipReward", ["reward"], ["clipped_reward"], function=lambda r: np.clip(r, -1, 1)),
+            Node("ClipReward", ["reward", "max_R"], ["clipped_reward"], function=clipper),
 
             TransitionNode(
                 factory=transition_factory,

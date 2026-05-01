@@ -27,7 +27,7 @@ class DataCollectionProcessor:
         }
 
         nodes = [
-            Node("ToTensor", ["state", "device"], ["state_t"],function=to_tensor, no_grad=True),
+            Node("ToTensor", ["state", "device"], ["state_t"], function=to_tensor, no_grad=True),
             Node("ActorForward", ["actor", "state_t"], ["dist"], function=lambda net, s: net(s)),
             Node("CriticForward", ["critic", "state_t"], ["value_t"], function=lambda net, s: net(s)),
             Node("SampleAction", ["dist"], ["action_t"], function=lambda dist: dist.sample(), no_grad=True),

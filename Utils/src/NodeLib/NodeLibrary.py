@@ -229,7 +229,7 @@ class BufferAppendingNode(Node):
         super().__init__("BufferAppendingNode", ["buffer", "transitions"], ["_buffer_updated"])
 
     def forward(self, buffer, transitions):
-        #print(transitions)
+        print(transitions)
         for t in transitions:
             buffer.append(t)
         return True  # DummySignal
