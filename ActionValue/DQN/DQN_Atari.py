@@ -14,7 +14,7 @@ from backend.Utils.src.EnvFactory import AtariEnvFactory
 from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
-from utils import setting_global_seed
+from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
