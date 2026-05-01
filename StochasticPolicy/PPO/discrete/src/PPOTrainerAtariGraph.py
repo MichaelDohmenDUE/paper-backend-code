@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from torch import nn
 
+from StochasticPolicy.PPO.discrete.src.PPOTrainerGraph import gae_helper
 from backend.Utils.src.NodeLib.NodeLibrary import detransition, td_residual, normalize, clipped_surrogate_objective, \
     optimizer_normalized
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
@@ -58,7 +59,7 @@ class KUpdateNode(Node):
             for start in range(0, dataset_size, self.batch_size):
                 idx = indices[start: start + self.batch_size]
 
-                # Constructing the Inner graph needs context, copy ensures a clean start
+                #Constructing the Inner graph needs context, copy ensures a clean start
                 inner_context = context.copy()
                 inner_context.update({
                     "b_states": states[idx],
@@ -108,29 +109,12 @@ class PPOTrainerProcessor:
                  function=detransition),
 
             Node("GAE", ["rewards", "dones", "values", "bootstraps", "gamma", "lam", "num_envs"],
-                 ["advantages", "returns"], function=self._gae_helper),
+                 ["advantages", "returns"], function=gae_helper),
 
             KUpdateNode(minibatch_graph, epochs, batch_size)]
 
         self.graph = Graph(nodes, initial_keys=list(self.context.keys()))
 
-    @staticmethod
-    def _gae_helper(r, d, v, boot_vals, gamma, lam, num_envs):
-        r, d, v, boot_vals = [x.view(-1, num_envs) for x in [r, d, v, boot_vals]]
-        all_advantages = torch.zeros_like(v)
-
-        for i in range(num_envs):
-            boot_value = boot_vals[-1, i].unsqueeze(0)
-            deltas = td_residual(r[:, i], d[:, i], v[:, i], boot_value, gamma)
-            gae_adv = torch.zeros_like(deltas)
-            last_gae = 0
-            for t in reversed(range(len(deltas))):
-                gae_adv[t] = last_gae = deltas[t] + gamma * lam * (1.0 - d[t, i]) * last_gae
-            all_advantages[:, i] = gae_adv
-
-        advantages = all_advantages.reshape(-1)
-        returns = advantages + v.reshape(-1)
-        return normalize(advantages), returns # TODO REmove Return into later block
 
     def run(self):
         self.graph.run(self.context)

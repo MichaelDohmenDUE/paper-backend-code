@@ -19,6 +19,25 @@ def dual_optimizer_step(actor, critic, optimizer, loss, max_norm):
     optimizer.step()
     return loss.item()
 
+
+
+def gae_helper(r, d, v, boot_vals, gamma, lam, num_envs):
+    r, d, v, boot_vals = [x.view(-1, num_envs) for x in [r, d, v, boot_vals]]
+    all_advantages = torch.zeros_like(v)
+
+    for i in range(num_envs):
+        boot_value = boot_vals[-1, i].unsqueeze(0)
+        deltas = td_residual(r[:, i], d[:, i], v[:, i], boot_value, gamma)
+        gae_adv = torch.zeros_like(deltas)
+        last_gae = 0
+        for t in reversed(range(len(deltas))):
+            gae_adv[t] = last_gae = deltas[t] + gamma * lam * (1.0 - d[t, i]) * last_gae
+        all_advantages[:, i] = gae_adv
+
+    advantages = all_advantages.reshape(-1)
+    returns = advantages + v.reshape(-1)
+    return normalize(advantages), returns
+
 def create_ppo_minibatch_graph():
     nodes = [
         Node("ActorForward", ["actor", "b_states"], ["dist"],
@@ -112,36 +131,19 @@ class PPOTrainerProcessor:
         minibatch_graph = create_ppo_minibatch_graph()
 
         nodes = [
-            Node("Sample", ["buffer"],["rollout"],
+            Node("Sample", ["buffer"], ["rollout"],
                  function=lambda b: b.sample() if b.reached_rollout_size() else Signal.NOSIGNAL),
             Node("Detransition", ["fields", "rollout", "device"],
                  ["states", "actions", "logps", "rewards", "dones", "values", "bootstraps"],
                  function=detransition),
 
             Node("GAE", ["rewards", "dones", "values", "bootstraps", "gamma", "lam", "num_envs"],
-                 ["advantages", "returns"], function=self._gae_helper),
+                 ["advantages", "returns"], function=gae_helper),
 
             KUpdateNode(minibatch_graph, epochs, batch_size)]
 
         self.graph = Graph(nodes, initial_keys=list(self.context.keys()))
 
-    @staticmethod
-    def _gae_helper(r, d, v, boot_vals, gamma, lam, num_envs):
-        r, d, v, boot_vals = [x.view(-1, num_envs) for x in [r, d, v, boot_vals]]
-        all_advantages = torch.zeros_like(v)
-
-        for i in range(num_envs):
-            boot_value = boot_vals[-1, i].unsqueeze(0)
-            deltas = td_residual(r[:, i], d[:, i], v[:, i], boot_value, gamma)
-            gae_adv = torch.zeros_like(deltas)
-            last_gae = 0
-            for t in reversed(range(len(deltas))):
-                gae_adv[t] = last_gae = deltas[t] + gamma * lam * (1.0 - d[t, i]) * last_gae
-            all_advantages[:, i] = gae_adv
-
-        advantages = all_advantages.reshape(-1)
-        returns = advantages + v.reshape(-1)
-        return normalize(advantages), returns
 
     def run(self):
         self.graph.run(self.context)

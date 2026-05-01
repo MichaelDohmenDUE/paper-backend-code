@@ -27,7 +27,10 @@ def to_numpy_array(action_raw):
 
 
 def clipper(action, max_action):
-    return action.clamp(-max_action, max_action)
+    if isinstance(action, torch.Tensor):
+        return action.clamp(-max_action, max_action)
+    else:
+        return np.clip(action, -max_action, max_action)
 
 
 def bellman(target_Q: torch.Tensor, reward: torch.Tensor, done: torch.Tensor, discount_factor: float) -> torch.Tensor:

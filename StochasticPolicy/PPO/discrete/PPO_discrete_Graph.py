@@ -87,7 +87,7 @@ def main(seed):
     critic = CriticPPO(state_dim, hidden_dim).to(device)
     optimizer = optim.Adam(list(actor.parameters()) + list(critic.parameters()), lr=lr)
 
-    rollout_buffer = RolloutBuffer(spec, rollout_size= rollout_size)
+    rollout_buffer = RolloutBuffer(spec, rollout_size=rollout_size)
 
     trainer = PPOTrainerProcessor(actor, critic, optimizer, rollout_buffer, batch_size, epochs, gamma=gamma, lam=lam)
 
