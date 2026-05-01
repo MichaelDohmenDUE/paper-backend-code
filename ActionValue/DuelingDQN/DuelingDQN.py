@@ -14,13 +14,17 @@ from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler, VecEnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
+from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def main():
+def main(seed):
     start_time = time.time()
     epsilon = 1.0
+    epsilon_final = 0.05
+    epsilon_decay = 20000
+    eval_episodes = 10
     env_name = "CartPole-v1"
     sync_freq = 100
     hidden_size = 128
@@ -29,16 +33,20 @@ def main():
     tau = 1.0
     gamma = 0.99
     max_steps = 1_000_000
-    seed = 42
-    lr = 3e-4
+    seed = seed
+    offset = 100
+    lr = 2.5e-4
     warmup_steps = 1000
+    setting_global_seed(seed)
 
     wandb.init(
         entity="michael_dohmen-",
-        project="my-DuellingDqn-benchmarks",
+        project="my-DuelingDQN-benchmarks",
+        name=f"DuelingDQN{env_name}_seed{seed}",
+        tags=["benchmarking", "DuelingDQN"],
         config={
             "env_id": env_name,
-            "exp_name": "DuellingDQN-CartPole-v1",
+            "exp_name": f"DuelingDQN{env_name}_seed-{seed}",
             "seed": seed,
             "max_buffer_size": max_buffer_size,
             "batch_size": batch_size,
@@ -46,26 +54,32 @@ def main():
             "lr": lr,
             "gamma": gamma,
             "sync_freq": sync_freq,
+            "warmup_steps": warmup_steps,
             "epsilon": epsilon,
             "tau": tau,
-            "warmup_steps": warmup_steps,
+            "eval_episodes": eval_episodes,
+            "device": device,
+            "epsilon_decay": epsilon_decay,
+            "epsilon_final": epsilon_final,
         }
     )
 
     spec = TransitionSpec(["state", "action", "reward", "next_state", "done"])
     factory = TransitionFactory(spec)
+
     gym_factory = GymEnvFactory(env_name)
-    env = VecEnvironmentHandler(gym_factory, seed,num_envs=1 )
-    eval_env = VecEnvironmentHandler(gym_factory, seed + 1, num_envs=1)
+
+    env = VecEnvironmentHandler(gym_factory, seed, num_envs=1)
+    eval_env = VecEnvironmentHandler(gym_factory, seed + offset, num_envs=1)
     obs_size, action_size, _ = env.get_env_specs()
     obs_size = obs_size[0]
     behavior_net = DuellingDQN(obs_size, hidden_size, action_size).to(device)
     target_net = deepcopy(behavior_net).to(device)
-    eps_greedy = EpsilonGreedyPolicy(epsilon_start=epsilon, epsilon_final=0.01, epsilon_decay=10000)
+
     optimizer = torch.optim.Adam(behavior_net.parameters(), lr)
 
     buffer = ReplayBuffer(spec, max_buffer_size, batch_size)
-
+    eps_greedy = EpsilonGreedyPolicy(epsilon_start=epsilon, epsilon_final=epsilon_final, epsilon_decay=epsilon_decay)
     collector = DataCollectionProcessor(behavior_net, env, buffer, eps_greedy, factory, device)
 
     train_process = TrainProcessor(buffer, behavior_net, target_net, optimizer, gamma, device, warmup_steps)
@@ -75,18 +89,29 @@ def main():
     for step in range(max_steps):
         metrics = {"global_step": step}
         metrics_data = collector.run()
+        if metrics_data:
+            metrics.update(metrics_data)
         metrics_train = train_process.run()
-        metrics = metrics_data | metrics_train
+        if metrics_train:
+            metrics.update(metrics_train)
         sync_process.run()
         metrics["charts/epsilon"] = collector.epsilon_greedy.epsilon
         metrics["global_step"] = step
         if step % 400 == 0:
             metrics["charts/SPS"] = int(step / max(time.time() - start_time, 1e-6))
+            metrics["charts/epsilon"] = collector.epsilon_greedy.epsilon
+
         if step % 10_000 == 0 and step > warmup_steps:
-            metrics["charts/eval_avg_score"] = evaluate_policy(behavior_net, eval_env, episodes=5, device=device)
-        if metrics:
+            metrics["charts/eval_avg_score"] = evaluate_policy(behavior_net, eval_env, episodes=eval_episodes, device=device)
+
+        if len(metrics) > 1:
             wandb.log(metrics, step=step)
-
-
-if __name__ == "__main__":
-    main()
+    step = max_steps
+    metrics = {"global_step": step,
+               "charts/eval_avg_score": evaluate_policy(behavior_net, eval_env, episodes=eval_episodes, device=device)}
+    wandb.log(metrics, step=step)
+    wandb.finish()
+if __name__ == '__main__':
+    seeds = [0, 1, 2]
+    for seed in seeds:
+        main(seed)

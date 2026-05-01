@@ -73,17 +73,16 @@ def main(seed):
     eval_env = VecEnvironmentHandler(gym_factory, seed + offset, num_envs=1)
     obs_size, action_size, _ = env.get_env_specs()
     obs_size = obs_size[0]
-
     behavior_net = Policy(obs_size, action_size, hidden_size).to(device)
     target_net = deepcopy(behavior_net).to(device)
 
     optimizer = torch.optim.Adam(behavior_net.parameters(), lr)
 
     buffer = ReplayBuffer(spec, max_buffer_size, batch_size)
-    eps_greedy = EpsilonGreedyPolicy(epsilon_start=epsilon, epsilon_final=0.05, epsilon_decay=20000)
+    eps_greedy = EpsilonGreedyPolicy(epsilon_start=epsilon, epsilon_final=epsilon_final, epsilon_decay=epsilon_decay)
     collector = DataCollectionProcessor(behavior_net, env, buffer, eps_greedy, factory, device)
 
-    train_process = TrainProcessor(buffer, behavior_net, target_net, optimizer, gamma, device)
+    train_process = TrainProcessor(buffer, behavior_net, target_net, optimizer, gamma, device, warmup_steps)
 
     sync_process = SyncProcessor(behavior_net, target_net, tau, sync_freq)
 
