@@ -28,7 +28,7 @@ def main(seed, evn_name):
     env_name = evn_name
     sync_freq = 2000
     batch_size = 32
-    max_buffer_size = 300_000
+    max_buffer_size = 1_000_000
     tau = 1.0
     gamma = 0.99
     max_steps = 1_000_000
