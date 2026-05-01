@@ -19,7 +19,7 @@ from backend.Utils.src.utils import setting_global_seed
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def main():
+def main(seed):
     start_time = time.time()
     epsilon = 1.0
     epsilon_final = 0.05
@@ -32,8 +32,8 @@ def main():
     max_buffer_size = 100000
     tau = 1.0
     gamma = 0.99
-    max_steps = 500000
-    seed = 1
+    max_steps = 1_000_000
+    seed = seed
     offset = 100
     lr = 2.5e-4
     warmup_steps = 2000
@@ -43,7 +43,7 @@ def main():
         entity="michael_dohmen-",
         project="my-ddqn-benchmarks",
         name=f"DDQN_{env_name}_seed{seed}",
-        tags=["testing", "DQDN"],
+        tags=["benchmarking", "DQDN"],
         config={
             "env_id": env_name,
             "exp_name": f"DDQN_{env_name}_seed-{seed}",
@@ -107,11 +107,12 @@ def main():
 
         if len(metrics) > 1:
             wandb.log(metrics, step=step)
-    metrics = {"global_step": step}
-    metrics["charts/eval_avg_score"] = evaluate_policy(behavior_net, eval_env, episodes=eval_episodes, device=device)
+    step = max_steps
+    metrics = {"global_step": step,
+               "charts/eval_avg_score": evaluate_policy(behavior_net, eval_env, episodes=eval_episodes, device=device)}
     wandb.log(metrics, step=step)
     wandb.finish()
 if __name__ == '__main__':
-    seeds = [0,1,2]
+    seeds = [0, 1, 2]
     for seed in seeds:
         main(seed)
