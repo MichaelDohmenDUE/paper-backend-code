@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 
+from NodeLib.NodeLibrary import to_tensor, to_numpy_array
 from backend.StochasticPolicy.PPO.discrete.src.DataCollectorGraph import EpisodicMetricsNode
 from backend.Utils.src.NodeLib.Node import Node, Graph
 from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, BootStrappingNode, \
@@ -26,16 +27,15 @@ class DataCollectionProcessor:
         }
 
         nodes = [
-            Node("ToTensor", ["state", "device"], ["state_t"],
-                 function=lambda s, d: torch.as_tensor(s, dtype=torch.float32, device=d), no_grad=True),
+            Node("ToTensor", ["state", "device",], ["state_t"],function=to_tensor, no_grad=True),
             Node("ActorForward", ["actor", "state_t"], ["dist"], function=lambda net, s: net(s)),
             Node("CriticForward", ["critic", "state_t"], ["value_t"], function=lambda net, s: net(s)),
             Node("SampleAction", ["dist"], ["action_t"], function=lambda dist: dist.sample(), no_grad=True),
             Node("LogProb", ["dist", "action_t"], ["logp_t"], function=lambda dist, a: dist.log_prob(a), no_grad=True),
             Node("SqueezeValue", ["value_t"], ["value_t_sq"], function=lambda v: v.squeeze(-1), no_grad=True),
-            Node("ToNumpy_a", ["action_t"], ["action"], function=lambda t: t.cpu().numpy().squeeze(), no_grad=True),
-            Node("ToNumpy_l", ["logp_t"], ["logp"], function=lambda t: t.cpu().numpy().squeeze(), no_grad=True),
-            Node("ToNumpy_v", ["value_t_sq"], ["value"], function=lambda t: t.cpu().numpy().squeeze(), no_grad=True),
+            Node("ToNumpy_a", ["action_t"], ["action"], function=to_numpy_array, no_grad=True),
+            Node("ToNumpy_l", ["logp_t"], ["logp"], function=to_numpy_array, no_grad=True),
+            Node("ToNumpy_v", ["value_t_sq"], ["value"], function=to_numpy_array, no_grad=True),
             Node("EnvStep", ["env", "action"], ["next_state", "reward", "done", "info"],
                  function=lambda env, a: env.step(a)),
 
@@ -55,12 +55,13 @@ class DataCollectionProcessor:
             ),
             BufferAppendingNode(),
 
+            BootStrappingNodeMujoco(rollout_size),
+
+            Node("State", ["next_state", "_buffer_updated"], ["state"],
+                 function=lambda ns, _: np.array(ns).astype(np.float32)),
             EpisodicMetricsNode(),
             Node("CountSteps", ["total_steps", "num_envs"], ["total_steps"], function=lambda steps, n: steps + n),
 
-            BootStrappingNodeMujoco(rollout_size),
-            Node("State", ["next_state", "_buffer_updated"], ["state"],
-                 function=lambda ns, _: np.array(ns).astype(np.float32))
         ]
 
         self.graph = Graph(nodes, initial_keys=list(self.context.keys()))

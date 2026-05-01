@@ -1,7 +1,8 @@
 import numpy as np
 import torch
 
-from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, BootStrappingNode
+from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, BootStrappingNode, \
+    to_numpy_array, to_tensor
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 from backend.Utils.src.NodeLib.Node import Node, Graph
 
@@ -36,19 +37,18 @@ class DataCollectionProcessor:
             "running_rewards": np.zeros(self.num_envs),
             "metrics_queue": [],
             "total_steps": 0,
-            "num_envs": self.num_envs
+            "num_envs": self.num_envs,
         }
 
         nodes = [
-            Node("ToTensor", ["state", "device"], ["state_t"],
-                 function=lambda s, d: torch.as_tensor(s, dtype=torch.float32, device=d), no_grad=True),
+            Node("ToTensor", ["state", "device"], ["state_t"], function=to_tensor, no_grad=True),
             Node("AgentForward", ["agent", "state_t"], ["dist", "value_t"], function=lambda net, s: net(s), no_grad=True),
             Node("SampleAction", ["dist"], ["action_t"], function=lambda dist: dist.sample(), no_grad=True),
             Node("LogProb", ["dist", "action_t"], ["logp_t"], function=lambda dist, a: dist.log_prob(a), no_grad=True),
             Node("SqueezeValue", ["value_t"], ["value_t_sq"], function=lambda v: v.squeeze(-1), no_grad=True),
-            Node("ToNumpy_a", ["action_t"], ["action"], function=lambda t: t.cpu().numpy().squeeze(), no_grad=True),
-            Node("ToNumpy_l", ["logp_t"], ["logp"], function=lambda t: t.cpu().numpy().squeeze(), no_grad=True),
-            Node("ToNumpy_v", ["value_t_sq"], ["value"], function=lambda t: t.cpu().numpy().squeeze(), no_grad=True),
+            Node("ToNumpy_a", ["action_t"], ["action"], function=to_numpy_array, no_grad=True),
+            Node("ToNumpy_l", ["logp_t"], ["logp"], function=to_numpy_array, no_grad=True),
+            Node("ToNumpy_v", ["value_t_sq"], ["value"], function=to_numpy_array, no_grad=True),
             Node("EnvStep", ["env", "action"], ["next_state", "reward", "done", "info"],
                  function=lambda env, a: env.step(a)),
             Node("ClipReward", ["reward"], ["clipped_reward"], function=lambda r: np.clip(r, -1, 1)),
@@ -68,13 +68,13 @@ class DataCollectionProcessor:
                 }
             ),
             BufferAppendingNode(),
+            BootStrappingNode(rollout_size),
+
+            Node("OverwriteState", ["next_state", "_buffer_updated"], ["state"],
+                 function=lambda ns, _: np.array(ns).astype(np.uint8)),
 
             EpisodicMetricsNode(),
             Node("CountSteps", ["total_steps", "num_envs"], ["total_steps"], function=lambda steps, n: steps + n),
-
-            BootStrappingNode(rollout_size),
-            Node("State", ["next_state", "_buffer_updated"], ["state"],
-                 function=lambda ns, _: np.array(ns).astype(np.uint8))
         ]
 
         self.graph = Graph(nodes, initial_keys=list(self.context.keys()))
