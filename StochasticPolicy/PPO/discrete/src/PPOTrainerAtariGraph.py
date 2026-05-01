@@ -3,8 +3,8 @@ import torch
 from torch import nn
 
 from StochasticPolicy.PPO.discrete.src.PPOTrainerGraph import  compute_returns, compute_raw_gae
-from backend.Utils.src.NodeLib.NodeLibrary import detransition, td_residual, normalize, clipped_surrogate_objective, \
-    optimizer_normalized
+from backend.Utils.src.NodeLib.NodeLibrary import detransition, normalize, clipped_surrogate_objective, \
+    optimizer_normalized, td_residual, compute_returns
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -107,10 +107,14 @@ class PPOTrainerProcessor:
             Node("Detransition", ["fields", "rollout", "device"],
                  ["states", "actions", "logps", "rewards", "dones", "values", "bootstraps"],
                  function=detransition),
+            Node("ComputeDeltas", ["rewards", "dones", "values", "bootstraps", "gamma", "num_envs"],
+                 ["deltas"],
+                 function=td_residual),
 
-            Node("RawGAE", ["rewards", "dones", "values", "bootstraps", "gamma", "lam", "num_envs"],
+            Node("RawGAE", ["deltas", "dones", "gamma", "lam", "num_envs"],
                  ["raw_advantages"],
                  function=compute_raw_gae),
+
             Node("ComputeReturns", ["raw_advantages", "values"],
                  ["returns"],
                  function=compute_returns),

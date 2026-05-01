@@ -148,17 +148,35 @@ def optimize_step_normalized(optimizer, actor, loss, max_grad_norm):  # TODO Uni
     return True
 
 
-def td_residual(rewards, dones, value, bootstrap_value, gamma):
-    next_values = torch.zeros_like(value)
-    next_values[:-1] = value[1:]
-    next_values[-1] = bootstrap_value[-1]
-
+def td_residual(rewards, dones, values, bootstrap_values, gamma, num_envs=None):
+    if num_envs is not None:
+        rewards = rewards.view(-1, num_envs)
+        dones = dones.view(-1, num_envs)
+        values = values.view(-1, num_envs)
+        bootstrap_values = bootstrap_values.view(-1, num_envs)
     next_non_terminal = 1.0 - dones
+    assert (bootstrap_values[:-1] == 0.0).all(), "bootstrap_value Error"
+    # Shift values by 1 and Bootstrap the bootstrapValue
+    next_values = torch.cat([values[1:], bootstrap_values[-1:]], dim=0)
+    deltas = rewards + gamma * next_values * next_non_terminal - values
 
-    assert (bootstrap_value[:-1] == 0.0).all(), "bootstrap_value Error"
-
-    deltas = rewards + gamma * next_values * next_non_terminal - value
     return deltas
+
+def compute_raw_gae(deltas, d, gamma, lam, num_envs):
+    d = d.view(-1, num_envs)
+    all_advantages = torch.zeros_like(deltas)
+
+    last_gae = torch.zeros(num_envs, device=deltas.device)
+
+    for t in reversed(range(len(deltas))):
+        last_gae = deltas[t] + gamma * lam * (1.0 - d[t]) * last_gae
+        all_advantages[t] = last_gae
+
+    return all_advantages.reshape(-1)
+
+
+def compute_returns(advantages, values):
+    return advantages + values.view(-1)
 
 
 def normalize(tensor: torch.Tensor) -> torch.Tensor:

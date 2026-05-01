@@ -2,14 +2,15 @@ import numpy as np
 import torch
 from torch import nn
 
-from backend.Utils.src.NodeLib.NodeLibrary import detransition, td_residual, normalize, clipped_surrogate_objective, \
-    optimizer_normalized
+from backend.Utils.src.NodeLib.NodeLibrary import detransition, normalize, clipped_surrogate_objective, td_residual, \
+    compute_raw_gae, compute_returns
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 from backend.Utils.src.utils import gae
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 from backend.Utils.src.NodeLib.Node import Node, Graph, Signal
+
 
 def dual_optimizer_step(actor, critic, optimizer, loss, max_norm):
     optimizer.zero_grad()
@@ -19,26 +20,6 @@ def dual_optimizer_step(actor, critic, optimizer, loss, max_norm):
     optimizer.step()
     return loss.item()
 
-
-def compute_raw_gae(r, d, v, boot_vals, gamma, lam, num_envs):
-    #Reshape depending on the number of envs
-    r, d, v, boot_vals = [x.view(-1, num_envs) for x in [r, d, v, boot_vals]]
-
-    all_advantages = torch.zeros_like(v)
-
-    for i in range(num_envs):
-        boot_value = boot_vals[-1, i].unsqueeze(0)
-        deltas = td_residual(r[:, i], d[:, i], v[:, i], boot_value, gamma)
-        gae_adv = torch.zeros_like(deltas)
-        last_gae = 0
-        for t in reversed(range(len(deltas))):
-            gae_adv[t] = last_gae = deltas[t] + gamma * lam * (1.0 - d[t, i]) * last_gae
-        all_advantages[:, i] = gae_adv
-
-    return all_advantages.reshape(-1)
-
-def compute_returns(advantages, values):
-    return advantages + values.view(-1)
 
 def create_ppo_minibatch_graph():
     nodes = [
@@ -90,7 +71,7 @@ class KUpdateNode(Node):
             for start in range(0, dataset_size, self.batch_size):
                 idx = indices[start: start + self.batch_size]
 
-                #Constructing the Inner graph needs context, copy ensures a clean start
+                # Constructing the Inner graph needs context, copy ensures a clean start
                 inner_context = context.copy()
                 inner_context.update({
                     "b_states": states[idx],
@@ -111,6 +92,7 @@ class KUpdateNode(Node):
             "losses/value_loss": np.mean(v_losses),
             "losses/entropy": np.mean(entropies)
         }
+
 
 class PPOTrainerProcessor:
     def __init__(self, actor, critic, optimizer, rollout_buffer, batch_size=64, epochs=10,
@@ -139,9 +121,14 @@ class PPOTrainerProcessor:
                  ["states", "actions", "logps", "rewards", "dones", "values", "bootstraps"],
                  function=detransition),
 
-            Node("RawGAE", ["rewards", "dones", "values", "bootstraps", "gamma", "lam", "num_envs"],
+            Node("ComputeDeltas", ["rewards", "dones", "values", "bootstraps", "gamma", "num_envs"],
+                 ["deltas"],
+                 function=td_residual),
+
+            Node("RawGAE", ["deltas", "dones", "gamma", "lam", "num_envs"],
                  ["raw_advantages"],
                  function=compute_raw_gae),
+
             Node("ComputeReturns", ["raw_advantages", "values"],
                  ["returns"],
                  function=compute_returns),
