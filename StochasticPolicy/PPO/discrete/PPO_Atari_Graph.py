@@ -101,8 +101,8 @@ def main(seed):
         metrics = {}
         metrics_ep = data_collector.run()
         if metrics_ep:
-            metrics.update(metrics_data)
-        metrics_train = train_process.run()
+            metrics.update(metrics_ep)
+        metrics_train = trainer.run()
         if metrics_train:
             metrics.update(metrics_train)
         steps = data_collector.context["total_steps"]

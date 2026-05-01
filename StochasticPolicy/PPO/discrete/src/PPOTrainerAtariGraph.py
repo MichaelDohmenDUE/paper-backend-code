@@ -98,7 +98,7 @@ class PPOTrainerProcessor:
             }
         }
 
-        minibatch_graph = create_ppo_minibatch_graph(agent, optimizer)
+        minibatch_graph = create_ppo_minibatch_graph()
 
         nodes = [
             Node("Sample", ["buffer"], ["rollout"],
