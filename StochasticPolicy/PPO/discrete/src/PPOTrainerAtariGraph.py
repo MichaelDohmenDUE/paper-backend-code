@@ -1,9 +1,8 @@
 import torch
 from torch import nn
 
-from StochasticPolicy.PPO.discrete.src.PPOTrainerGraph import compute_raw_gae
 from backend.Utils.src.NodeLib.NodeLibrary import detransition, normalize, clipped_surrogate_objective, \
-    optimizer_normalized, td_residual, compute_returns, KUpdateNode
+    optimizer_normalized, td_residual, compute_returns, KUpdateNode, compute_raw_gae
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
