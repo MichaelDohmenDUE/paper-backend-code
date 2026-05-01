@@ -57,13 +57,15 @@ def main(seed):
     algo_name = "ppo_discrete_mujoco"
 
     wandb.init(
-        entity="michael_dohmen-",
         project="my-ppo-benchmarks",
-        name=f"{algo_name}-seed-{seed}",
-        tags=[env_name, "baseline_study", algo_name],
+        group=algo_name,
+        name=f"{algo_name}-{env_name}-seed-{seed}",
+        tags=[env_name, "baseline", algo_name],
+        reinit=True,
+        entity="michael_dohmen-",
         config={
             "env_id": env_name,
-            "exp_name": "my_ppo_cartpole",
+            "exp_name": f"PPO_{env_name}_seed-{seed}",
             "seed": seed,
             "rollout_size": rollout_size,
             "batch_size": batch_size,
@@ -73,6 +75,9 @@ def main(seed):
             "lam": lam,
             "max_steps": max_steps,
             "offset": offset,
+            "eval_freq": eval_freq,
+            "eval_episodes": eval_episodes,
+            "device": device
         }
     )
 
@@ -93,23 +98,35 @@ def main(seed):
 
     data_collector = DataCollectionProcessor(env_handler, transition_factory, rollout_buffer, rollout_size,
                                              actor, critic, device)
-    steps = 0
+    step = 0
     eval_step = 0
-    while steps < max_steps:
+    while step < max_steps:
+        metrics = {}
         metrics_ep = data_collector.run()
+        if metrics_ep:
+            metrics.update(metrics_ep)
         metrics_train = trainer.run()
-        all_metrics = {**metrics_ep, **metrics_train, "charts/SPS": int(steps / (time.time() - start_time)),
-                       "global_step": data_collector.context["total_steps"]}
-        steps = data_collector.context["total_steps"]
+        if metrics_train:
+            metrics.update(metrics_train)
+        step = data_collector.context["total_steps"]
+        metrics["global_step"] = step
 
-        if eval_step <= steps:
-            avg_eval_reward = eval_trainer(trainer, eval_env_handler, eval_episodes=10)
-            all_metrics["eval/avg_reward"] = avg_eval_reward
+        elapsed_time = time.time() - start_time
+        if elapsed_time > 0:
+            sps = int(step / elapsed_time)
+            metrics["charts/SPS"] = sps
+        if eval_step <= step:
+            avg_eval_reward = eval_trainer(trainer, eval_env_handler, eval_episodes=eval_episodes)
+            metrics["eval/avg_reward"] = avg_eval_reward
             eval_step += eval_freq
-        wandb.log(all_metrics, step=steps)
+        if len(metrics) > 1:
+            wandb.log(metrics, step=step)
+    # Final Eval
+    metrics = {"global_step": step,
+               "charts/eval_avg_score": eval_trainer(trainer, eval_env_handler, eval_episodes=eval_episodes)}
+    wandb.log(metrics, step=step)
     wandb.finish()
-
 if __name__ == "__main__":
-    seeds = [0, 1, 2]
-    for seed in seeds:
+    seed = [0, 1, 2]
+    for seed in seed:
         main(seed)

@@ -120,10 +120,10 @@ def main(seed):
             wandb.log(metrics, step=step)
     # Final Eval
     metrics = {"global_step": step,
-               "charts/eval_avg_score":  eval_trainer(trainer, eval_env_handler, eval_episodes=eval_episodes)}
+               "charts/eval_avg_score": eval_trainer(trainer, eval_env_handler, eval_episodes=eval_episodes)}
     wandb.log(metrics, step=step)
     wandb.finish()
 if __name__ == "__main__":
-    seed = [0,1,2]
+    seed = [0, 1, 2]
     for seed in seed:
         main(seed)
