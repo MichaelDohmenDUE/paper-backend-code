@@ -36,7 +36,7 @@ def main(seed, env_name):
     seed = seed
     offset = 100
     lr = 2.5e-4
-    warmup_steps = 2000
+    warmup_steps = 10_000
 
     setting_global_seed(seed)
 
