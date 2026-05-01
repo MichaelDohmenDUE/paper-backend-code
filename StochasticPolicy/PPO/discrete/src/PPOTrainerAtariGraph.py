@@ -4,7 +4,7 @@ from torch import nn
 
 from StochasticPolicy.PPO.discrete.src.PPOTrainerGraph import  compute_returns, compute_raw_gae
 from backend.Utils.src.NodeLib.NodeLibrary import detransition, normalize, clipped_surrogate_objective, \
-    optimizer_normalized, td_residual, compute_returns
+    optimizer_normalized, td_residual, compute_returns, KUpdateNode
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -40,47 +40,6 @@ def create_ppo_minibatch_graph():
     return Graph(nodes, initial_keys=initial_keys)
 
 
-class KUpdateNode(Node):
-    def __init__(self, inner_graph, epochs, batch_size):
-        super().__init__("KUpdateLoop",
-                         ["states", "actions", "logps", "advantages", "returns", "inner_context"],
-                         ["train_metrics"])
-        self.inner_graph = inner_graph
-        self.epochs = epochs
-        self.batch_size = batch_size
-
-    def forward(self, states, actions, logps, advantages, returns, context):
-        dataset_size = len(states)
-        indices = np.arange(dataset_size)
-        p_losses, v_losses, entropies = [], [], []
-
-        for _ in range(self.epochs):
-            np.random.shuffle(indices)
-            for start in range(0, dataset_size, self.batch_size):
-                idx = indices[start: start + self.batch_size]
-
-                #Constructing the Inner graph needs context, copy ensures a clean start
-                inner_context = context.copy()
-                inner_context.update({
-                    "b_states": states[idx],
-                    "b_actions": actions[idx],
-                    "b_old_logps": logps[idx],
-                    "b_adv": advantages[idx],
-                    "b_ret": returns[idx]
-                })
-
-                self.inner_graph.run(inner_context)
-                # Logging Losses
-                p_losses.append(inner_context["policy_loss"].item())
-                v_losses.append(inner_context["value_loss"].item())
-                entropies.append(inner_context["entropy"].item())
-
-        return {
-            "losses/policy_loss": np.mean(p_losses),
-            "losses/value_loss": np.mean(v_losses),
-            "losses/entropy": np.mean(entropies)
-        }
-
 
 class PPOTrainerProcessor:
     def __init__(self, agent: nn.Module, optimizer: torch.optim.Optimizer, rollout_buffer: RolloutBuffer, batch_size=64,
@@ -107,7 +66,7 @@ class PPOTrainerProcessor:
             Node("Detransition", ["fields", "rollout", "device"],
                  ["states", "actions", "logps", "rewards", "dones", "values", "bootstraps"],
                  function=detransition),
-            Node("ComputeDeltas", ["rewards", "dones", "values", "bootstraps", "gamma", "num_envs"],
+            Node("td_residual", ["rewards", "dones", "values", "bootstraps", "gamma", "num_envs"],
                  ["deltas"],
                  function=td_residual),
 
