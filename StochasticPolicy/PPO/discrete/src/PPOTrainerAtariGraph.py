@@ -1,8 +1,7 @@
-import numpy as np
 import torch
 from torch import nn
 
-from StochasticPolicy.PPO.discrete.src.PPOTrainerGraph import  compute_returns, compute_raw_gae
+from StochasticPolicy.PPO.discrete.src.PPOTrainerGraph import compute_raw_gae
 from backend.Utils.src.NodeLib.NodeLibrary import detransition, normalize, clipped_surrogate_objective, \
     optimizer_normalized, td_residual, compute_returns, KUpdateNode
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
@@ -38,7 +37,6 @@ def create_ppo_minibatch_graph():
         "b_adv", "b_ret", "clip_eps", "vf_coef", "ent_coef", "max_grad_norm"
     ]
     return Graph(nodes, initial_keys=initial_keys)
-
 
 
 class PPOTrainerProcessor:
