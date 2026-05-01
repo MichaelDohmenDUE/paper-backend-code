@@ -27,7 +27,6 @@ def main(seed, evn_name):
     eval_episodes = 10
     env_name = evn_name
     sync_freq = 2000
-    hidden_size = 128
     batch_size = 32
     max_buffer_size = 300_000
     tau = 1.0
