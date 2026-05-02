@@ -136,7 +136,7 @@ def main(seed, env_name):
     wandb.finish()
 
 if __name__ == "__main__":
-    seeds = [1, 2 ,3]
+    seeds = [0,1,2]
     env_name = "Walker2d-v4"
     for current_seed in seeds:
         main(current_seed, env_name)

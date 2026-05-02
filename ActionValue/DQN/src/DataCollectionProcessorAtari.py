@@ -44,7 +44,7 @@ class DataCollectionProcessor:
                       function=lambda s: s.float(), no_grad=True),
             PropsNode("BehaviourNet", ["state_net_input"], ["q_values"], props=["behaviour_net"],
                       function=lambda net, s: net(s), no_grad=True),
-            PropsNode("EpsilonGreedy", ["q_values"], ["action_raw"], props="epsilon_greedy",
+            PropsNode("EpsilonGreedy", ["q_values"], ["action_raw"], props=["epsilon_greedy"],
                       function=lambda epsilon_greed, q: epsilon_greed.forward(q_values=q), no_grad=True),
             PropsNode("FormatToArray", ["action_raw"], ["action"],
                       function=to_numpy_array, no_grad=True),
