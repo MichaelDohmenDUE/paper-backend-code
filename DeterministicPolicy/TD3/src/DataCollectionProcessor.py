@@ -1,48 +1,115 @@
-from backend.DeterministicPolicy.TD3.src.ActionHandler import ActionHandler
+import numpy as np
+import torch
+
+import GlobalCounter
+from EnviromentHandler import VecEnvironmentHandler
+from NodeLib.Node import PropsNode, Graph
 from backend.Utils.src.BatchTransitioner import TransitionFactory
-from backend.Utils.src.EnviromentHandler import EnvironmentHandler
-from backend.Utils.src.GlobalCounter import GlobalCounter
-from backend.Utils.src.NodeLib.NodeLibrary import reset_handler
+from backend.Utils.src.NodeLib.NodeLibrary import BufferAppendingNode, TransitionNode, ConditionNode
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
-class DataCollectionProcessor:
-    def __init__(self, env_handler: EnvironmentHandler, action_handler: ActionHandler,
-                 transition_factory: TransitionFactory, replay_buffer: ReplayBuffer,
-                 global_counter: GlobalCounter):
-        self.env = env_handler
-        self.action_handler = action_handler
-        self.factory = transition_factory
-        self.buffer = replay_buffer
+def random_action(env, behaviour, state, expl_noise, max_action, action_size, device):
+    return np.random.uniform(*max_action, max_action, action_size)
 
-        self.state = self.env.reset()
-        self.episode_reward = 0
-        self.episode_timesteps = 0
-        self.episode_num = 0
-        self.global_counter = global_counter
+
+def network_action(env, behaviour, state, expl_noise, max_action, action_size, device):
+    state_t = torch.as_tensor(state, dtype=torch.float32, device=device)
+    if state_t.dim() == 1:
+        state_t = state_t.unsqueeze(0)
+    action = behaviour(state_t).squeeze(0).cpu().numpy()
+
+    noise = np.random.normal(0, max_action * expl_noise, size=action_size)
+    action = np.clip(action + noise, -max_action, max_action)
+    return action
+
+
+class DataCollectionProcessor:
+    def __init__(self, behaviour, env_handler: VecEnvironmentHandler, transition_factory: TransitionFactory,
+                 replay_buffer: ReplayBuffer, global_counter: GlobalCounter,
+                 max_action, expl_noise, warmup_steps, device):
+
+        self.num_envs = getattr(env_handler, "num_envs", 1)
+
+        self.context = {
+            "state": np.array(env_handler.reset()),
+            "env": env_handler,
+            "behaviour": behaviour,
+            "buffer": replay_buffer,
+            "global_counter": global_counter,
+            "max_action": max_action,
+            "expl_noise": expl_noise,
+            "warmup_steps": warmup_steps,
+            "device": device,
+            "running_rewards": np.zeros(self.num_envs),
+            "running_lengths": np.zeros(self.num_envs),
+            "num_envs": self.num_envs,
+        }
+        nodes = [
+            PropsNode("GetStep", ["global_counter"], ["current_step"],
+                      function=lambda gc: gc.get(), no_grad=True),
+
+            PropsNode("CheckWarmup", ["current_step", "warmup_steps"], ["is_warmup"],
+                      function=lambda step, warmup: step < warmup, no_grad=True),
+
+            ConditionNode(
+                name="SelectAction",
+                condition_key="is_warmup",
+                func_1=random_action,
+                func_2=network_action,
+                inputs=["env", "behaviour", "state", "expl_noise", "max_action", "action_size", "device"],
+                outputs=["action"],
+                no_grad=True
+            ),
+            PropsNode("EnvStep", ["env", "action"], ["next_state", "reward", "terminated", "truncated", "info"],
+                      function=lambda env, a: env.step_ddpg(a), no_grad=True),
+
+            PropsNode("CombineDones", ["terminated", "truncated"], ["done_reset"],
+                      function=lambda term, trunc: term or trunc, no_grad=True),
+
+            TransitionNode(
+                factory=transition_factory,
+                input_mapping={
+                    "state": "state", "action": "action", "reward": "reward",
+                    "next_state": "next_state", "done": "terminated"
+                }
+            ),
+            BufferAppendingNode(),
+
+            PropsNode("IncrementCounter", ["global_counter"], ["_dummy"],
+                      function=lambda gc: gc.set(gc.get() + 1), no_grad=True),
+
+            PropsNode("TrackMetrics", ["reward", "done_reset", "running_rewards", "running_lengths"],
+                      ["running_rewards", "running_lengths", "metrics"],
+                      function=self._track_helper, no_grad=True),
+
+            PropsNode("StateUpdate", ["next_state", "_buffer_updated"], ["state"],
+                      function=lambda ns, signal: np.array(ns).astype(np.float32)),
+        ]
+
+        self.graph = Graph(nodes, initial_keys=list(self.context.keys()))
+
+    @staticmethod
+    def _track_helper(reward, done_reset, running_rewards, running_lengths):
+        running_rewards += reward
+        running_lengths += 1
+
+        metrics = {}
+        dones = np.atleast_1d(done_reset)
+
+        for i in range(len(dones)):
+            if dones[i]:
+                metrics = {
+                    "charts/episodic_return": float(running_rewards[i]),
+                    "charts/episodic_length": int(running_lengths[i])
+                }
+                running_rewards[i] = 0
+                running_lengths[i] = 0
+        return running_rewards, running_lengths, metrics
 
     def run(self):
-        action = self.action_handler.select_action(self.state, self.global_counter.get())
-        next_state, reward, terminated, truncated, info = self.env.step_ddpg(action)
-
-        transition = self.factory.forward(state=self.state, action=action, reward=reward, next_state=next_state,
-                                          done=terminated)
-
-        self.buffer.append(transition)
-        self.state = reset_handler(env=self.env, next_state=next_state, done=terminated or truncated)
-        #Logging
-        self.episode_reward += reward
-        self.global_counter.set(self.global_counter.get() + 1)
-        self.episode_timesteps += 1
-        metrics = {}
-        if truncated or terminated:
-            #print(f"Episode {self.episode_num + 1} — Reward: {self.episode_reward:.2f}")
-            metrics = {
-                "charts/episodic_return": self.episode_reward,
-                "charts/episodic_length": self.episode_timesteps,
-                "global_step": self.global_counter.get(),
-            }
-            self.episode_reward = 0
-            self.episode_timesteps = 0
-            self.episode_num += 1
+        self.graph.run(self.context)
+        metrics = self.context.get("metrics", {})
+        if metrics:
+            metrics["global_step"] = self.context["global_counter"].get()
         return metrics

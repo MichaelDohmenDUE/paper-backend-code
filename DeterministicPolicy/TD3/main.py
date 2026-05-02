@@ -12,7 +12,7 @@ from backend.DeterministicPolicy.TD3.src.DataCollectionProcessor import DataColl
 from backend.DeterministicPolicy.TD3.src.TD3TrainerProcessor import TrainProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnvFactory import GymEnvFactory
-from backend.Utils.src.EnviromentHandler import EnvironmentHandler
+from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
 from backend.Utils.src.EvaluationHelper import eval_trainer
 from backend.Utils.src.GlobalCounter import GlobalCounter
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
@@ -66,9 +66,10 @@ def main(seed, env_name):
         }
     )
     gym_factory = GymEnvFactory(env_name)
-    env_handler = EnvironmentHandler(gym_factory, seed)
-    eval_env_handler = EnvironmentHandler(gym_factory, seed + 100)
+    env_handler = VecEnvironmentHandler(gym_factory, seed)
+    eval_env_handler = VecEnvironmentHandler(gym_factory, seed + 100)
     observation_size, action_size, max_action = env_handler.get_env_specs()
+    observation_size = observation_size[0]
     if max_action is None:
         max_action = 1
     spec = TransitionSpec(["state", "action", "reward", "next_state", "done"])
@@ -114,7 +115,8 @@ def main(seed, env_name):
         device=device,
     )
 
-    datacollector = DataCollectionProcessor(env_handler, action_handler, transition_factory, replay_buffer, gl_counter)
+    datacollector = DataCollectionProcessor(actor, env_handler, transition_factory, replay_buffer, gl_counter, max_action,
+                                            expl_noise, warmup, device)
 
     sync_process_critic_1 = SyncProcessor(critic_1, critic_target_1, tau, sync_freq, gl_counter)
     sync_process_critic_2 = SyncProcessor(critic_2, critic_target_2, tau, sync_freq, gl_counter)
@@ -140,8 +142,9 @@ def main(seed, env_name):
 
     wandb.finish()
 
+
 if __name__ == "__main__":
-    seeds = [0,1,2]
+    seeds = [0, 1, 2]
     env_name = "Walker2d-v4"
     for current_seed in seeds:
         main(current_seed, env_name)
