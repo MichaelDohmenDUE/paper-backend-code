@@ -133,6 +133,11 @@ def main(seed, env_name):
             eval_metrics = eval_trainer(trainer, eval_env_handler, eval_episodes)
             all_metrics.update(eval_metrics)
         wandb.log(all_metrics, step=gl_counter.get())
+
+    eval_metrics = eval_trainer(trainer, eval_env_handler, eval_episodes)
+    all_metrics.update(eval_metrics)
+    wandb.log(all_metrics, step=gl_counter.get())
+
     wandb.finish()
 
 if __name__ == "__main__":
