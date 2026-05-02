@@ -2,11 +2,12 @@ import numpy as np
 import torch
 from torch import nn
 
+from BatchTransitioner import TransitionSpec
 from StochasticPolicy.PPO.discrete.src.PPOTrainerGraph import compute_raw_gae
 from backend.Utils.src.NodeLib.NodeLibrary import detransition, normalize, clipped_surrogate_objective, \
-    optimizer_normalized, td_residual, compute_returns, KUpdateNode, unpack_minibatch, record_metrics, \
-    create_batch_generator, RepeatNode
+    optimizer_normalized, td_residual, compute_returns, KUpdateNode, unpack_minibatch, record_metrics, RepeatNode
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
+from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -16,9 +17,15 @@ from backend.Utils.src.NodeLib.Node import Node, Graph, Signal
 def create_ppo_minibatch_graph():
     nodes = [
 
-        Node("GetBatch", ["batch_generator"],
+        Node("GetBatch", ["all_batches", "_iteration"],
              ["b_states", "b_actions", "b_old_logps", "b_adv", "b_ret"],
-             function=lambda gen: next(gen)),
+             function=lambda batches, i: (
+                 batches[i]["states"].to(device),
+                 batches[i]["actions"].to(device),
+                 batches[i]["logps"].to(device),
+                 batches[i]["advantages"].to(device),
+                 batches[i]["returns"].to(device)
+             )),
 
         Node("AgentForward", ["agent", "b_states"], ["dist", "value_tensor"],
              function=lambda net, s: net(s)),
@@ -44,26 +51,26 @@ def create_ppo_minibatch_graph():
     ]
 
     initial_keys = [
-        "agent", "optimizer", "clip_eps", "vf_coef", "ent_coef", "max_grad_norm",
-        "batch_generator", "metric_history"
+        "agent", "optimizer", "clip_eps", "vf_coef", "ent_coef", "max_grad_norm", "_iteration",
+        "all_batches", "metric_history"
     ]
     return Graph(nodes, initial_keys=initial_keys)
 
 
 class PPOTrainerProcessor:
-    def __init__(self, agent: nn.Module, optimizer: torch.optim.Optimizer, rollout_buffer: RolloutBuffer, batch_size=64,
+    def __init__(self, agent: nn.Module, optimizer: torch.optim.Optimizer, rollout_buffer: RolloutBuffer, replay_buffer: ReplayBuffer, batch_size=64,
                  epochs=10, clip_eps=0.2, vf_coef=0.5, ent_coef=0.01, max_grad_norm=0.5, gamma=0.99, lam=0.95):
         self.agent = agent
         self.rollout_buffer = rollout_buffer
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.context = {
-            "agent": agent, "optimizer": optimizer, "buffer": rollout_buffer,
+            "agent": agent, "optimizer": optimizer, "buffer": rollout_buffer, "replay_buffer": replay_buffer,
             "device": self.device, "gamma": gamma, "lam": lam,
             "num_envs": rollout_buffer.num_envs, "fields": rollout_buffer.spec.fields,
             "inner_context": {
                 "agent": agent, "optimizer": optimizer, "clip_eps": clip_eps,
-                "vf_coef": vf_coef, "ent_coef": ent_coef, "max_grad_norm": max_grad_norm
+                "vf_coef": vf_coef, "ent_coef": ent_coef, "max_grad_norm": max_grad_norm, "device": self.device
             }
         }
 
@@ -90,29 +97,29 @@ class PPOTrainerProcessor:
                  ["advantages"],
                  function=normalize),
 
-            Node("PackDataset", ["states", "actions", "logps", "advantages", "returns"],
-                 ["dataset_dict"],
-                 function=lambda s, a, lp, adv, ret: {
-                     "states": s, "actions": a, "logps": lp,
-                     "advantages": adv, "returns": ret
-                 }),
+            Node("PopulateBuffer",
+                 ["replay_buffer", "states", "actions", "logps", "advantages", "returns"],
+                 ["ppo_buffer"],
+                 function=lambda buffer, *args: buffer.populate(dict(zip(buffer.spec.fields, args)))),
 
-            Node("InitGenerator", ["dataset_dict"], ["batch_generator"],
-                 function=lambda data: create_batch_generator(data, batch_size, epochs)),
+            Node("GenerateBatches",
+                 ["ppo_buffer"],
+                 ["all_batches"],
+                 function=lambda buffer: buffer.generate_batches(batch_size, epochs)),
 
-            #Logging
-            Node("InitMetrics", [], ["metric_history"],
-                 function=lambda: {"policy_loss": [], "value_loss": [], "entropy": []}),
-
-            Node("PrepInnerContext", ["inner_context", "batch_generator", "metric_history"],
+            Node("PrepInnerContext", ["inner_context", "all_batches", "metric_history"],
                  ["ready_inner_context"],
-                 function=lambda ctx, gen, hist: {**ctx, "batch_generator": gen, "metric_history": hist}),
+                 function=lambda ctx, batches, hist: {**ctx, "all_batches": batches, "metric_history": hist}),
 
             RepeatNode("KUpdateLoop",
                        inputs=["ready_inner_context"],
                        outputs=["final_inner_context"],
                        inner_graph=minibatch_graph,
-                       iterations=(rollout_buffer.rollout_size // batch_size) * epochs)
+                       iterations=(rollout_buffer.rollout_size // batch_size) * epochs),
+
+            Node("InitMetrics", [], ["metric_history"],
+                 function=lambda: {"policy_loss": [], "value_loss": [], "entropy": []}),
+
         ]
 
         self.graph = Graph(nodes, initial_keys=list(self.context.keys()))

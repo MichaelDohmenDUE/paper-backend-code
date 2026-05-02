@@ -65,6 +65,21 @@ class ReplayBuffer:
 
         return self.choice(seq_idxs)
 
+    def generate_batches(self, batch_size: int, epochs: int) -> list[dict[str, torch.Tensor]]:
+        if self.size == 0:
+            raise ValueError("Buffer is empty. Cannot generate Batch.")
+
+        indices = np.arange(self.size)
+        all_batches = []
+
+        for _ in range(epochs):
+            np.random.shuffle(indices)
+            for start in range(0, self.size, batch_size):
+                idx = indices[start: start + batch_size]
+                all_batches.append(self.choice(idx))
+
+        return all_batches
+
     def choice(self, indices: np.ndarray | list[int]) -> dict[str, torch.Tensor]:
         batch = {}
         for field in self.spec.fields:
@@ -73,3 +88,31 @@ class ReplayBuffer:
             batch[field] = torch.as_tensor(numpy_batch)
 
         return batch
+
+    def populate(self, data_dict: dict) -> 'ReplayBuffer':
+        if not data_dict:
+            return self
+
+        for field in self.spec.fields:
+            if field not in data_dict:
+                raise ValueError(f"Missing field '{field}'. Expect: {self.spec.fields}")
+
+        first_field = self.spec.fields[0]
+        dataset_size = len(data_dict[first_field])
+
+        if dataset_size > self.max_buffer_size:
+            raise ValueError(f"Dataset size ({dataset_size}) exceeds max_buffer_size ({self.max_buffer_size})")
+
+        for field in self.spec.fields:
+            value = data_dict[field]
+
+            if torch.is_tensor(value):
+                self.data[field] = value.detach().cpu().numpy()
+            else:
+                self.data[field] = np.asarray(value)
+
+        self.size = dataset_size
+        self.ptr = 0
+        self._initialized = True
+
+        return self

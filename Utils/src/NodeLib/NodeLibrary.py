@@ -8,18 +8,6 @@ from backend.Utils.src.NodeLib.Node import Node
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 
 
-def create_batch_generator(dataset_dict, batch_size, epochs):
-    dataset_size = len(next(iter(dataset_dict.values())))
-    indices = np.arange(dataset_size)
-
-    for _ in range(epochs):
-        np.random.shuffle(indices)
-        for start in range(0, dataset_size, batch_size):
-            idx = indices[start: start + batch_size]
-            # Yield exactly the fields the minibatch graph expects
-            yield tuple(dataset_dict[k][idx] for k in ["states", "actions", "logps", "advantages", "returns"])
-
-
 def record_metrics(history, p_loss, v_loss, entropy):
     """Appends the current step's losses to the tracking dictionary."""
     history["policy_loss"].append(p_loss.item())
@@ -380,6 +368,7 @@ class RepeatNode(Node):
         current_context = loop_context.copy()
 
         for i in range(self.iterations):
+            current_context["_iteration"] = i
             self.inner_graph.run(current_context)
 
         return current_context

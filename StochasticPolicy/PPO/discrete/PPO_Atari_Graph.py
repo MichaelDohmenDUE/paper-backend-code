@@ -4,6 +4,7 @@ import torch
 import wandb
 from torch import optim
 
+from ReplayBuffer import ReplayBuffer
 from backend.CommonModels.src.DiscreteActorPPO import AtariPPOAgent
 from backend.StochasticPolicy.PPO.discrete.src.DataCollectorGraph import DataCollectionProcessor
 from backend.StochasticPolicy.PPO.discrete.src.PPOTrainerAtariGraph import PPOTrainerProcessor
@@ -80,6 +81,7 @@ def main(seed):
     )
 
     spec = TransitionSpec(["state", "action", "logp", "reward", "done", "value", "bootstrap_value"])
+    replay_spec = TransitionSpec(["states", "actions", "logps", "advantages", "returns"])
     transition_factory = TransitionFactory(spec)
     factory = AtariEnvFactory(env_name)
     env_handler = VecEnvironmentHandler(factory, seed, num_envs)
@@ -90,8 +92,10 @@ def main(seed):
     optimizer = optim.Adam(agent.parameters(), lr=lr)
 
     rollout_buffer = RolloutBuffer(spec, rollout_size)
+    replay_buffer = ReplayBuffer(replay_spec, rollout_size, batch_size)
 
-    trainer = PPOTrainerProcessor(agent, optimizer, rollout_buffer, batch_size, epochs, gamma=gamma, lam=lam)
+    trainer = PPOTrainerProcessor(agent, optimizer, rollout_buffer, replay_buffer, batch_size, epochs, gamma=gamma,
+                                  lam=lam)
 
     data_collector = DataCollectionProcessor(env_handler, transition_factory, rollout_buffer, rollout_size,
                                              agent, device)
@@ -105,14 +109,14 @@ def main(seed):
         metrics_train = trainer.run()
         if metrics_train:
             metrics.update(metrics_train)
-        steps = data_collector.context["total_steps"]
+        step = data_collector.context["total_steps"]
         metrics["global_step"] = step
 
         elapsed_time = time.time() - start_time
         if elapsed_time > 0:
             sps = int(step / elapsed_time)
             metrics["charts/SPS"] = sps
-        if eval_step <= steps:
+        if eval_step <= step:
             avg_eval_reward = eval_trainer(trainer, eval_env_handler, eval_episodes=eval_episodes)
             metrics["eval/avg_reward"] = avg_eval_reward
             eval_step += eval_freq
@@ -120,10 +124,10 @@ def main(seed):
             wandb.log(metrics, step=step)
     # Final Eval
     metrics = {"global_step": step,
-               "charts/eval_avg_score":  eval_trainer(trainer, eval_env_handler, eval_episodes=eval_episodes)}
+               "charts/eval_avg_score": eval_trainer(trainer, eval_env_handler, eval_episodes=eval_episodes)}
     wandb.log(metrics, step=step)
     wandb.finish()
 if __name__ == "__main__":
-    seed = [0,1,2]
-    for seed in seed:
+    seeds = [0, 1, 2]
+    for seed in seeds:
         main(seed)
