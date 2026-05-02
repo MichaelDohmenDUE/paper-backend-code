@@ -4,7 +4,7 @@ import torch
 import wandb
 from torch import optim
 
-from ReplayBuffer import ReplayBuffer
+from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.CommonModels.src.DiscreteActorPPO import AtariPPOAgent
 from backend.StochasticPolicy.PPO.discrete.src.DataCollectorGraph import DataCollectionProcessor
 from backend.StochasticPolicy.PPO.discrete.src.PPOTrainerAtariGraph import PPOTrainerProcessor

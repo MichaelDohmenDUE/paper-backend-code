@@ -40,7 +40,7 @@ class DataCollectionProcessor:
             metrics = {
                 "charts/episodic_return": self.episode_reward,
                 "charts/episodic_length": self.episode_timesteps,
-                "global_step": self.global_counter,
+                "global_step": self.global_counter.get(),
             }
             self.episode_reward = 0
             self.episode_timesteps = 0
