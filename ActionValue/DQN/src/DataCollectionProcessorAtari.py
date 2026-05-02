@@ -4,7 +4,7 @@ import wandb
 from torch import nn
 
 from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
-from NodeLib.Node import Node, Graph
+from NodeLib.Node import Node, Graph, PropsNode
 from backend.ActionValue.DQN.src.ActionHandler import EpsilonGreedyPolicy
 from backend.Utils.src import ReplayBuffer
 from backend.Utils.src.BatchTransitioner import TransitionFactory
@@ -38,20 +38,20 @@ class DataCollectionProcessor:
         }
 
         nodes = [
-            Node("FormatToTensor", ["state", "device"], ["state_t"],
-                 function=to_tensor, no_grad=True),
-            Node("CastFloat", ["state_t"], ["state_net_input"],
-                 function=lambda s: s.float(), no_grad=True),
-            Node("BehaviourNet", ["behaviour_net", "state_net_input"], ["q_values"],
-                 function=lambda net, s: net(s), no_grad=True),
-            Node("EpsilonGreedy", ["epsilon_greedy", "q_values"], ["action_raw"],
-                 function=lambda epsilon_greed, q: epsilon_greed.forward(q_values=q), no_grad=True),
-            Node("FormatToArray", ["action_raw"], ["action"],
-                 function=to_numpy_array, no_grad=True),
-            Node("EnvStep", ["env", "action"], ["next_state_raw", "reward", "done", "info"],
-                 function=lambda env, a: env.step(a), no_grad=True),
-            Node("FormatNextState", ["next_state_raw"], ["next_state"],
-                 function=lambda ns: np.array(ns).astype(np.uint8), no_grad=True),
+            PropsNode("FormatToTensor", ["state", "device"], ["state_t"],
+                      function=to_tensor, no_grad=True),
+            PropsNode("CastFloat", ["state_t"], ["state_net_input"],
+                      function=lambda s: s.float(), no_grad=True),
+            PropsNode("BehaviourNet", ["state_net_input"], ["q_values"], props=["behaviour_net"],
+                      function=lambda net, s: net(s), no_grad=True),
+            PropsNode("EpsilonGreedy", ["q_values"], ["action_raw"], props="epsilon_greedy",
+                      function=lambda epsilon_greed, q: epsilon_greed.forward(q_values=q), no_grad=True),
+            PropsNode("FormatToArray", ["action_raw"], ["action"],
+                      function=to_numpy_array, no_grad=True),
+            PropsNode("EnvStep", ["action"], ["next_state_raw", "reward", "done", "info"], props=["env"],
+                      function=lambda env, a: env.step(a), no_grad=True),
+            PropsNode("FormatNextState", ["next_state_raw"], ["next_state"],
+                      function=lambda ns: np.array(ns).astype(np.uint8), no_grad=True),
             TransitionNode(
                 factory=transition_factory,
                 input_mapping={
@@ -63,7 +63,7 @@ class DataCollectionProcessor:
                 }
             ),
             BufferAppendingNode(),
-            Node("StateUpdate", ["next_state", "_buffer_updated"], ["state"],
+            PropsNode("StateUpdate", ["next_state", "_buffer_updated"], ["state"],
                  function=lambda ns, signal: ns, no_grad = True),
         ]
 

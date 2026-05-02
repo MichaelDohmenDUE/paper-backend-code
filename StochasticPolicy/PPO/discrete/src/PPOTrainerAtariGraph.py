@@ -2,16 +2,15 @@ import numpy as np
 import torch
 from torch import nn
 
-from BatchTransitioner import TransitionSpec
 from StochasticPolicy.PPO.discrete.src.PPOTrainerGraph import compute_raw_gae
 from backend.Utils.src.NodeLib.NodeLibrary import detransition, normalize, clipped_surrogate_objective, \
-    optimizer_normalized, td_residual, compute_returns, KUpdateNode, unpack_minibatch, record_metrics, RepeatNode
-from backend.Utils.src.RolloutBuffer import RolloutBuffer
+    optimizer_normalized, td_residual, compute_returns, record_metrics, RepeatNode
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
+from backend.Utils.src.RolloutBuffer import RolloutBuffer
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-from backend.Utils.src.NodeLib.Node import Node, Graph, Signal
+from backend.Utils.src.NodeLib.Node import Node, Graph, Signal, PropsNode
 
 
 def create_ppo_minibatch_graph():
@@ -44,7 +43,7 @@ def create_ppo_minibatch_graph():
                              entropy_coef: policy_loss + value_coef * value_loss - entropy_coef * ent),
         Node("Optimizer Normalized", ["agent", "optimizer", "loss", "max_grad_norm"], ["_loss_val"],
              function=optimizer_normalized),
-        #LoggingNode
+        # LoggingNode
         Node("RecordMetrics", ["metric_history", "policy_loss", "value_loss", "entropy"],
              ["metric_history"],
              function=record_metrics)
@@ -58,7 +57,8 @@ def create_ppo_minibatch_graph():
 
 
 class PPOTrainerProcessor:
-    def __init__(self, agent: nn.Module, optimizer: torch.optim.Optimizer, rollout_buffer: RolloutBuffer, replay_buffer: ReplayBuffer, batch_size=64,
+    def __init__(self, agent: nn.Module, optimizer: torch.optim.Optimizer, rollout_buffer: RolloutBuffer,
+                 replay_buffer: ReplayBuffer, batch_size=64,
                  epochs=10, clip_eps=0.2, vf_coef=0.5, ent_coef=0.01, max_grad_norm=0.5, gamma=0.99, lam=0.95):
         self.agent = agent
         self.rollout_buffer = rollout_buffer
@@ -77,39 +77,39 @@ class PPOTrainerProcessor:
         minibatch_graph = create_ppo_minibatch_graph()
 
         nodes = [
-            Node("Sample", ["buffer"], ["rollout"],
-                 function=lambda b: b.sample() if b.reached_rollout_size() else Signal.NOSIGNAL),
-            Node("Detransition", ["fields", "rollout", "device"],
-                 ["state", "action", "logp", "reward", "done", "value", "bootstra"],
-                 function=detransition),
-            Node("td_residual", ["reward", "done", "value", "bootstra", "gamma", "num_envs"],
-                 ["deltas"],
-                 function=td_residual),
+            PropsNode("Sample", ["buffer"], ["rollout"],
+                      function=lambda b: b.sample() if b.reached_rollout_size() else Signal.NOSIGNAL),
+            PropsNode("Detransition", ["fields", "rollout", "device"],
+                      ["state", "action", "logp", "reward", "done", "value", "bootstrap"],
+                      function=detransition),
+            PropsNode("td_residual", ["reward", "done", "value", "bootstrap", "gamma", "num_envs"],
+                      ["deltas"],
+                      function=td_residual),
 
-            Node("RawGAE", ["deltas", "done", "gamma", "lam", "num_envs"],
-                 ["raw_advantages"],
-                 function=compute_raw_gae),
+            PropsNode("RawGAE", ["deltas", "done", "gamma", "lam", "num_envs"],
+                      ["raw_advantages"],
+                      function=compute_raw_gae),
 
-            Node("ComputeReturns", ["raw_advantages", "value"],
-                 ["returns"],
-                 function=compute_returns),
-            Node("NormalizeAdvantages", ["raw_advantages"],
-                 ["advantages"],
-                 function=normalize),
+            PropsNode("ComputeReturns", ["raw_advantages", "value"],
+                      ["return"],
+                      function=compute_returns),
+            PropsNode("NormalizeAdvantages", ["raw_advantages"],
+                      ["advantage"],
+                      function=normalize),
 
-            Node("PopulateBuffer",
-                 ["replay_buffer", "state", "action", "logp", "advantages", "returns"],
-                 ["ppo_buffer"],
-                 function=lambda buffer, *args: buffer.populate(dict(zip(buffer.spec.fields, args)))),
+            PropsNode("PopulateBuffer",
+                      ["replay_buffer", "state", "action", "logp", "advantage", "return"],
+                      ["ppo_buffer"],
+                      function=lambda buffer, *args: buffer.populate(dict(zip(buffer.spec.fields, args)))),
 
-            Node("GenerateBatches",
-                 ["ppo_buffer"],
-                 ["all_batches"],
-                 function=lambda buffer: buffer.generate_batches(batch_size, epochs)),
+            PropsNode("GenerateBatches",
+                      ["ppo_buffer"],
+                      ["all_batches"],
+                      function=lambda buffer: buffer.generate_batches(batch_size, epochs)),
 
-            Node("PrepInnerContext", ["inner_context", "all_batches", "metric_history"],
-                 ["ready_inner_context"],
-                 function=lambda ctx, batches, hist: {**ctx, "all_batches": batches, "metric_history": hist}),
+            PropsNode("PrepInnerContext", ["inner_context", "all_batches", "metric_history"],
+                      ["ready_inner_context"],
+                      function=lambda ctx, batches, hist: {**ctx, "all_batches": batches, "metric_history": hist}),
 
             RepeatNode("KUpdateLoop",
                        inputs=["ready_inner_context"],
@@ -117,8 +117,8 @@ class PPOTrainerProcessor:
                        inner_graph=minibatch_graph,
                        iterations=(rollout_buffer.rollout_size // batch_size) * epochs),
 
-            Node("InitMetrics", [], ["metric_history"],
-                 function=lambda: {"policy_loss": [], "value_loss": [], "entropy": []}),
+            PropsNode("InitMetrics", [], ["metric_history"],
+                      function=lambda: {"policy_loss": [], "value_loss": [], "entropy": []}),
 
         ]
 

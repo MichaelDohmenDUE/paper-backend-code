@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from torch import nn
 from torch.distributions import Categorical
 
+from NodeLib.Node import PropsNode
 from backend.Utils.src.NodeLib.Node import Node
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 
@@ -254,9 +255,9 @@ class TransitionNode(Node):
         return transitions
 
 
-class BufferAppendingNode(Node):
+class BufferAppendingNode(PropsNode):
     def __init__(self):
-        super().__init__("BufferAppendingNode", ["buffer", "transitions"], ["_buffer_updated"])
+        super().__init__("BufferAppendingNode", ["buffer", "transitions"], ["_buffer_updated"], ["buffer",])
 
     def forward(self, buffer, transitions):
         #print(transitions)

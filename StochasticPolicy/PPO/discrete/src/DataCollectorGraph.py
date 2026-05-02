@@ -4,7 +4,7 @@ import torch
 from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, BootStrappingNode, \
     to_numpy_array, to_tensor, clipper
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
-from backend.Utils.src.NodeLib.Node import Node, Graph
+from backend.Utils.src.NodeLib.Node import Node, Graph, PropsNode
 
 
 class EpisodicMetricsNode(Node):
@@ -42,17 +42,17 @@ class DataCollectionProcessor:
         }
 
         nodes = [
-            Node("ToTensor", ["state", "device"], ["state_tensor"], function=to_tensor, no_grad=True),
-            Node("AgentForward", ["agent", "state_tensor"], ["dist", "value_tensor"], function=lambda net, s: net(s), no_grad=True),
-            Node("SampleAction", ["dist"], ["action_tensor"], function=lambda dist: dist.sample(), no_grad=True),
-            Node("LogProb", ["dist", "action_tensor"], ["logp_tensor"], function=lambda dist, a: dist.log_prob(a), no_grad=True),
-            Node("SqueezeValue", ["value_tensor"], ["value_t_sq"], function=lambda v: v.squeeze(-1), no_grad=True),
-            Node("ToNumpy_a", ["action_tensor"], ["action"], function=to_numpy_array, no_grad=True),
-            Node("ToNumpy_l", ["logp_tensor"], ["logp"], function=to_numpy_array, no_grad=True),
-            Node("ToNumpy_v", ["value_t_sq"], ["value"], function=to_numpy_array, no_grad=True),
-            Node("EnvStep", ["env", "action"], ["next_state", "reward", "done", "info"],
-                 function=lambda env, a: env.step(a)),
-            Node("ClipReward", ["reward", "max_R"], ["clipped_reward"], function=clipper),
+            PropsNode("ToTensor", ["state", "device"], ["state_tensor"], function=to_tensor, no_grad=True),
+            PropsNode("AgentForward", ["agent", "state_tensor"], ["dist", "value_tensor"], function=lambda net, s: net(s), no_grad=True),
+            PropsNode("SampleAction", ["dist"], ["action_tensor"], function=lambda dist: dist.sample(), no_grad=True),
+            PropsNode("LogProb", ["dist", "action_tensor"], ["logp_tensor"], function=lambda dist, a: dist.log_prob(a), no_grad=True),
+            PropsNode("SqueezeValue", ["value_tensor"], ["value_t_sq"], function=lambda v: v.squeeze(-1), no_grad=True),
+            PropsNode("ToNumpy_a", ["action_tensor"], ["action"], function=to_numpy_array, no_grad=True),
+            PropsNode("ToNumpy_l", ["logp_tensor"], ["logp"], function=to_numpy_array, no_grad=True),
+            PropsNode("ToNumpy_v", ["value_t_sq"], ["value"], function=to_numpy_array, no_grad=True),
+            PropsNode("EnvStep", ["env", "action"], ["next_state", "reward", "done", "info"],
+                      function=lambda env, a: env.step(a)),
+            PropsNode("ClipReward", ["reward", "max_R"], ["clipped_reward"], function=clipper),
 
             TransitionNode(
                 factory=transition_factory,
