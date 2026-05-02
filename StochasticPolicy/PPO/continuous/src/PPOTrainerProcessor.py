@@ -1,6 +1,7 @@
+import numpy as np
 import torch
 
-from NodeLib.NodeLibrary import RepeatNode
+from NodeLib.NodeLibrary import RepeatNode, record_metrics
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -56,19 +57,22 @@ def create_ppo_minibatch_graph():
              function=lambda policy_loss, value_loss, ent, value_coef, entropy_coef:
              policy_loss + value_coef * value_loss - entropy_coef * ent),
         PropsNode("DualOptimizer", ["loss", "max_grad_norm"], ["_loss_val"], ["actor", "critic", "optimizer"],
-                  function=dual_optimizer_step)
+                  function=dual_optimizer_step),
+        Node("RecordMetrics", ["metric_history", "policy_loss", "value_loss", "entropy"],
+             ["metric_history"],
+             function=record_metrics)
     ]
 
     initial_keys = [
         "actor", "critic", "optimizer", "all_batches", "clip_eps", "vf_coef", "pl_coef", "ent_coef", "max_grad_norm",
-        "_iteration"
+        "_iteration", "metric_history",
     ]
     return Graph(nodes, initial_keys=initial_keys)
 
 
 class PPOTrainerProcessor:
     def __init__(self, actor, critic, optimizer, rollout_buffer, replay_buffer, batch_size=64, epochs=10,
-                 clip_eps=0.2, vf_coef=0.5, pl_coef=1.0, ent_coef=0.01, max_grad_norm=0.5, gamma=0.99, lam=0.95):
+                 clip_eps=0.2, vf_coef=0.5, pl_coef=1.0, ent_coef=0.00, max_grad_norm=0.5, gamma=0.99, lam=0.95):
         self.actor = actor
         self.critic = critic
         self.rollout_buffer = rollout_buffer
@@ -81,7 +85,7 @@ class PPOTrainerProcessor:
             "num_envs": rollout_buffer.num_envs, "fields": rollout_buffer.spec.fields,
             "inner_context": {
                 "actor": actor, "critic": critic, "optimizer": optimizer, "clip_eps": clip_eps,
-                "vf_coef": vf_coef, "pl_coef": pl_coef, "max_grad_norm": max_grad_norm, "ent_coef": ent_coef
+                "vf_coef": vf_coef, "pl_coef": pl_coef, "max_grad_norm": max_grad_norm, "ent_coef": ent_coef,
             }
         }
 
