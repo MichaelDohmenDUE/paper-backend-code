@@ -86,6 +86,12 @@ class VecEnvironmentHandler:
         next_states = np.asarray(next_states, dtype=np.float32)
         return next_states, rewards, dones, infos
 
+    def step_detailed(self, actions):
+        next_states, rewards, terminated, truncated, infos = self.envs.step(actions)
+        rewards = rewards * self.reward_scale
+        next_states = np.asarray(next_states, dtype=np.float32)
+        return next_states, rewards, terminated, truncated, infos
+
     def get_env_specs(self) -> tuple:
         return self.state_dim, self.action_dim, self.max_action
 

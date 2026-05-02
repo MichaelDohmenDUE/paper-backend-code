@@ -1,8 +1,8 @@
 import numpy as np
 import torch
 
-import GlobalCounter
-from EnviromentHandler import VecEnvironmentHandler
+from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
+from backend.Utils.src.GlobalCounter import GlobalCounter
 from NodeLib.Node import PropsNode, Graph
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.NodeLib.NodeLibrary import BufferAppendingNode, TransitionNode, ConditionNode
@@ -16,8 +16,8 @@ def random_action(env, behaviour, state, expl_noise, max_action, action_size, de
 def network_action(env, behaviour, state, expl_noise, max_action, action_size, device):
     state_t = torch.as_tensor(state, dtype=torch.float32, device=device)
     if state_t.dim() == 1:
-        state_t = state_t.unsqueeze(0)
-    action = behaviour(state_t).squeeze(0).cpu().numpy()
+        state_t = state_t.unsqueeze(0).to(device)
+    action = behaviour(state_t).squeeze(0).detach().cpu().numpy()
 
     noise = np.random.normal(0, max_action * expl_noise, size=action_size)
     action = np.clip(action + noise, -max_action, max_action)
@@ -27,7 +27,7 @@ def network_action(env, behaviour, state, expl_noise, max_action, action_size, d
 class DataCollectionProcessor:
     def __init__(self, behaviour, env_handler: VecEnvironmentHandler, transition_factory: TransitionFactory,
                  replay_buffer: ReplayBuffer, global_counter: GlobalCounter,
-                 max_action, expl_noise, warmup_steps, device):
+                 max_action, expl_noise, warmup_steps, action_size, device):
 
         self.num_envs = getattr(env_handler, "num_envs", 1)
 
@@ -44,6 +44,7 @@ class DataCollectionProcessor:
             "running_rewards": np.zeros(self.num_envs),
             "running_lengths": np.zeros(self.num_envs),
             "num_envs": self.num_envs,
+            "action_size": action_size
         }
         nodes = [
             PropsNode("GetStep", ["global_counter"], ["current_step"],
@@ -62,7 +63,7 @@ class DataCollectionProcessor:
                 no_grad=True
             ),
             PropsNode("EnvStep", ["env", "action"], ["next_state", "reward", "terminated", "truncated", "info"],
-                      function=lambda env, a: env.step_ddpg(a), no_grad=True),
+                      function=lambda env, a: env.step_detailed(a), no_grad=True),
 
             PropsNode("CombineDones", ["terminated", "truncated"], ["done_reset"],
                       function=lambda term, trunc: term or trunc, no_grad=True),

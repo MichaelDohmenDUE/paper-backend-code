@@ -115,8 +115,8 @@ def main(seed, env_name):
         device=device,
     )
 
-    datacollector = DataCollectionProcessor(actor, env_handler, transition_factory, replay_buffer, gl_counter, max_action,
-                                            expl_noise, warmup, device)
+    datacollector = DataCollectionProcessor(actor, env_handler, transition_factory, replay_buffer, gl_counter,
+                                            max_action, expl_noise, warmup, action_size, device)
 
     sync_process_critic_1 = SyncProcessor(critic_1, critic_target_1, tau, sync_freq, gl_counter)
     sync_process_critic_2 = SyncProcessor(critic_2, critic_target_2, tau, sync_freq, gl_counter)

@@ -373,3 +373,25 @@ class RepeatNode(Node):
             self.inner_graph.run(current_context)
 
         return current_context
+
+
+class ConditionNode(Node):
+    def __init__(self, name, condition_key, func_1, func_2, inputs, outputs, no_grad=True):
+        self.condition_key = condition_key
+        self.function_1 = func_1
+        self.function_2 = func_2
+        self.no_grad = no_grad
+
+        super().__init__(name, [condition_key] + inputs, outputs)
+
+    def forward(self, condition, *args):
+        import torch
+        if self.no_grad:
+            with torch.no_grad():
+                if condition:
+                    return self.function_1(*args)
+                return self.function_2(*args)
+        else:
+            if condition:
+                return self.function_2(*args)
+            return self.function_1(*args)
