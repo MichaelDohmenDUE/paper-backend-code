@@ -24,8 +24,9 @@ class EpisodicMetricsNode(Node):
                 })
                 running_rewards[i] = 0
 
+
 class DataCollectionProcessor:
-    def __init__(self, env_handler, transition_factory, rollout_buffer: RolloutBuffer, rollout_size, agent,device):
+    def __init__(self, env_handler, transition_factory, rollout_buffer: RolloutBuffer, rollout_size, agent, device):
         self.num_envs = getattr(env_handler, "num_envs", 1)
 
         self.context = {

@@ -1,12 +1,11 @@
 import numpy as np
-import torch
 
 from NodeLib.NodeLibrary import to_tensor, to_numpy_array
 from backend.StochasticPolicy.PPO.discrete.src.DataCollectorGraph import EpisodicMetricsNode
 from backend.Utils.src.NodeLib.Node import Node, Graph
-from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, BootStrappingNode, \
-    BootStrappingNodeMujoco
+from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, BootStrappingNodeMujoco
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
+
 
 class DataCollectionProcessor:
     def __init__(self, env_handler, transition_factory, rollout_buffer: RolloutBuffer, rollout_size, actor, critic,
@@ -28,11 +27,13 @@ class DataCollectionProcessor:
 
         nodes = [
             Node("ToTensor", ["state", "device"], ["state_tensor"], function=to_tensor, no_grad=True),
-            Node("ActorForward", ["actor", "state_tensor"], ["dist"], function=lambda net, s: net(s)),
-            Node("CriticForward", ["critic", "state_tensor"], ["value_tensor"], function=lambda net, s: net(s)),
+            Node("ActorForward", ["actor", "state_tensor"], ["dist"], function=lambda net, s: net(s), no_grad=True),
+            Node("CriticForward", ["critic", "state_tensor"], ["value_tensor"], function=lambda net, s: net(s),
+                 no_grad=True),
             Node("SampleAction", ["dist"], ["action_tensor"], function=lambda dist: dist.sample(), no_grad=True),
-            Node("LogProb", ["dist", "action_tensor"], ["logp_tensor"], function=lambda dist, a: dist.log_prob(a), no_grad=True),
-            Node("SqueezeValue", ["value_tensor"], ["value_t_sq"], function=lambda v: v.squeeze(-1), no_grad=True),# TODO: Rewirte
+            Node("LogProb", ["dist", "action_tensor"], ["logp_tensor"], function=lambda dist, a: dist.log_prob(a),
+                 no_grad=True),
+            Node("SqueezeValue", ["value_tensor"], ["value_t_sq"], function=lambda v: v.squeeze(-1), no_grad=True),
             Node("ToNumpy_a", ["action_tensor"], ["action"], function=to_numpy_array, no_grad=True),
             Node("ToNumpy_l", ["logp_tensor"], ["logp"], function=to_numpy_array, no_grad=True),
             Node("ToNumpy_v", ["value_t_sq"], ["value"], function=to_numpy_array, no_grad=True),
