@@ -20,6 +20,26 @@ from utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+import gymnasium as gym
+
+
+class NormalizedVecHandler(VecEnvironmentHandler):
+    def __init__(self, factory, seed, num_envs):
+        super().__init__(factory, seed, num_envs=num_envs)
+        self.envs = gym.wrappers.NormalizeObservation(self.envs)
+        self.envs = gym.wrappers.TransformObservation(self.envs, lambda obs: np.clip(obs, -10, 10))
+        self.envs = gym.wrappers.NormalizeReward(self.envs, gamma=0.99)
+        self.envs = gym.wrappers.TransformReward(self.envs, lambda reward: np.clip(reward, -10, 10))
+
+
+class NormalizedEvalHandler(EnvironmentHandler):
+    def __init__(self, factory, seed, train_handler):
+        super().__init__(factory, seed)
+        self.env = gym.wrappers.NormalizeObservation(self.env)
+        self.env = gym.wrappers.TransformObservation(self.env, lambda obs: np.clip(obs, -10, 10))
+        self.env.obs_rms = train_handler.envs.obs_rms
+
+
 
 def eval_trainer(trainer, env_handler, eval_episodes=5):
     avg_reward = 0.0
@@ -31,12 +51,12 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
             with torch.no_grad():
                 dist = trainer.actor(state_t)
                 action = dist.mean.cpu().numpy().flatten()
-
+                action = np.clip(action, -1.0, 1.0)
             next_state, reward, done, _ = env_handler.step(action)
             avg_reward += reward
             state = next_state
     avg_reward /= eval_episodes
-    print(f"Average Reward over {eval_episodes} episodes: {avg_reward:.3f}")
+    #print(f"Average Reward over {eval_episodes} episodes: {avg_reward:.3f}")
     return avg_reward
 
 
@@ -87,9 +107,10 @@ def main(seed):
     spec = TransitionSpec(["state", "action", "logp", "reward", "done", "value", "bootstrap_value"])
     replay_spec = TransitionSpec(["state", "action", "logp", "advantage", "return"])
     transition_factory = TransitionFactory(spec)
+    transition_factory = TransitionFactory(spec)
     factory = GymEnvFactory(env_name)
-    env_handler = VecEnvironmentHandler(factory, seed, num_envs=num_envs)
-    eval_env_handler = EnvironmentHandler(factory, seed +100)
+    env_handler = NormalizedVecHandler(factory, seed, num_envs=num_envs)
+    eval_env_handler = NormalizedEvalHandler(factory, seed + 100, train_handler=env_handler)
     state_dim, action_dim, _ = env_handler.get_env_specs()
     state_dim = state_dim[0]
     actor = ActorPPO(state_dim, action_dim, hidden_dim).to(device)
