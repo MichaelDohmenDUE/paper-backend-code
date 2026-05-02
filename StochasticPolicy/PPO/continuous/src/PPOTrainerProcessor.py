@@ -1,6 +1,6 @@
 import torch
 
-from NodeLib.NodeLibrary import combined_loss, RepeatNode
+from NodeLib.NodeLibrary import RepeatNode
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -43,31 +43,32 @@ def create_ppo_minibatch_graph():
         Node("LogProb", ["dist", "b_action"], ["new_logp"],
              function=lambda dist, a: dist.log_prob(a).sum(dim=-1) if len(
                  dist.log_prob(a).shape) > 1 else dist.log_prob(a)),
+        Node("Entropy", ["dist"], ["entropy"],
+             function=lambda dist: dist.entropy().mean()),
+
         Node("SqueezeValue", ["value_tensor"], ["value_pred"],
              function=lambda v: v.squeeze(-1)),
         Node("PolicyLoss", ["new_logp", "b_old_logps", "b_adv", "clip_eps"], ["policy_loss"],
              function=clipped_surrogate_objective),
         Node("ValueLoss", ["b_ret", "value_pred"], ["value_loss"],
              function=lambda ret, v: 0.5 * (ret - v).pow(2).mean()),
-        Node("TotalLoss", ["policy_loss", "pl_coef", "value_loss", "vf_coef"], ["loss"],
-             function=combined_loss),
+        Node("TotalLoss", ["policy_loss", "value_loss", "entropy", "vf_coef", "ent_coef"], ["loss"],
+             function=lambda policy_loss, value_loss, ent, value_coef, entropy_coef:
+             policy_loss + value_coef * value_loss - entropy_coef * ent),
         PropsNode("DualOptimizer", ["loss", "max_grad_norm"], ["_loss_val"], ["actor", "critic", "optimizer"],
                   function=dual_optimizer_step)
     ]
 
     initial_keys = [
-        "actor", "critic", "optimizer", "all_batches", "clip_eps", "vf_coef", "pl_coef", "max_grad_norm", "_iteration"
+        "actor", "critic", "optimizer", "all_batches", "clip_eps", "vf_coef", "pl_coef", "ent_coef", "max_grad_norm",
+        "_iteration"
     ]
     return Graph(nodes, initial_keys=initial_keys)
 
 
-class PropNode:
-    pass
-
-
 class PPOTrainerProcessor:
     def __init__(self, actor, critic, optimizer, rollout_buffer, replay_buffer, batch_size=64, epochs=10,
-                 clip_eps=0.2, vf_coef=0.5, pl_coef=1.0, max_grad_norm=0.5, gamma=0.99, lam=0.95):
+                 clip_eps=0.2, vf_coef=0.5, pl_coef=1.0, ent_coef=0.01, max_grad_norm=0.5, gamma=0.99, lam=0.95):
         self.actor = actor
         self.critic = critic
         self.rollout_buffer = rollout_buffer
@@ -80,7 +81,7 @@ class PPOTrainerProcessor:
             "num_envs": rollout_buffer.num_envs, "fields": rollout_buffer.spec.fields,
             "inner_context": {
                 "actor": actor, "critic": critic, "optimizer": optimizer, "clip_eps": clip_eps,
-                "vf_coef": vf_coef, "pl_coef": pl_coef, "max_grad_norm": max_grad_norm
+                "vf_coef": vf_coef, "pl_coef": pl_coef, "max_grad_norm": max_grad_norm, "ent_coef": ent_coef
             }
         }
 
@@ -136,4 +137,14 @@ class PPOTrainerProcessor:
 
     def run(self):
         self.graph.run(self.context)
-        return self.context.get("train_metrics", {})
+
+        if "final_inner_context" in self.context:
+            history = self.context["final_inner_context"]["metric_history"]
+
+            train_metrics = {
+                "losses/policy_loss": np.mean(history["policy_loss"]) if history["policy_loss"] else 0,
+                "losses/value_loss": np.mean(history["value_loss"]) if history["value_loss"] else 0,
+                "losses/entropy": np.mean(history["entropy"]) if history["entropy"] else 0
+            }
+            return train_metrics
+        return {}
