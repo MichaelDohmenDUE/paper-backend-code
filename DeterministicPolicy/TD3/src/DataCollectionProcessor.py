@@ -66,7 +66,7 @@ class DataCollectionProcessor:
                       function=lambda env, a: env.step_detailed(a), no_grad=True),
 
             PropsNode("CombineDones", ["terminated", "truncated"], ["done_reset"],
-                      function=lambda term, trunc: term or trunc, no_grad=True),
+                      function=lambda term, trunc: term | trunc, no_grad=True),
 
             TransitionNode(
                 factory=transition_factory,
