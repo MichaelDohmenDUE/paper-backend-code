@@ -81,7 +81,7 @@ def main(seed):
     )
 
     spec = TransitionSpec(["state", "action", "logp", "reward", "done", "value", "bootstrap_value"])
-    replay_spec = TransitionSpec(["states", "actions", "logps", "advantages", "returns"])
+    replay_spec = TransitionSpec(["state", "action", "logp", "advantage", "return"])
     transition_factory = TransitionFactory(spec)
     factory = AtariEnvFactory(env_name)
     env_handler = VecEnvironmentHandler(factory, seed, num_envs)

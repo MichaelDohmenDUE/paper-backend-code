@@ -18,24 +18,24 @@ def create_ppo_minibatch_graph():
     nodes = [
 
         Node("GetBatch", ["all_batches", "_iteration"],
-             ["b_states", "b_actions", "b_old_logps", "b_adv", "b_ret"],
+             ["b_states", "b_action", "b_old_logp", "b_adv", "b_ret"],
              function=lambda batches, i: (
-                 batches[i]["states"].to(device),
-                 batches[i]["actions"].to(device),
-                 batches[i]["logps"].to(device),
-                 batches[i]["advantages"].to(device),
-                 batches[i]["returns"].to(device)
+                 batches[i]["state"].to(device),
+                 batches[i]["action"].to(device),
+                 batches[i]["logp"].to(device),
+                 batches[i]["advantage"].to(device),
+                 batches[i]["return"].to(device)
              )),
 
         Node("AgentForward", ["agent", "b_states"], ["dist", "value_tensor"],
              function=lambda net, s: net(s)),
-        Node("LogProb", ["dist", "b_actions"], ["new_logp"],
+        Node("LogProb", ["dist", "b_action"], ["new_logp"],
              function=lambda dist, a: dist.log_prob(a)),
         Node("Entropy", ["dist"], ["entropy"],
              function=lambda dist: dist.entropy().mean()),
         Node("SqueezeValue", ["value_tensor"], ["value_pred"],
              function=lambda v: v.squeeze(-1)),
-        Node("PolicyLoss", ["new_logp", "b_old_logps", "b_adv", "clip_eps"], ["policy_loss"],
+        Node("PolicyLoss", ["new_logp", "b_old_logp", "b_adv", "clip_eps"], ["policy_loss"],
              function=clipped_surrogate_objective),
         Node("ValueLoss", ["b_ret", "value_pred"], ["value_loss"],
              function=lambda ret, v: 0.5 * (ret - v).pow(2).mean()),
@@ -80,17 +80,17 @@ class PPOTrainerProcessor:
             Node("Sample", ["buffer"], ["rollout"],
                  function=lambda b: b.sample() if b.reached_rollout_size() else Signal.NOSIGNAL),
             Node("Detransition", ["fields", "rollout", "device"],
-                 ["states", "actions", "logps", "rewards", "dones", "values", "bootstraps"],
+                 ["state", "action", "logp", "reward", "done", "value", "bootstra"],
                  function=detransition),
-            Node("td_residual", ["rewards", "dones", "values", "bootstraps", "gamma", "num_envs"],
+            Node("td_residual", ["reward", "done", "value", "bootstra", "gamma", "num_envs"],
                  ["deltas"],
                  function=td_residual),
 
-            Node("RawGAE", ["deltas", "dones", "gamma", "lam", "num_envs"],
+            Node("RawGAE", ["deltas", "done", "gamma", "lam", "num_envs"],
                  ["raw_advantages"],
                  function=compute_raw_gae),
 
-            Node("ComputeReturns", ["raw_advantages", "values"],
+            Node("ComputeReturns", ["raw_advantages", "value"],
                  ["returns"],
                  function=compute_returns),
             Node("NormalizeAdvantages", ["raw_advantages"],
@@ -98,7 +98,7 @@ class PPOTrainerProcessor:
                  function=normalize),
 
             Node("PopulateBuffer",
-                 ["replay_buffer", "states", "actions", "logps", "advantages", "returns"],
+                 ["replay_buffer", "state", "action", "logp", "advantages", "returns"],
                  ["ppo_buffer"],
                  function=lambda buffer, *args: buffer.populate(dict(zip(buffer.spec.fields, args)))),
 
