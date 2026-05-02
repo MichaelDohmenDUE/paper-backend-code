@@ -21,15 +21,19 @@ class Node:
 
     def __call__(self, context: dict):
         args = [context[key] for key in self.inputs]
-        if self.no_grad:
-            with torch.no_grad():
-                result = self.forward(*args)
+        if any(arg is Signal.NOSIGNAL for arg in args):
+            result = Signal.NOSIGNAL
         else:
-            result = self.forward(*args)
-        # Special Signal to abort Graph Execution, different from "None" as an output
-        if result is Signal.NOSIGNAL:
-            return Signal.NOSIGNAL
+            if self.no_grad:
+                with torch.no_grad():
+                    result = self.forward(*args)
+            else:
+                result = self.forward(*args)
 
+        if result is Signal.NOSIGNAL:
+            for key in self.outputs:
+                context[key] = Signal.NOSIGNAL
+            return None
         if len(self.outputs) == 0:
             return None
         if len(self.outputs) == 1:
@@ -48,9 +52,7 @@ class Graph:
 
     def run(self, context: dict):
         for node in self.execution_order_list:
-            signal = node(context)
-            if signal is Signal.NOSIGNAL:
-                return None
+            node(context)
         return context
 
     def _compile(self, initial_keys: list[str]):
@@ -95,16 +97,10 @@ class Graph:
         self.execution_order_list = sorted_nodes
 
 
-class PropsNode:
-    def __init__(self, name: str, inputs: list[str], outputs: list[str], props=None, function=None, no_grad: bool = False):
-        if props is None:
-            self.inputs = inputs
-        else:
-            self.inputs = props + inputs
-        self.name = name
-        self.function = function
-        self.outputs = outputs
-        self.no_grad = no_grad
+class PropsNode(Node):
+    def __init__(self, name, inputs, outputs, props=None, function=None, no_grad=False):
+        combined = (props if props else []) + inputs
+        super().__init__(name, combined, outputs, function, no_grad)
 
     def forward(self, *args):
         if self.function is not None:

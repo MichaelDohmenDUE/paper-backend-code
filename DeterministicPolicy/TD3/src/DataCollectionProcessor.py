@@ -10,16 +10,18 @@ from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 
 def random_action(env, behaviour, state, expl_noise, max_action, action_size, device):
-    return np.random.uniform(*max_action, max_action, action_size)
+    num_envs = getattr(env, "num_envs", 1)
+    return np.random.uniform(-max_action, max_action, (num_envs, action_size))
 
 
 def network_action(env, behaviour, state, expl_noise, max_action, action_size, device):
     state_t = torch.as_tensor(state, dtype=torch.float32, device=device)
     if state_t.dim() == 1:
         state_t = state_t.unsqueeze(0).to(device)
-    action = behaviour(state_t).squeeze(0).detach().cpu().numpy()
+    action = behaviour(state_t).detach().cpu().numpy()
 
-    noise = np.random.normal(0, max_action * expl_noise, size=action_size)
+    num_envs = action.shape[0]
+    noise = np.random.normal(0, max_action * expl_noise, size=(num_envs, action_size))
     action = np.clip(action + noise, -max_action, max_action)
     return action
 
@@ -56,8 +58,8 @@ class DataCollectionProcessor:
             ConditionNode(
                 name="SelectAction",
                 condition_key="is_warmup",
-                func_1=random_action,
-                func_2=network_action,
+                func_1=network_action,
+                func_2=random_action,
                 inputs=["env", "behaviour", "state", "expl_noise", "max_action", "action_size", "device"],
                 outputs=["action"],
                 no_grad=True
