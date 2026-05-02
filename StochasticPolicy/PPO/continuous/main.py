@@ -85,6 +85,7 @@ def main(seed):
     )
 
     spec = TransitionSpec(["state", "action", "logp", "reward", "done", "value", "bootstrap_value"])
+    replay_spec = TransitionSpec(["state", "action", "logp", "advantage", "return"])
     transition_factory = TransitionFactory(spec)
     factory = GymEnvFactory(env_name)
     env_handler = VecEnvironmentHandler(factory, seed, num_envs=num_envs)
@@ -95,11 +96,10 @@ def main(seed):
     critic = CriticPPO(state_dim, hidden_dim).to(device)
     optimizer = optim.Adam(list(actor.parameters()) + list(critic.parameters()), lr=lr)
 
-    action_handler = ActionHandler(actor, critic, device)
-
     rollout_buffer = RolloutBuffer(spec, rollout_size=rollout_size)
+    replay_buffer = ReplayBuffer(replay_spec, rollout_size, batch_size)
 
-    trainer = PPOTrainerProcessor(actor, critic, optimizer, rollout_buffer, batch_size, epochs, gamma=gamma, lam=lam)
+    trainer = PPOTrainerProcessor(actor, critic, optimizer, rollout_buffer, replay_buffer, epochs, gamma=gamma, lam=lam)
 
     data_collector = DataCollectionProcessor(env_handler, transition_factory, rollout_buffer, rollout_size,
                                              actor, critic, device)

@@ -100,10 +100,9 @@ class PropsNode:
         if props is None:
             self.inputs = inputs
         else:
-            self.inputs = props.append(inputs)
+            self.inputs = props + inputs
         self.name = name
         self.function = function
-        self.inputs = inputs
         self.outputs = outputs
         self.no_grad = no_grad
 

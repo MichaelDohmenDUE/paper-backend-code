@@ -255,7 +255,7 @@ class TransitionNode(Node):
         return transitions
 
 
-class BufferAppendingNode(PropsNode):
+class BufferAppendingNode(Node):
     def __init__(self):
         super().__init__("BufferAppendingNode", ["buffer", "transitions"], ["_buffer_updated"], ["buffer",])
 

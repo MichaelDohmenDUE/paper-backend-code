@@ -34,8 +34,7 @@ class DataCollectionProcessor:
             Node("SampleAction", ["dist"], ["action_tensor"], function=lambda dist: dist.sample(), no_grad=True),
             Node("LogProb", ["dist", "action_tensor"], ["logp_tensor"],
                  function=lambda dist, a: dist.log_prob(a).sum(dim=-1) if len(
-                     dist.log_prob(a).shape) > 1 else dist.log_prob(a),
-                 no_grad=True),
+                     dist.log_prob(a).shape) > 1 else dist.log_prob(a), no_grad=True),
 
             Node("SqueezeValue", ["value_tensor"], ["value_t_sq"], function=lambda v: v.squeeze(-1), no_grad=True),
 
