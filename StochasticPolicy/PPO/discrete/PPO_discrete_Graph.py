@@ -4,6 +4,7 @@ import torch
 import wandb
 from torch import optim
 
+from ReplayBuffer import ReplayBuffer
 from backend.CommonModels.src.CriticPPO import CriticPPO
 from backend.CommonModels.src.DiscreteActorPPO import DiscreteActorPPO
 from backend.StochasticPolicy.PPO.discrete.src.DataCollectorGraphMujoco import DataCollectionProcessor
@@ -11,7 +12,7 @@ from backend.StochasticPolicy.PPO.discrete.src.PPOTrainerGraph import PPOTrainer
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
 from backend.Utils.src.EnvFactory import GymEnvFactory
-from backend.Utils.src.EnviromentHandler import EnvironmentHandler, VecEnvironmentHandler
+from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 from backend.Utils.src.utils import setting_global_seed
 
@@ -83,6 +84,7 @@ def main(seed):
     )
 
     spec = TransitionSpec(["state", "action", "logp", "reward", "done", "value", "bootstrap_value"])
+    replay_spec = TransitionSpec(["state", "action", "logp", "advantage", "return"])
     transition_factory = TransitionFactory(spec)
     factory = GymEnvFactory(env_name)
     env_handler = VecEnvironmentHandler(factory, seed, num_envs=num_envs)
@@ -94,8 +96,10 @@ def main(seed):
     optimizer = optim.Adam(list(actor.parameters()) + list(critic.parameters()), lr=lr)
 
     rollout_buffer = RolloutBuffer(spec, rollout_size=rollout_size)
+    replay_buffer = ReplayBuffer(replay_spec, rollout_size, batch_size)
 
-    trainer = PPOTrainerProcessor(actor, critic, optimizer, rollout_buffer, batch_size, epochs, gamma=gamma, lam=lam)
+    trainer = PPOTrainerProcessor(actor, critic, optimizer, rollout_buffer, replay_buffer, batch_size, epochs,
+                                  gamma=gamma, lam=lam)
 
     data_collector = DataCollectionProcessor(env_handler, transition_factory, rollout_buffer, rollout_size,
                                              actor, critic, device)
@@ -127,6 +131,8 @@ def main(seed):
                "charts/eval_avg_score": eval_trainer(trainer, eval_env_handler, eval_episodes=eval_episodes)}
     wandb.log(metrics, step=step)
     wandb.finish()
+
+
 if __name__ == "__main__":
     seed = [0, 1, 2]
     for seed in seed:

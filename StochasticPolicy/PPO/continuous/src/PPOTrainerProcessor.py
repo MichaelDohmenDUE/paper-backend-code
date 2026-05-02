@@ -1,79 +1,103 @@
-import numpy as np
 import torch
-from torch import nn
 
-from backend.Utils.src.utils import compute_gae
+from NodeLib.NodeLibrary import combined_loss
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+import torch
+
+from backend.Utils.src.NodeLib.NodeLibrary import detransition, normalize, clipped_surrogate_objective, td_residual, \
+    compute_raw_gae, compute_returns, KUpdateNode
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+from backend.Utils.src.NodeLib.Node import Node, Graph, Signal, PropsNode
+
+
+def dual_optimizer_step(actor, critic, optimizer, loss, max_norm):
+    optimizer.zero_grad()
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(actor.parameters(), max_norm)
+    torch.nn.utils.clip_grad_norm_(critic.parameters(), max_norm)
+    optimizer.step()
+    return loss.item()
+
+
+def create_ppo_minibatch_graph():
+    nodes = [
+        PropsNode("ActorForward", ["b_states"], ["dist"], ["actor"],
+                  function=lambda net, s: net(s)),
+        Node("CriticForward", ["critic", "b_states"], ["value_tensor"],
+             function=lambda net, s: net(s)),
+        Node("LogProb", ["dist", "b_actions"], ["new_logp"],
+             function=lambda dist, a: dist.log_prob(a).sum(dim=-1) if len(
+                 dist.log_prob(a).shape) > 1 else dist.log_prob(a)),
+        Node("SqueezeValue", ["value_tensor"], ["value_pred"],
+             function=lambda v: v.squeeze(-1)),
+        Node("PolicyLoss", ["new_logp", "b_old_logps", "b_adv", "clip_eps"], ["policy_loss"],
+             function=clipped_surrogate_objective),
+        Node("ValueLoss", ["b_ret", "value_pred"], ["value_loss"],
+             function=lambda ret, v: 0.5 * (ret - v).pow(2).mean()),
+        Node("TotalLoss", ["policy_loss", "value_loss", "entropy", "vf_coef", "ent_coef"], ["loss"],
+             function=combined_loss),
+        PropsNode("DualOptimizer", ["loss", "max_grad_norm"], ["_loss_val"], ["actor", "critic", "optimizer"],
+                  function=dual_optimizer_step)
+    ]
+
+    initial_keys = [
+        "actor", "critic", "optimizer",
+        "b_states", "b_actions", "b_old_logps",
+        "b_adv", "b_ret", "clip_eps", "vf_coef", "ent_coef", "max_grad_norm"
+    ]
+    return Graph(nodes, initial_keys=initial_keys)
+
 
 class PPOTrainerProcessor:
-    def __init__(self, actor, critic, optimizer, replay_buffer, batch_size: int = 64, epochs: int = 10,
+    def __init__(self, actor, critic, optimizer, rollout_buffer, batch_size=64, epochs=10,
                  clip_eps=0.2, vf_coef=1.0, ent_coef=0.01, max_grad_norm=0.5, gamma=0.99, lam=0.95):
         self.actor = actor
         self.critic = critic
-        self.optimizer = optimizer
-        self.replay_buffer = replay_buffer
-        self.batch_size = batch_size
-        self.epochs = epochs
-        self.clip_eps = clip_eps
-        self.vf_coef = vf_coef
-        self.ent_coef = ent_coef
-        self.max_grad_norm = max_grad_norm
-        self.use_value_clip = False  # TODO: Spinup Implementation uses value Clipping, original PPO Paper does not
-        self.gamma = gamma
-        self.lam = lam
-        self.device = device
+        self.rollout_buffer = rollout_buffer
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        self.context = {
+            "actor": actor, "critic": critic, "optimizer": optimizer, "buffer": rollout_buffer,
+            "device": self.device, "gamma": gamma, "lam": lam,
+            "num_envs": rollout_buffer.num_envs, "fields": rollout_buffer.spec.fields,
+            "inner_context": {
+                "actor": actor, "critic": critic, "optimizer": optimizer, "clip_eps": clip_eps,
+                "vf_coef": vf_coef, "ent_coef": ent_coef, "max_grad_norm": max_grad_norm
+            }
+        }
+
+        minibatch_graph = create_ppo_minibatch_graph()
+
+        nodes = [
+            PropNode("Sample", ["buffer"], ["rollout"],
+                     function=lambda b: b.sample() if b.reached_rollout_size() else Signal.NOSIGNAL),
+            Node("Detransition", ["fields", "rollout", "device"],
+                 ["states", "actions", "logps", "rewards", "dones", "values", "bootstraps"],
+                 function=detransition),
+
+            Node("td_residual", ["rewards", "dones", "values", "bootstraps", "gamma", "num_envs"],
+                 ["deltas"],
+                 function=td_residual),
+
+            Node("RawGAE", ["deltas", "dones", "gamma", "lam", "num_envs"],
+                 ["raw_advantages"],
+                 function=compute_raw_gae),
+
+            Node("ComputeReturns", ["raw_advantages", "values"],
+                 ["returns"],
+                 function=compute_returns),
+            Node("NormalizeAdvantages", ["raw_advantages"],
+                 ["advantages"],
+                 function=normalize),
+
+            KUpdateNode(minibatch_graph, epochs, batch_size)]
+
+        self.graph = Graph(nodes, initial_keys=list(self.context.keys()))
 
     def run(self):
-        states, actions, old_logps, advantages, returns = compute_gae(self.replay_buffer, gamma=self.gamma,
-                                                                      lam=self.lam)
-
-        # advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-
-        # Convert to tensors
-        states = torch.as_tensor(states, dtype=torch.float32, device=self.device)
-        actions = torch.as_tensor(actions, dtype=torch.float32, device=self.device)
-        old_logps = torch.as_tensor(old_logps, dtype=torch.float32, device=self.device)
-        advantages = torch.as_tensor(advantages, dtype=torch.float32, device=self.device)
-        returns = torch.as_tensor(returns, dtype=torch.float32, device=self.device)
-
-        # Replaybuffer Rollout
-        replaybuffer_rollout = list(zip(states, actions, old_logps, advantages, returns))
-
-        for _ in range(self.epochs):
-            np.random.shuffle(replaybuffer_rollout)
-            for start in range(0, len(replaybuffer_rollout), self.batch_size):
-                batch = replaybuffer_rollout[start:start + self.batch_size]
-                b_states, b_actions, b_old_logps, b_adv, b_ret = zip(*batch)
-                b_states = torch.stack(b_states)
-                b_actions = torch.stack(b_actions)
-                b_old_logps = torch.stack(b_old_logps)
-                b_adv = torch.stack(b_adv)
-                b_ret = torch.stack(b_ret)
-
-                dist = self.actor(b_states)
-                new_logp = dist.log_prob(b_actions).sum(-1)
-                # print(new_logp)
-                entropy = dist.entropy().sum(-1).mean()
-                value_pred = self.critic(b_states).squeeze(-1)
-
-                # Policy Losses
-                ratio = torch.exp(new_logp - b_old_logps)
-                surrogate_objective = ratio * b_adv
-                surrogate_objective2 = torch.clamp(ratio, 1.0 - self.clip_eps, 1.0 + self.clip_eps) * b_adv
-                policy_loss = -torch.min(surrogate_objective, surrogate_objective2).mean()
-
-                # value loss
-                value_loss = (b_ret - value_pred).pow(2).mean()
-
-                loss = policy_loss + self.vf_coef * value_loss - self.ent_coef * entropy
-                # print(f"total loss {loss}")
-
-                # Backprop
-                self.optimizer.zero_grad()
-                loss.backward()
-                if self.use_value_clip:  # NOT USED BY ORIGINAL PPO
-                    nn.utils.clip_grad_norm_(list(self.actor.parameters()) + list(self.critic.parameters()),
-                                             self.max_grad_norm)
-                self.optimizer.step()
+        self.graph.run(self.context)
+        return self.context.get("train_metrics", {})
