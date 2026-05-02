@@ -35,10 +35,11 @@ class NormalizedVecHandler(VecEnvironmentHandler):
 class NormalizedEvalHandler(EnvironmentHandler):
     def __init__(self, factory, seed, train_handler):
         super().__init__(factory, seed)
-        self.env = gym.wrappers.NormalizeObservation(self.env)
-        self.env = gym.wrappers.TransformObservation(self.env, lambda obs: np.clip(obs, -10, 10))
-        self.env.obs_rms = train_handler.envs.obs_rms
+        norm_wrapper = gym.wrappers.NormalizeObservation(self.env)
+        train_rms = train_handler.envs.get_wrapper_attr("obs_rms")
 
+        norm_wrapper.obs_rms = train_rms
+        self.env = gym.wrappers.TransformObservation(norm_wrapper, lambda obs: np.clip(obs, -10, 10))
 
 
 def eval_trainer(trainer, env_handler, eval_episodes=5):
@@ -71,7 +72,7 @@ def main(seed):
     eval_episodes = 10
     max_steps = 1_000_000
     lr = 3e-4
-    hidden_dim = 256
+    hidden_dim = 64
     gamma = 0.99
     lam = 0.95
     eval_freq = 50_000
