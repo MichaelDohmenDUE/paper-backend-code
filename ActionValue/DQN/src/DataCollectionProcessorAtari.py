@@ -69,7 +69,7 @@ class DataCollectionProcessor:
             ),
             BufferAppendingNode(),
             PropsNode("StateUpdate", ["next_state", "_buffer_updated"], ["state"],
-                 function=lambda ns, signal: ns, no_grad = True),
+                      function=lambda ns, signal: ns, no_grad=True),
         ]
 
         self.graph = Graph(nodes, initial_keys=list(self.context.keys()))

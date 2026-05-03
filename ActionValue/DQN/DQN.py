@@ -135,6 +135,7 @@ def main(seed):
     metrics["charts/eval_avg_score"] = evaluate_policy(behavior_net, eval_env, episodes=eval_episodes, device=device)
     wandb.log(metrics, step=step)
     wandb.finish()
+
 if __name__ == '__main__':
     seeds = [0,1,2]
     for seed in seeds:
