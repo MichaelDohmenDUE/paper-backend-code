@@ -1,8 +1,8 @@
-import sys
+
 import time
 from copy import deepcopy
 
-import numpy as np
+
 import torch
 import wandb
 
@@ -30,7 +30,7 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
         state = env_handler.reset()
         done = False
         while not done:
-            state_t = torch.as_tensor(state, dtype=torch.float32, device=trainer.device).unsqueeze(0)
+            state_t = torch.as_tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
             with torch.no_grad():
                 action = trainer.actor(state_t).cpu().numpy().flatten()
             next_state, reward, terminated, truncated, _ = env_handler.step_ddpg(action)
@@ -126,6 +126,6 @@ def main(seed, env_name):
     wandb.finish()
 if __name__ == "__main__":
     seeds = [1, 2, 3]
-    env_name = sys.argv[1] if len(sys.argv) > 1 else ""
+    env_name = "HalfCheetah-v4"
     for seed in seeds:
         main(seed, env_name)
