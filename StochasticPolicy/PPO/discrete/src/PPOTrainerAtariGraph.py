@@ -66,7 +66,7 @@ class PPOTrainerProcessor:
         self.context = {
             "agent": agent, "optimizer": optimizer, "buffer": rollout_buffer, "replay_buffer": replay_buffer,
             "device": self.device, "gamma": gamma, "lam": lam,
-            "num_envs": rollout_buffer.num_envs, "fields": rollout_buffer.spec.fields,
+            "num_envs": rollout_buffer.num_envs, "spec_fields": rollout_buffer.spec.fields,
             "inner_context": {
                 "agent": agent, "optimizer": optimizer, "clip_eps": clip_eps,
                 "vf_coef": vf_coef, "ent_coef": ent_coef, "max_grad_norm": max_grad_norm, "device": self.device,
@@ -76,11 +76,11 @@ class PPOTrainerProcessor:
         minibatch_graph = create_ppo_minibatch_graph()
 
         nodes = [
-            PropsNode("StartTrainGate", ["buffer"], ["rollout"],
-                      function=lambda b: b.sample_batch() if b.ready() else Signal.NOSIGNAL),
+            PropsNode("Sample", ["buffer"], ["rollout"],
+                      function=lambda b: b.sample() if b.reached_rollout_size() else Signal.NOSIGNAL),
 
             PropsNode("Detransition", ["spec_fields", "rollout", "device"],
-                      ["state", "action", "reward", "next_state", "done"],
+                      ["state", "action", "logp", "reward", "done", "value", "bootstrap"],
                       function=detransition),
             PropsNode("td_residual", ["reward", "done", "value", "bootstrap", "gamma", "num_envs"],
                       ["deltas"],
@@ -127,13 +127,13 @@ class PPOTrainerProcessor:
     def run(self):
         self.graph.run(self.context)
 
-        if "final_inner_context" in self.context:
-            history = self.context["final_inner_context"]["metric_history"]
-
+        final_context = self.context.get("final_inner_context")
+        if final_context and isinstance(final_context, dict):
+            history = final_context.get("metric_history", {})
             train_metrics = {
-                "losses/policy_loss": np.mean(history["policy_loss"]) if history["policy_loss"] else 0,
-                "losses/value_loss": np.mean(history["value_loss"]) if history["value_loss"] else 0,
-                "losses/entropy": np.mean(history["entropy"]) if history["entropy"] else 0
+                "losses/policy_loss": np.mean(history["policy_loss"]) if history.get("policy_loss") else 0,
+                "losses/value_loss": np.mean(history["value_loss"]) if history.get("value_loss") else 0,
+                "losses/entropy": np.mean(history["entropy"]) if history.get("entropy") else 0
             }
             return train_metrics
 
