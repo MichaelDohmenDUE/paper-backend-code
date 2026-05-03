@@ -23,20 +23,20 @@ def main(seed, env_name):
     start_time = time.time()
     epsilon = 1.0
     epsilon_final = 0.05
-    epsilon_decay = 20000
+    epsilon_decay = 1_000_000
     eval_episodes = 5
     evaL_frequency = 100_000
     env_name = env_name
-    sync_freq = 500
-    batch_size = 128
+    sync_freq = 1000
+    batch_size = 32
     max_buffer_size = 1_000_000
     tau = 1.0
     gamma = 0.99
     max_steps = 10_000_000
     seed = seed
     offset = 100
-    lr = 2.5e-4
-    warmup_steps = 10_000
+    lr = 1e-4
+    warmup_steps = 80_000
 
     setting_global_seed(seed)
 
