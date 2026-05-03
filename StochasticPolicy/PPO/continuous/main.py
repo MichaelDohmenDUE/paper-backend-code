@@ -63,8 +63,8 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
 
 def main(seed):
     start_time = time.time()
-    env_name = "HalfCheetah-v4"
-    num_envs = 2
+    env_name = "Hopper-v4"
+    num_envs = 8
     seed = seed
     rollout_size = 2048
     batch_size = 64

@@ -76,10 +76,12 @@ class PPOTrainerProcessor:
         minibatch_graph = create_ppo_minibatch_graph()
 
         nodes = [
-            PropsNode("Sample", ["buffer"], ["rollout"],
-                      function=lambda b: b.sample() if b.reached_rollout_size() else Signal.NOSIGNAL),
-            PropsNode("Detransition", ["fields", "rollout", "device"],
-                      ["state", "action", "logp", "reward", "done", "value", "bootstrap"],
+            PropsNode("StartTrainGate", ["buffer", "global_counter", "start_timesteps"], ["rollout"],
+                      function=lambda b, gc, start:
+                      b.sample_batch() if (gc.get() >= start and b.ready()) else Signal.NOSIGNAL),
+
+            PropsNode("Detransition", ["spec_fields", "rollout", "device"],
+                      ["state", "action", "reward", "next_state", "done"],
                       function=detransition),
             PropsNode("td_residual", ["reward", "done", "value", "bootstrap", "gamma", "num_envs"],
                       ["deltas"],

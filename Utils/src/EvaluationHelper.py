@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def eval_trainer(trainer, env_handler, eval_episodes=5):
@@ -12,7 +13,7 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
     if isinstance(state, tuple):
         state = state[0]
     while len(episode_returns) < eval_episodes:
-        state_t = torch.as_tensor(state, dtype=torch.float32, device=trainer.device)
+        state_t = torch.as_tensor(state, dtype=torch.float32, device=device)
         if state_t.dim() == 1:
             state_t = state_t.unsqueeze(0)
         with torch.no_grad():
