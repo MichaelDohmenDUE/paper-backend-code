@@ -5,7 +5,7 @@ import torch
 import wandb
 from torch import optim
 
-from RolloutBuffer import RolloutBuffer
+from backend.Utils.src.RolloutBuffer import RolloutBuffer
 from backend.CommonModels.src.ActorPPO import ActorPPO
 from backend.CommonModels.src.CriticPPO import CriticPPO
 from backend.StochasticPolicy.PPO.continuous.src.ActionHandler import ActionHandler
@@ -16,7 +16,7 @@ from backend.Utils.src.BatchTransitioner import TransitionSpec
 from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler, VecEnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
-from utils import setting_global_seed
+from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
