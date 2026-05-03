@@ -13,13 +13,11 @@ from backend.DeterministicPolicy.DDPG.src.DataCollectionProcessor import DataCol
 from backend.DeterministicPolicy.DDPG.src.TrainProcessor import TrainProcess
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnvFactory import GymEnvFactory
-from backend.Utils.src.EnviromentHandler import EnvironmentHandler
+from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
 from backend.Utils.src.GlobalCounter import GlobalCounter
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
 from backend.Utils.src.utils import setting_global_seed
-
-from EnviromentHandler import VecEnvironmentHandler
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
