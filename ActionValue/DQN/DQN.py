@@ -58,7 +58,7 @@ def main(seed):
     env_name = "CartPole-v1"
     sync_freq = 1000
     hidden_size = 64
-    batch_size = 128
+    batch_size = 32
     max_buffer_size = 100_000
     tau = 1.0
     gamma = 0.99

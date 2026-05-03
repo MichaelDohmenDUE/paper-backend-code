@@ -118,6 +118,7 @@ def nl_max(tensor: torch.Tensor, dim: int = 1) -> torch.Tensor:
 
 
 def mean_squared_error(tensor: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    #print(tensor.shape, target.shape)
     return F.mse_loss(tensor, target)
 
 
