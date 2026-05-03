@@ -9,12 +9,10 @@ from backend.Utils.src.NodeLib.NodeLibrary import reset_handler, noise_handler, 
 from NodeLib.Node import Graph, PropsNode
 from NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, to_numpy_array
 
-
 class DataCollectionProcessor:
     def __init__(self, env: EnvironmentHandler, actor, noise_generator, buffer: ReplayBuffer,
                  transition_factory: TransitionFactory, global_counter: GlobalCounter, max_action,
                  device: torch.device):
-        self.num_envs = getattr(env, "num_envs", 1)
 
         self.context = {
             "state": np.array(env.reset()).astype(np.float32),
@@ -25,7 +23,10 @@ class DataCollectionProcessor:
             "global_counter": global_counter,
             "max_action": max_action,
             "device": device,
-            "num_envs": self.num_envs
+            "num_envs": 1,
+            "episode_reward": 0.0,
+            "episode_length": 0,
+            "metrics": {}
         }
 
         nodes = [
@@ -44,14 +45,13 @@ class DataCollectionProcessor:
                       function=lambda env, a: env.step_ddpg(a), no_grad=True),
 
             PropsNode("CombineDones", ["terminated", "truncated"], ["done_reset"],
-                      function=lambda terminated, truncated: terminated | truncated, no_grad=True),
+                      function=lambda term, trunc: bool(term) or bool(trunc), no_grad=True),
             PropsNode("ResetNoise", ["noise_generator", "done_reset"], ["_dummy_noise"],
-                      function=lambda ng, d: noise_handler(ng, done=np.any(d)), no_grad=True),
-            PropsNode("ExtractTrueNextState", ["next_state", "terminated", "truncated", "info"], ["real_next_state"],
-                      function=lambda ns, terminated, truncated, info: info.get("final_observation", ns) if (
-                              np.any(terminated) or np.any(truncated)) else ns, no_grad=True),
+                      function=lambda ng, d: noise_handler(ng, done=d), no_grad=True),
 
-            # 5. Buffer Transition
+            PropsNode("ExtractTrueNextState", ["next_state", "done_reset", "info"], ["real_next_state"],
+                      function=lambda ns, done, info: info.get("final_observation", ns) if done else ns, no_grad=True),
+
             TransitionNode(
                 factory=transition_factory,
                 input_mapping={
@@ -64,9 +64,11 @@ class DataCollectionProcessor:
             ),
             BufferAppendingNode(),
 
-            # 6. Metrics and State Overwrite
             PropsNode("IncrementCounter", ["global_counter"], ["_dummy_count"],
                       function=lambda gc: gc.set(gc.get() + 1), no_grad=True),
+
+            PropsNode("TrackMetrics", ["reward", "done_reset"], ["_dummy_track"],
+                      function=_track_helper, no_grad=True),
 
             PropsNode("StateUpdate", ["next_state", "_buffer_updated"], ["state"],
                       function=lambda ns, signal: np.array(ns).astype(np.float32)),
@@ -74,7 +76,20 @@ class DataCollectionProcessor:
 
         self.graph = Graph(nodes, initial_keys=list(self.context.keys()))
 
+    def _track_helper(self, reward, done_reset):
+        self.context["episode_reward"] += float(reward)
+        self.context["episode_length"] += 1
+
+        if done_reset:
+            self.context["metrics"] = {
+                "charts/episodic_return": self.context["episode_reward"],
+                "charts/episodic_length": self.context["episode_length"],
+                "global_step": self.context["global_counter"].get()
+            }
+            self.context["episode_reward"] = 0.0
+            self.context["episode_length"] = 0
+
     def run(self):
+        self.context["metrics"] = {}
         self.graph.run(self.context)
-        metrics = {}
-        return metrics
+        return self.context["metrics"]
