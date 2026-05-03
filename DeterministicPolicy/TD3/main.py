@@ -144,6 +144,6 @@ def main(seed, env_name):
 
 if __name__ == "__main__":
     seeds = [0, 1, 2]
-    env_name = "HalfCheetah-v4"
+    env_name = "Hopper-v4"
     for current_seed in seeds:
         main(current_seed, env_name)
