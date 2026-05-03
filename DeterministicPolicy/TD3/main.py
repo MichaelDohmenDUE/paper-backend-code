@@ -48,7 +48,6 @@ def main(seed, env_name):
         tags=["v1.0-benchmark", "official-run"],
         config={
             "env_id": env_name,
-            "exp_name": "Td3-Hopper-v4",
             "seed": seed,
             "buffer_size": buffer_size,
             "batch_size": batch_size,
@@ -145,6 +144,6 @@ def main(seed, env_name):
 
 if __name__ == "__main__":
     seeds = [0, 1, 2]
-    env_name = "Walker2d-v4"
+    env_name = "HalfCheetah-v4"
     for current_seed in seeds:
         main(current_seed, env_name)

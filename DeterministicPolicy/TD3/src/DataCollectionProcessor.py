@@ -69,12 +69,14 @@ class DataCollectionProcessor:
 
             PropsNode("CombineDones", ["terminated", "truncated"], ["done_reset"],
                       function=lambda term, trunc: term | trunc, no_grad=True),
-
+            PropsNode("ExtractTrueNextState", ["next_state", "terminated", "truncated", "info"], ["real_next_state"],
+                      function=lambda ns, term, trunc, info: info.get("final_observation", ns) if (
+                              term.any() or trunc.any()) else ns, no_grad=True),
             TransitionNode(
                 factory=transition_factory,
                 input_mapping={
                     "state": "state", "action": "action", "reward": "reward",
-                    "next_state": "next_state", "done": "terminated"
+                    "next_state": "real_next_state", "done": "terminated"
                 }
             ),
             BufferAppendingNode(),

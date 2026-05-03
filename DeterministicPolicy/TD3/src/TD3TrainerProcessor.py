@@ -87,8 +87,8 @@ class TrainProcessor:
             PropsNode("UpdateCritic2", ["optimizer_critic_2", "critic_loss_2"], ["_c2_opt"],
                       function=optimizer_update),
 
-            PropsNode("ActorForward", ["actor", "gated_state"], ["policy_action"],
-                      function=lambda net, s: net(s)),
+            PropsNode("ActorForward", ["actor", "gated_state", "_c1_opt", "_c2_opt"], ["policy_action"],
+                      function=lambda net, s, *_: net(s)),
 
             PropsNode("ActorQValue", ["critic_1", "gated_state", "policy_action"], ["actor_q_val"],
                       function=lambda net, s, a: net(s, a).squeeze()),
@@ -118,7 +118,8 @@ class TrainProcessor:
         return metrics
 
     def run(self):
-        self.graph.run(self.context)
+        if self.global_counter.get() >= self.start_timesteps:
+            self.graph.run(self.context)
         metrics = self.context.get("metrics", {})
 
         if metrics is Signal.NOSIGNAL or not isinstance(metrics, dict):
