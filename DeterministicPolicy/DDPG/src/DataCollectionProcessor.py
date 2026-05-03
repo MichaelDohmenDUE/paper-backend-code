@@ -6,8 +6,8 @@ from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.NodeLib.NodeLibrary import reset_handler, noise_handler, action_with_noise
 
-from backend.Utils.NodeLib.Node import Graph, PropsNode
-from backend.Utils.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, to_numpy_array
+from backend.Utils.src.NodeLib.Node import Graph, PropsNode
+from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, to_numpy_array
 
 class DataCollectionProcessor:
     def __init__(self, env: EnvironmentHandler, actor, noise_generator, buffer: ReplayBuffer,
