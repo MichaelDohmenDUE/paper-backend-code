@@ -111,6 +111,6 @@ def main(seed, evn_name):
     wandb.finish()
 if __name__ == '__main__':
     seeds = [0, 1, 2]
-    evn_name = "PongNoFrameskip-v4"
+    evn_name = "BreakoutNoFrameskip-v4"
     for seed in seeds:
         main(seed, evn_name)
