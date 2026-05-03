@@ -69,16 +69,15 @@ class PPOTrainerProcessor:
             "num_envs": rollout_buffer.num_envs, "fields": rollout_buffer.spec.fields,
             "inner_context": {
                 "agent": agent, "optimizer": optimizer, "clip_eps": clip_eps,
-                "vf_coef": vf_coef, "ent_coef": ent_coef, "max_grad_norm": max_grad_norm, "device": self.device
+                "vf_coef": vf_coef, "ent_coef": ent_coef, "max_grad_norm": max_grad_norm, "device": self.device,
             }
         }
 
         minibatch_graph = create_ppo_minibatch_graph()
 
         nodes = [
-            PropsNode("StartTrainGate", ["buffer", "global_counter", "start_timesteps"], ["rollout"],
-                      function=lambda b, gc, start:
-                      b.sample_batch() if (gc.get() >= start and b.ready()) else Signal.NOSIGNAL),
+            PropsNode("StartTrainGate", ["buffer"], ["rollout"],
+                      function=lambda b: b.sample_batch() if b.ready() else Signal.NOSIGNAL),
 
             PropsNode("Detransition", ["spec_fields", "rollout", "device"],
                       ["state", "action", "reward", "next_state", "done"],
