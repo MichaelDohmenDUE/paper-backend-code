@@ -64,4 +64,9 @@ class TrainProcessor:
 
     def run(self):
         self.graph.run(self.context)
-        return self.context.get("train_metrics", {})
+        metrics = self.context.get("train_metrics", {})
+
+        if metrics is Signal.NOSIGNAL or not isinstance(metrics, dict):
+            return {}
+
+        return metrics
