@@ -74,15 +74,16 @@ def sample_distribution(dist: Categorical) -> tuple[int, torch.Tensor]:
 def optimizer_update(optimizer: torch.optim.Optimizer, loss: torch.Tensor) -> dict:
     optimizer.zero_grad()
     loss.backward()
-    total_squared_norm = 0.0
-    n_params = 0
-    for group in optimizer.param_groups:
-        for p in group['params']:
-            if p.grad is not None:
-                total_squared_norm += p.grad.detach().pow(2).sum().item()
-                n_params += p.numel()
-    rms_grad = (total_squared_norm / n_params) ** 0.5 if n_params > 0 else 0
+    #total_squared_norm = 0.0
+    #n_params = 0
+    #for group in optimizer.param_groups:
+    #    for p in group['params']:
+     ##       if p.grad is not None:
+     #           total_squared_norm += p.grad.detach().pow(2).sum().item()
+     #           n_params += p.numel()
+    #rms_grad = (total_squared_norm / n_params) ** 0.5 if n_params > 0 else 0
     optimizer.step()
+    return {}
     return {
         "grad/rms_gradient": rms_grad,
         "grad/total_parameters": n_params
