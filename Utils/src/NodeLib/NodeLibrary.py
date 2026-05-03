@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch import nn
 from torch.distributions import Categorical
 
-from NodeLib.Node import PropsNode
+from NodeLib.Node import PropsNode, Signal
 from backend.Utils.src.NodeLib.Node import Node
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 
@@ -395,3 +395,23 @@ class ConditionNode(Node):
             if condition:
                 return self.function_2(*args)
             return self.function_1(*args)
+
+
+class TimerNode(Node):
+    def __init__(self, name, timer_inputs, data_inputs, outputs):
+        super().__init__(name, timer_inputs + data_inputs, outputs)
+        self.num_timer_args = len(timer_inputs)
+
+    def forward(self, *args):
+        step = args[0]
+        freq = args[1]
+
+        #Payload
+        data = args[self.num_timer_args:]
+
+        if step % freq == 0:
+            return data[0] if len(data) == 1 else tuple(data)
+        else:
+            if len(self.outputs) == 1:
+                return Signal.NOSIGNAL
+            return tuple([Signal.NOSIGNAL] * len(self.outputs))
