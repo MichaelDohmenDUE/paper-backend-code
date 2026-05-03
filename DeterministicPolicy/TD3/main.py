@@ -28,7 +28,7 @@ def main(seed, env_name):
     seed = seed
     max_timesteps = 1_000_000
     warmup = 25000
-    eval_freq = 5000
+    eval_freq = 100000
     eval_episodes = 5
     expl_noise = 0.1
     batch_size = 256
