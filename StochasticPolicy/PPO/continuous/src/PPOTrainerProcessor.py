@@ -141,14 +141,16 @@ class PPOTrainerProcessor:
 
     def run(self):
         self.graph.run(self.context)
-
-        if "final_inner_context" in self.context:
-            history = self.context["final_inner_context"]["metric_history"]
-
-            train_metrics = {
-                "losses/policy_loss": np.mean(history["policy_loss"]) if history["policy_loss"] else 0,
-                "losses/value_loss": np.mean(history["value_loss"]) if history["value_loss"] else 0,
-                "losses/entropy": np.mean(history["entropy"]) if history["entropy"] else 0
-            }
-            return train_metrics
+        final_inner = self.context.get("final_inner_context")
+        if final_inner is not None and final_inner is not Signal.NOSIGNAL:
+            try:
+                history = final_inner["metric_history"]
+                train_metrics = {
+                    "losses/policy_loss": np.mean(history["policy_loss"]) if history["policy_loss"] else 0,
+                    "losses/value_loss": np.mean(history["value_loss"]) if history["value_loss"] else 0,
+                    "losses/entropy": np.mean(history["entropy"]) if history["entropy"] else 0
+                }
+                return train_metrics
+            except (KeyError, TypeError):
+                return {}
         return {}
