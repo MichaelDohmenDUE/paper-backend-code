@@ -42,7 +42,7 @@ class DataCollectionProcessor:
                       function=to_numpy_array, no_grad=True),
 
             PropsNode("EnvStep", ["env", "action_np"], ["next_state", "reward", "terminated", "truncated", "info"],
-                      function=lambda env, a: env.step_ddpg(a), no_grad=True),
+                      function=lambda env, a: env.step_detailed(a), no_grad=True),
 
             PropsNode("CombineDones", ["terminated", "truncated"], ["done_reset"],
                       function=lambda term, trunc: bool(term) or bool(trunc), no_grad=True),
@@ -77,7 +77,7 @@ class DataCollectionProcessor:
         self.graph = Graph(nodes, initial_keys=list(self.context.keys()))
 
     def _track_helper(self, reward, done_reset):
-        self.context["episode_reward"] += float(reward)
+        self.context["episode_reward"] += float(reward[0])
         self.context["episode_length"] += 1
 
         if done_reset:

@@ -19,30 +19,33 @@ from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
 from backend.Utils.src.utils import setting_global_seed
 
+from EnviromentHandler import VecEnvironmentHandler
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def eval_trainer(trainer, env_handler, eval_episodes=5):
     avg_reward = 0.0
-    trainer.actor.eval()
+    actor = trainer.actor
+    actor.eval()
 
     for _ in range(eval_episodes):
         state = env_handler.reset()
         done = False
         while not done:
-            state_t = torch.as_tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
+            state_t = torch.as_tensor(state, dtype=torch.float32, device=device)
+
             with torch.no_grad():
-                action = trainer.actor(state_t).cpu().numpy().flatten()
-            next_state, reward, terminated, truncated, _ = env_handler.step_ddpg(action)
-            avg_reward += reward
+                action = actor(state_t).cpu().numpy()
+            next_state, reward, terminated, truncated, _ = env_handler.step_detailed(action)
+
+            avg_reward += reward[0]
             state = next_state
-            done = terminated or truncated
+            done = terminated[0] or truncated[0]
+
     avg_reward /= eval_episodes
-    metrics = {
-        "eval/eval_avg_reward": avg_reward,
-    }
-    trainer.actor.train()
-    return metrics
+    actor.train()
+    return {"eval/eval_avg_reward": avg_reward}
 
 def main(seed, env_name):
     start_time = time.time()
@@ -83,10 +86,10 @@ def main(seed, env_name):
     )
 
     gym_factory = GymEnvFactory(env_name)
-    env = EnvironmentHandler(gym_factory, seed)
-    eval_env_handler = EnvironmentHandler(gym_factory, seed + 100)
+    env = VecEnvironmentHandler(gym_factory, seed, num_envs=1)
+    eval_env_handler = VecEnvironmentHandler(gym_factory, seed + 100, num_envs=1)
     observation_size, action_size, max_action = env.get_env_specs()
-
+    observation_size = observation_size[0]
     # Networks
     actor = Actor(observation_size, action_size, max_action, hidden_size).to(device)
     actor_target = deepcopy(actor).to(device)
