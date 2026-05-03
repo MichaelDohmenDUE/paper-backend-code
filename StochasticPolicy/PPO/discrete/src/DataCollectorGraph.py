@@ -1,15 +1,21 @@
 import numpy as np
-import torch
-
+from backend.Utils.src.NodeLib.Node import Node, Graph, PropsNode
 from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, BootStrappingNode, \
     to_numpy_array, to_tensor, clipper
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
-from backend.Utils.src.NodeLib.Node import Node, Graph, PropsNode
 
+def merge_final_observations(next_state_raw, episode_done, info):
+    true_next = np.array(next_state_raw).copy()
+    if isinstance(info, dict) and "final_observation" in info:
+        final_obs = info["final_observation"]
+        for i, done in enumerate(episode_done):
+            if done and final_obs[i] is not None:
+                true_next[i] = final_obs[i]
+    return true_next.astype(np.uint8)
 
 class EpisodicMetricsNode(Node):
     def __init__(self):
-        super().__init__("EpisodicMetrics", ["running_rewards", "metrics_queue", "reward", "done"], [])
+        super().__init__("EpisodicMetrics", ["running_rewards", "metrics_queue", "reward", "episode_done"], [])
 
     def forward(self, running_rewards, metrics_queue, reward, done):
         reward = np.atleast_1d(reward)
@@ -44,15 +50,23 @@ class DataCollectionProcessor:
 
         nodes = [
             PropsNode("ToTensor", ["state", "device"], ["state_tensor"], function=to_tensor, no_grad=True),
-            PropsNode("AgentForward", ["agent", "state_tensor"], ["dist", "value_tensor"], function=lambda net, s: net(s), no_grad=True),
+            PropsNode("AgentForward", ["agent", "state_tensor"], ["dist", "value_tensor"],
+                      function=lambda net, s: net(s.float()), no_grad=True),
             PropsNode("SampleAction", ["dist"], ["action_tensor"], function=lambda dist: dist.sample(), no_grad=True),
-            PropsNode("LogProb", ["dist", "action_tensor"], ["logp_tensor"], function=lambda dist, a: dist.log_prob(a), no_grad=True),
+            PropsNode("LogProb", ["dist", "action_tensor"], ["logp_tensor"], function=lambda dist, a: dist.log_prob(a),
+                      no_grad=True),
             PropsNode("SqueezeValue", ["value_tensor"], ["value_t_sq"], function=lambda v: v.squeeze(-1), no_grad=True),
             PropsNode("ToNumpy_a", ["action_tensor"], ["action"], function=to_numpy_array, no_grad=True),
             PropsNode("ToNumpy_l", ["logp_tensor"], ["logp"], function=to_numpy_array, no_grad=True),
             PropsNode("ToNumpy_v", ["value_t_sq"], ["value"], function=to_numpy_array, no_grad=True),
-            PropsNode("EnvStep", ["env", "action"], ["next_state", "reward", "done", "info"],
-                      function=lambda env, a: env.step(a)),
+            PropsNode("EnvStep", ["env", "action"], ["next_state_raw", "reward", "done", "truncated", "info"],
+                      function=lambda env, a: env.step_detailed(a)),
+            PropsNode("CombineDones", ["done", "truncated"], ["episode_done"],
+                      function=lambda term, trunc: term | trunc, no_grad=True),
+
+            PropsNode("ExtractTrueNextState", ["next_state_raw", "episode_done", "info"], ["next_state"],
+                      function=merge_final_observations, no_grad=True),
+
             PropsNode("ClipReward", ["reward", "max_R"], ["clipped_reward"], function=clipper),
 
             TransitionNode(
@@ -73,7 +87,7 @@ class DataCollectionProcessor:
             BootStrappingNode(rollout_size),
 
             Node("OverwriteState", ["next_state", "_buffer_updated"], ["state"],
-                 function=lambda ns, _: np.array(ns).astype(np.uint8)),
+                 function=lambda ns, _: np.asarray(ns, dtype=np.uint8)),
 
             EpisodicMetricsNode(),
             Node("CountSteps", ["total_steps", "num_envs"], ["total_steps"], function=lambda steps, n: steps + n),

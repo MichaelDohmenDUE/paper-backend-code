@@ -1,11 +1,13 @@
 import numpy as np
 
-
+from NodeLib.Node import PropsNode
 from NodeLib.NodeLibrary import to_tensor, to_numpy_array
 from backend.StochasticPolicy.PPO.discrete.src.DataCollectorGraph import EpisodicMetricsNode
 from backend.Utils.src.NodeLib.Node import Node, Graph
 from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, BootStrappingNodeMujoco
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
+
+from StochasticPolicy.PPO.discrete.src.DataCollectorGraphMujoco import merge_final_observations
 
 
 class DataCollectionProcessor:
@@ -44,8 +46,14 @@ class DataCollectionProcessor:
 
             Node("ClipAction", ["action"], ["clipped_action"], function=lambda a: np.clip(a, -1.0, 1.0)),
 
-            Node("EnvStep", ["env", "clipped_action"], ["next_state", "reward", "done", "info"],
-                 function=lambda env, a: env.step(a)),
+            PropsNode("EnvStep", ["env", "action"], ["next_state_raw", "reward", "done", "truncated", "info"],
+                      function=lambda env, a: env.step_detailed(a)),
+
+            PropsNode("CombineDones", ["done", "truncated"], ["episode_done"],
+                      function=lambda term, trunc: term | trunc, no_grad=True),
+
+            PropsNode("ExtractTrueNextState", ["next_state_raw", "episode_done", "info"], ["next_state"],
+                      function=merge_final_observations, no_grad=True),
 
             TransitionNode(
                 factory=transition_factory,

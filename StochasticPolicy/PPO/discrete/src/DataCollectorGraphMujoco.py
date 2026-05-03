@@ -1,11 +1,21 @@
 import numpy as np
 
-from NodeLib.NodeLibrary import to_tensor, to_numpy_array
+from NodeLib.Node import PropsNode
+from NodeLib.NodeLibrary import to_tensor, to_numpy_array, clipper
 from backend.StochasticPolicy.PPO.discrete.src.DataCollectorGraph import EpisodicMetricsNode
 from backend.Utils.src.NodeLib.Node import Node, Graph
 from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, BootStrappingNodeMujoco
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 
+
+def merge_final_observations(next_state_raw, episode_done, info):
+    true_next = np.array(next_state_raw).copy()
+    if isinstance(info, dict) and "final_observation" in info:
+        final_obs = info["final_observation"]
+        for i, done in enumerate(episode_done):
+            if done and final_obs[i] is not None:
+                true_next[i] = final_obs[i]
+    return true_next.astype(np.float32)
 
 class DataCollectionProcessor:
     def __init__(self, env_handler, transition_factory, rollout_buffer: RolloutBuffer, rollout_size, actor, critic,
@@ -37,8 +47,14 @@ class DataCollectionProcessor:
             Node("ToNumpy_a", ["action_tensor"], ["action"], function=to_numpy_array, no_grad=True),
             Node("ToNumpy_l", ["logp_tensor"], ["logp"], function=to_numpy_array, no_grad=True),
             Node("ToNumpy_v", ["value_t_sq"], ["value"], function=to_numpy_array, no_grad=True),
-            Node("EnvStep", ["env", "action"], ["next_state", "reward", "done", "info"],
-                 function=lambda env, a: env.step(a)),
+            PropsNode("EnvStep", ["env", "action"], ["next_state_raw", "reward", "done", "truncated", "info"],
+                      function=lambda env, a: env.step_detailed(a)),
+
+            PropsNode("CombineDones", ["done", "truncated"], ["episode_done"],
+                      function=lambda term, trunc: term | trunc, no_grad=True),
+
+            PropsNode("ExtractTrueNextState", ["next_state_raw", "episode_done", "info"], ["next_state"],
+                      function=merge_final_observations, no_grad=True),
 
             TransitionNode(
                 factory=transition_factory,
