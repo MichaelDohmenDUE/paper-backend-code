@@ -137,6 +137,6 @@ def main(seed, env_name):
     wandb.finish()
 
 if __name__ == '__main__':
-    seeds = [1,2,3]
+    seeds = [0, 1, 2]
     for seed in seeds:
         main(seed, env_name="PongNoFrameskip-v4")
