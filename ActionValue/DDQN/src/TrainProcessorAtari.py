@@ -66,4 +66,7 @@ class TrainProcessor:
 
     def run(self):
         self.graph.run(self.context)
-        return self.context.get("train_metrics", {})
+        res = self.context.get("train_metrics", {})
+        if isinstance(res, Signal) or res is Signal.NOSIGNAL:
+            return {}
+        return res
