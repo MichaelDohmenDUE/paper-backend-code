@@ -68,7 +68,7 @@ class DataCollectionProcessor:
                       function=lambda gc: gc.set(gc.get() + 1), no_grad=True),
 
             PropsNode("TrackMetrics", ["reward", "done_reset"], ["_dummy_track"],
-                      function=_track_helper, no_grad=True),
+                      function=self._track_helper, no_grad=True),
 
             PropsNode("StateUpdate", ["next_state", "_buffer_updated"], ["state"],
                       function=lambda ns, signal: np.array(ns).astype(np.float32)),
