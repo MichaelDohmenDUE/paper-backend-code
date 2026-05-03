@@ -118,7 +118,7 @@ def main(seed):
         if metrics_data:
             metrics.update(metrics_data)
         metrics_train = train_process.run()
-        if metrics_train:
+        if isinstance(metrics_train, dict) and metrics_train:
             metrics.update(metrics_train)
         sync_process.run()
 

@@ -40,17 +40,22 @@ class DataCollectionProcessor:
                  function=lambda epsilon_greed, q: epsilon_greed.forward(q_values=q), no_grad=True),
             Node("FormatToArray", ["action_raw"], ["action"],
                  function=to_numpy_array, no_grad=True),
-            Node("EnvStep", ["env", "action"], ["next_state", "reward", "done", "info"],
-                 function=lambda env, a: env.step(a), no_grad=True),
+            Node("EnvStep", ["env", "action"], ["next_state", "reward", "terminated", "truncated", "info"],
+                 function=lambda env, a: env.step_detailed(a), no_grad=True),
 
+            Node("CombineDones", ["terminated", "truncated"], ["done"],
+                 function=lambda term, trunc: term | trunc, no_grad=True),
+            Node("ExtractTrueNextState", ["next_state", "done", "info"], ["real_next_state"],
+                 function=lambda ns, d, info: info.get("final_observation", ns) if (
+                         d and isinstance(info, dict)) else ns, no_grad=True),
             TransitionNode(
                 factory=transition_factory,
                 input_mapping={
                     "state": "state",
                     "action": "action",
                     "reward": "reward",
-                    "next_state": "next_state",
-                    "done": "done"
+                    "next_state": "real_next_state",
+                    "done": "terminated"
                 }
             ),
             BufferAppendingNode(),

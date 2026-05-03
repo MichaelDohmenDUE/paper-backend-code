@@ -48,17 +48,22 @@ class DataCollectionProcessor:
                       function=lambda epsilon_greed, q: epsilon_greed.forward(q_values=q), no_grad=True),
             PropsNode("FormatToArray", ["action_raw"], ["action"],
                       function=to_numpy_array, no_grad=True),
-            PropsNode("EnvStep", ["action"], ["next_state_raw", "reward", "done", "info"], props=["env"],
-                      function=lambda env, a: env.step(a), no_grad=True),
+            PropsNode("EnvStep", ["action"], ["next_state_raw", "reward", "terminated", "truncated", "info"], props=["env"],
+                      function=lambda env, a: env.step_detailed(a), no_grad=True),
             PropsNode("FormatNextState", ["next_state_raw"], ["next_state"],
                       function=lambda ns: np.array(ns).astype(np.uint8), no_grad=True),
+            Node("CombineDones", ["terminated", "truncated"], ["done"],
+                 function=lambda term, trunc: term | trunc, no_grad=True),
+            Node("ExtractTrueNextState", ["next_state", "done", "info"], ["real_next_state"],
+                 function=lambda ns, d, info: info.get("final_observation", ns) if (
+                         d and isinstance(info, dict)) else ns, no_grad=True),
             TransitionNode(
                 factory=transition_factory,
                 input_mapping={
                     "state": "state",
                     "action": "action",
                     "reward": "reward",
-                    "next_state": "next_state",
+                    "next_state": "real_next_state",
                     "done": "done"
                 }
             ),

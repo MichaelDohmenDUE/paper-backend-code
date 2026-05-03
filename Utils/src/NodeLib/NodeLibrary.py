@@ -237,11 +237,7 @@ class TransitionNode(Node):
         self.default_kwargs = default_kwargs if default_kwargs is not None else {}
 
     def forward(self, *args):
-        #  Split up args into the transition arrays | the num_envs integer
         *transition_data, num_envs = args
-
-        if num_envs == 1:
-            transition_data = [[x] for x in transition_data]
 
         transitions = []
 
@@ -249,7 +245,6 @@ class TransitionNode(Node):
             kwargs = dict(zip(self.factory_args, step_values))
             # Inject the hardcoded values
             kwargs.update(self.default_kwargs)
-            # Transition
             transition = self.factory.forward(**kwargs)
             transitions.append(transition)
 

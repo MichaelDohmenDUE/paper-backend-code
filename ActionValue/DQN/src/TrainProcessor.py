@@ -40,7 +40,7 @@ class TrainProcessor:
             Node("BehaviorForward", ["behavior_net", "state"], ["qs_b"],
                  function=lambda net, s: net(s.float().squeeze(1))),
             Node("QsaBehavior", ["qs_b", "action"], ["qsa_b"],
-                 function=lambda q, a: indexing(q, a).reshape(-1)),
+                 function=lambda q, a: indexing(q, a.long().view(-1, 1)).reshape(-1)),
             Node("TargetForward", ["target_net", "next_state"], ["qs_t"],
                  function=lambda net, ns: net(ns.squeeze(1)), no_grad=True),
             Node("Max", ["qs_t"], ["max_q_t"],
