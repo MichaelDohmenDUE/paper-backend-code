@@ -67,15 +67,13 @@ class DataCollectionProcessor:
             PropsNode("ExtractTrueNextState", ["next_state_raw", "episode_done", "info"], ["next_state"],
                       function=merge_final_observations, no_grad=True),
 
-            PropsNode("ClipReward", ["reward", "max_R"], ["clipped_reward"], function=clipper),
-
             TransitionNode(
                 factory=transition_factory,
                 input_mapping={
                     "state": "state",
                     "action": "action",
                     "logp": "logp",
-                    "reward": "clipped_reward",
+                    "reward": "reward",
                     "done": "done",
                     "value": "value"
                 },

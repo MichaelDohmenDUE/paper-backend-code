@@ -5,7 +5,7 @@ import torch
 import wandb
 
 from backend.CommonModels.src.DuellingDQN import DuellingAtariDQN
-from EnvFactory import AtariEnvFactory
+from backend.Utils.src.EnvFactory import AtariEnvFactory
 from backend.ActionValue.DQN.DQN import evaluate_policy
 from backend.ActionValue.DQN.src.ActionHandler import EpsilonGreedyPolicy
 from backend.ActionValue.DQN.src.DataCollectionProcessorAtari import DataCollectionProcessor
