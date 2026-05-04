@@ -6,8 +6,8 @@ from torch import optim
 
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.CommonModels.src.DiscreteActorPPO import AtariPPOAgent
-from backend.StochasticPolicy.PPO.discrete.src.DataCollectorGraph import DataCollectionProcessor
-from backend.StochasticPolicy.PPO.discrete.src.PPOTrainerAtariGraph import PPOTrainerProcessor
+from backend.StochasticPolicy.PPO.discrete.src.DataCollectorAtari import DataCollectionProcessor
+from backend.StochasticPolicy.PPO.discrete.src.PPOTrainerAtari import PPOTrainerProcessor
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
 from backend.Utils.src.EnvFactory import AtariEnvFactory
@@ -104,7 +104,7 @@ def main(seed):
     while step < max_steps:
         metrics = {}
         metrics_ep = data_collector.run()
-        if metrics_ep:PPO_Atari_Graph.py
+        if metrics_ep:
             metrics.update(metrics_ep)
         metrics_train = trainer.run()
         if metrics_train:

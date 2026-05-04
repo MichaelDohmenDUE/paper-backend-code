@@ -8,7 +8,7 @@ from ReplayBuffer import ReplayBuffer
 from backend.CommonModels.src.CriticPPO import CriticPPO
 from backend.CommonModels.src.DiscreteActorPPO import DiscreteActorPPO
 from backend.StochasticPolicy.PPO.discrete.src.DataCollectorGraphMujoco import DataCollectionProcessor
-from backend.StochasticPolicy.PPO.discrete.src.PPOTrainerGraph import PPOTrainerProcessor
+from backend.StochasticPolicy.PPO.discrete.src.PPOTrainer import PPOTrainerProcessor
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
 from backend.Utils.src.EnvFactory import GymEnvFactory
