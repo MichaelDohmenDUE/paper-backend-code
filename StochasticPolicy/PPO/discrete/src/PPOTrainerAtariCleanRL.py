@@ -1,13 +1,12 @@
 import numpy as np
 import torch
+from torch import nn
 
-from backend.Utils.src import GlobalCounter
-from Utils.src.NodeLib.NodeLibrary import linearly_annealed_lr_alpha, clipped_value_loss
 from backend.Utils.src.NodeLib.NodeLibrary import detransition, normalize, clipped_surrogate_objective, \
     optimizer_normalized, td_residual, compute_returns, record_metrics, RepeatNode, compute_raw_gae
+from backend.Utils.src.NodeLib.NodeLibrary import linearly_annealed_lr_alpha, clipped_value_loss
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
-from torch import nn
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -62,7 +61,7 @@ def create_ppo_minibatch_graph():
 
 class PPOTrainerProcessor:
     def __init__(self, agent: nn.Module, optimizer: torch.optim.Optimizer, rollout_buffer: RolloutBuffer,
-                 replay_buffer: ReplayBuffer,learn_rate: float, global_counter, max_steps,   batch_size=64,
+                 replay_buffer: ReplayBuffer, learn_rate: float, global_counter, max_steps, batch_size=64,
                  epochs=10, clip_eps=0.2, vf_coef=0.5, ent_coef=0.01, max_grad_norm=0.5, gamma=0.99, lam=0.95):
         self.agent = agent
         self.rollout_buffer = rollout_buffer
