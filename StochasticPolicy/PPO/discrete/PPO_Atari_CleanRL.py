@@ -42,7 +42,7 @@ def main(seed):
     start_time = time.time()
     env_name = "BreakoutNoFrameskip-v4"
     seed = seed
-    rollout_size = 2048
+    rollout_size = 1024
     batch_size = 256
     epochs = 4
     max_steps = 10_000_000
