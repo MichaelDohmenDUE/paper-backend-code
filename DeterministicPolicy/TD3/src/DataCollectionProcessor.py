@@ -3,7 +3,7 @@ import torch
 
 from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
 from backend.Utils.src.GlobalCounter import GlobalCounter
-from NodeLib.Node import PropsNode, Graph
+from backend.Utils.src.NodeLib.Node import PropsNode, Graph
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.NodeLib.NodeLibrary import BufferAppendingNode, TransitionNode, ConditionNode
 from backend.Utils.src.ReplayBuffer import ReplayBuffer

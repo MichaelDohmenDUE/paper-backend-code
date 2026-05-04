@@ -94,12 +94,9 @@ class PPOTrainerProcessor:
             PropsNode("ComputeReturns", ["raw_advantages", "value"],
                       ["return"],
                       function=compute_returns),
-            PropsNode("NormalizeAdvantages", ["raw_advantages"],
-                      ["advantage"],
-                      function=normalize),
 
             PropsNode("PopulateBuffer",
-                      ["replay_buffer", "state", "action", "logp", "advantage", "return"],
+                      ["replay_buffer", "state", "action", "logp", "raw_advantages", "return"],
                       ["ppo_buffer"],
                       function=lambda buffer, *args: buffer.populate(dict(zip(buffer.spec.fields, args)))),
 
