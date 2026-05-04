@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from torch import nn
 
+from backend.Utils.src.NodeLib.NodeLibrary import mean_squared_error
 from backend.Utils.src.NodeLib.NodeLibrary import detransition, normalize, clipped_surrogate_objective, \
     optimizer_normalized, td_residual, compute_returns, record_metrics, RepeatNode, compute_raw_gae
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
@@ -36,7 +37,7 @@ def create_ppo_minibatch_graph():
         Node("PolicyLoss", ["new_logp", "b_old_logp", "b_adv", "clip_eps"], ["policy_loss"],
              function=clipped_surrogate_objective),
         Node("ValueLoss", ["b_ret", "value_pred"], ["value_loss"],
-             function=lambda ret, v: 0.5 * (ret - v).pow(2).mean()),
+             function=lambda ret, v: 0.5 * mean_squared_error(v, ret)),
         Node("TotalLoss", ["policy_loss", "value_loss", "entropy", "vf_coef", "ent_coef"], ["loss"],
              function=lambda policy_loss, value_loss, ent, value_coef,
                              entropy_coef: policy_loss + value_coef * value_loss - entropy_coef * ent),

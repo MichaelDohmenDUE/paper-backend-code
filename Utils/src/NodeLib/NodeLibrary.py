@@ -89,6 +89,18 @@ def optimizer_update(optimizer: torch.optim.Optimizer, loss: torch.Tensor) -> di
         "grad/total_parameters": n_params
     }
 
+def linearly_annealed_lr_alpha(step: int, max_step: int, alpha_start: float, optimizer: torch.optim.Optimizer):
+    fraction = 1.0 - (step - 1) / max_step
+
+    alpha = fraction * alpha_start
+
+    for param_group in optimizer.param_groups:
+        param_group["lr"] = alpha
+
+    return alpha# For Logging
+
+
+
 
 def timed_optimizer_update(optim: torch.optim.Optimizer, loss: torch.Tensor, step: int, syncro_frequency: int):
     if step % syncro_frequency != 0:
@@ -121,6 +133,16 @@ def mean_squared_error(tensor: torch.Tensor, target: torch.Tensor) -> torch.Tens
     #print(tensor.shape, target.shape)
     return F.mse_loss(tensor, target)
 
+
+def clipped_value_loss(returns: torch.Tensor,
+                       value: torch.Tensor,
+                       past_value: torch.Tensor,
+                       clip_eps: float) -> torch.Tensor:
+    v_loss_unclipped = (value - returns).pow(2)
+    v_clipped = past_value + torch.clamp(value - past_value, -clip_eps, clip_eps)
+    v_loss_clipped = (v_clipped - returns).pow(2)
+    value_loss = 0.5 * torch.max(v_loss_unclipped, v_loss_clipped).mean()
+    return value_loss
 
 def combined_loss(*args):
     if len(args) % 2 == 1:

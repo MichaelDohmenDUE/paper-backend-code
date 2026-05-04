@@ -1,5 +1,8 @@
 import numpy as np
 import torch
+
+from backend.Utils.src import GlobalCounter
+from Utils.src.NodeLib.NodeLibrary import linearly_annealed_lr_alpha, clipped_value_loss
 from backend.Utils.src.NodeLib.NodeLibrary import detransition, normalize, clipped_surrogate_objective, \
     optimizer_normalized, td_residual, compute_returns, record_metrics, RepeatNode, compute_raw_gae
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
@@ -15,13 +18,14 @@ def create_ppo_minibatch_graph():
     nodes = [
 
         Node("GetBatch", ["all_batches", "_iteration"],
-             ["b_states", "b_action", "b_old_logp", "b_adv", "b_ret"],
+             ["b_states", "b_action", "b_old_logp", "b_adv", "b_ret", "b_old_value"],
              function=lambda batches, i: (
                  batches[i]["state"].to(device),
                  batches[i]["action"].to(device),
                  batches[i]["logp"].to(device),
                  batches[i]["advantage"].to(device),
-                 batches[i]["return"].to(device)
+                 batches[i]["return"].to(device),
+                 batches[i]["value"].to(device)
              )),
 
         Node("AgentForward", ["agent", "b_states"], ["dist", "value_tensor"],
@@ -34,8 +38,10 @@ def create_ppo_minibatch_graph():
              function=lambda v: v.squeeze(-1)),
         Node("PolicyLoss", ["new_logp", "b_old_logp", "b_adv", "clip_eps"], ["policy_loss"],
              function=clipped_surrogate_objective),
-        Node("ValueLoss", ["b_ret", "value_pred"], ["value_loss"],
-             function=lambda ret, v: 0.5 * (ret - v).pow(2).mean()),
+
+        Node("ValueLoss", ["b_ret", "value_pred", "b_old_value", "clip_eps"], ["value_loss"],
+             function=clipped_value_loss),
+
         Node("TotalLoss", ["policy_loss", "value_loss", "entropy", "vf_coef", "ent_coef"], ["loss"],
              function=lambda policy_loss, value_loss, ent, value_coef,
                              entropy_coef: policy_loss + value_coef * value_loss - entropy_coef * ent),
@@ -56,7 +62,7 @@ def create_ppo_minibatch_graph():
 
 class PPOTrainerProcessor:
     def __init__(self, agent: nn.Module, optimizer: torch.optim.Optimizer, rollout_buffer: RolloutBuffer,
-                 replay_buffer: ReplayBuffer, batch_size=64,
+                 replay_buffer: ReplayBuffer,learn_rate: float, global_counter, max_steps,   batch_size=64,
                  epochs=10, clip_eps=0.2, vf_coef=0.5, ent_coef=0.01, max_grad_norm=0.5, gamma=0.99, lam=0.95):
         self.agent = agent
         self.rollout_buffer = rollout_buffer
@@ -66,6 +72,10 @@ class PPOTrainerProcessor:
             "agent": agent, "optimizer": optimizer, "buffer": rollout_buffer, "replay_buffer": replay_buffer,
             "device": self.device, "gamma": gamma, "lam": lam,
             "num_envs": rollout_buffer.num_envs, "spec_fields": rollout_buffer.spec.fields,
+            "learn_rate": learn_rate, "global_counter": global_counter,
+            "current_update_step": 0,
+            "total_updates_steps": max_steps,
+            "initial_lr": learn_rate,
             "inner_context": {
                 "agent": agent, "optimizer": optimizer, "clip_eps": clip_eps,
                 "vf_coef": vf_coef, "ent_coef": ent_coef, "max_grad_norm": max_grad_norm, "device": self.device,
@@ -97,7 +107,7 @@ class PPOTrainerProcessor:
                       function=normalize),
 
             PropsNode("PopulateBuffer",
-                      ["replay_buffer", "state", "action", "logp", "advantage", "return"],
+                      ["replay_buffer", "state", "action", "logp", "advantage", "return", "value"],
                       ["ppo_buffer"],
                       function=lambda buffer, *args: buffer.populate(dict(zip(buffer.spec.fields, args)))),
 
@@ -109,6 +119,13 @@ class PPOTrainerProcessor:
             PropsNode("PrepInnerContext", ["inner_context", "all_batches", "metric_history"],
                       ["ready_inner_context"],
                       function=lambda ctx, batches, hist: {**ctx, "all_batches": batches, "metric_history": hist}),
+
+            Node(
+                "AnnealLearningRate",
+                ["current_update_step", "total_updates_steps", "initial_lr", "optimizer"],
+                ["current_lr"],
+                function=linearly_annealed_lr_alpha
+            ),
 
             RepeatNode("KUpdateLoop",
                        inputs=["ready_inner_context"],
@@ -124,6 +141,8 @@ class PPOTrainerProcessor:
         self.graph = Graph(nodes, initial_keys=list(self.context.keys()))
 
     def run(self):
+        counter = self.context["global_counter"]
+        self.context["current_update_step"] = counter.get()
         self.graph.run(self.context)
 
         final_context = self.context.get("final_inner_context")
@@ -132,7 +151,8 @@ class PPOTrainerProcessor:
             train_metrics = {
                 "losses/policy_loss": np.mean(history["policy_loss"]) if history.get("policy_loss") else 0,
                 "losses/value_loss": np.mean(history["value_loss"]) if history.get("value_loss") else 0,
-                "losses/entropy": np.mean(history["entropy"]) if history.get("entropy") else 0
+                "losses/entropy": np.mean(history["entropy"]) if history.get("entropy") else 0,
+                "charts/learning_rate": self.context.get("current_lr", self.context["learn_rate"])
             }
             return train_metrics
 

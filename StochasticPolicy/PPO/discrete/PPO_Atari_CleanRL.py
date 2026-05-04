@@ -4,7 +4,6 @@ import torch
 import wandb
 from torch import optim
 
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.CommonModels.src.DiscreteActorPPO import AtariPPOAgent
 from backend.StochasticPolicy.PPO.discrete.src.DataCollectorCleanRL import DataCollectionProcessor
 from backend.StochasticPolicy.PPO.discrete.src.PPOTrainerAtariCleanRL import PPOTrainerProcessor
@@ -12,6 +11,8 @@ from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
 from backend.Utils.src.EnvFactory import AtariEnvFactory
 from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
+from backend.Utils.src.GlobalCounter import GlobalCounter
+from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 from backend.Utils.src.utils import setting_global_seed
 
@@ -81,7 +82,7 @@ def main(seed):
     )
 
     spec = TransitionSpec(["state", "action", "logp", "reward", "done", "value", "bootstrap_value"])
-    replay_spec = TransitionSpec(["state", "action", "logp", "advantage", "return"])
+    replay_spec = TransitionSpec(["state", "action", "logp", "advantage", "return", "value"])
     transition_factory = TransitionFactory(spec)
     factory = AtariEnvFactory(env_name)
     env_handler = VecEnvironmentHandler(factory, seed, num_envs)
@@ -94,14 +95,17 @@ def main(seed):
     rollout_buffer = RolloutBuffer(spec, rollout_size)
     replay_buffer = ReplayBuffer(replay_spec, rollout_size, batch_size)
 
-    trainer = PPOTrainerProcessor(agent, optimizer, rollout_buffer, replay_buffer, batch_size, epochs, gamma=gamma,
+    gl_counter = GlobalCounter()
+
+    trainer = PPOTrainerProcessor(agent, optimizer, rollout_buffer, replay_buffer, lr, gl_counter, max_steps,
+                                  batch_size, epochs, gamma=gamma,
                                   lam=lam)
 
     data_collector = DataCollectionProcessor(env_handler, transition_factory, rollout_buffer, rollout_size,
                                              agent, device)
-    step = 0
+
     eval_step = 0
-    while step < max_steps:
+    while gl_counter.get() < max_steps:
         metrics = {}
         metrics_ep = data_collector.run()
         if metrics_ep:
@@ -109,25 +113,27 @@ def main(seed):
         metrics_train = trainer.run()
         if metrics_train:
             metrics.update(metrics_train)
-        step = data_collector.context["total_steps"]
-        metrics["global_step"] = step
+        gl_counter.set(data_collector.context["total_steps"])
+        metrics["global_step"] = gl_counter.get()
 
         elapsed_time = time.time() - start_time
         if elapsed_time > 0:
-            sps = int(step / elapsed_time)
+            sps = int(gl_counter.get() / elapsed_time)
             metrics["charts/SPS"] = sps
-        if eval_step <= step:
+        if eval_step <= gl_counter.get():
             avg_eval_reward = eval_trainer(trainer, eval_env_handler, eval_episodes=eval_episodes)
-            metrics["eval/avg_reward"] = avg_eval_reward
+            metrics["charts/eval_avg_score"] = avg_eval_reward
             eval_step += eval_freq
         if len(metrics) > 1:
-            wandb.log(metrics, step=step)
+            wandb.log(metrics, step=gl_counter.get())
     # Final Eval
-    metrics = {"global_step": step,
+    metrics = {"global_step": gl_counter.get(),
                "charts/eval_avg_score": eval_trainer(trainer, eval_env_handler, eval_episodes=eval_episodes)}
-    wandb.log(metrics, step=step)
+    wandb.log(metrics, step=gl_counter.get())
     wandb.finish()
+
+
 if __name__ == "__main__":
-    seeds = [2,1,0]
+    seeds = [2, 1, 0]
     for seed in seeds:
         main(seed)
