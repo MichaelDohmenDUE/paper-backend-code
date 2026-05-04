@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from torch import nn
 
@@ -7,7 +8,7 @@ from backend.Utils.src.NodeLib.NodeLibrary import *
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 from NodeLib.NodeLibrary import TimerNode, detransition, action_with_gaussian_noise, clipper, bellman, \
-    mean_squared_error, optimizer_update
+    mean_squared_error, optimizer_update, deterministic_policy_gradient
 
 
 class TrainProcessor:

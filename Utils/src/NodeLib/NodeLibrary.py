@@ -213,7 +213,12 @@ def detransition(fields, batch, device: torch.device):
 
         else:
             processed[key] = t
-
+    # FOr Debgging, might be useful later
+    #for key, val in processed.items():
+    #    if torch.isnan(val).any():
+    #        print(f"FATAL ERROR: Found NaN in {key} from Replay Buffer!")
+    #        print(val)
+    #        raise ValueError(f"Poisoned buffer data in {key}")
     return tuple(processed[k] for k in fields)
 
 def unpack_minibatch(minibatch_dict, fields):

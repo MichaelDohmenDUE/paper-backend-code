@@ -8,6 +8,8 @@ from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.NodeLib.NodeLibrary import BufferAppendingNode, TransitionNode, ConditionNode
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
+from StochasticPolicy.PPO.discrete.src.DataCollectorGraphMujoco import merge_final_observations
+
 
 def random_action(env, behaviour, state, expl_noise, max_action, action_size, device):
     num_envs = getattr(env, "num_envs", 1)
@@ -69,9 +71,8 @@ class DataCollectionProcessor:
 
             PropsNode("CombineDones", ["terminated", "truncated"], ["done_reset"],
                       function=lambda term, trunc: term | trunc, no_grad=True),
-            PropsNode("ExtractTrueNextState", ["next_state", "terminated", "truncated", "info"], ["real_next_state"],
-                      function=lambda ns, term, trunc, info: info.get("final_observation", ns) if (
-                              term.any() or trunc.any()) else ns, no_grad=True),
+            PropsNode("ExtractTrueNextState", ["next_state", "done_reset", "info"], ["real_next_state"],
+                      function=merge_final_observations, no_grad=True),
             TransitionNode(
                 factory=transition_factory,
                 input_mapping={
