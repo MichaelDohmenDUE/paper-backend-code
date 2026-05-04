@@ -51,7 +51,7 @@ def main(seed):
     lam = 0.95
     eval_freq = 100_000
     eval_episodes = 5
-    algo_name = "PPO_discrete_atari"
+    algo_name = "PPO_discrete_atari_cleanRL"
     num_envs = 8
     offset = 100
     setting_global_seed(seed)
@@ -134,6 +134,6 @@ def main(seed):
 
 
 if __name__ == "__main__":
-    seeds = [2, 1, 0]
+    seeds = [0,1,2]
     for seed in seeds:
         main(seed)
