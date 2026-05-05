@@ -81,7 +81,7 @@ def main(seed, env_name):
     optimizer = torch.optim.Adam(behavior_net.parameters(), lr)
 
     buffer = ReplayBuffer(spec, max_buffer_size, batch_size)
-    eps_greedy = EpsilonGreedyPolicy(epsilon_start=epsilon, epsilon_final=0.05, epsilon_decay=20000)
+    eps_greedy = EpsilonGreedyPolicy(epsilon_start=epsilon, epsilon_final=0.05, epsilon_decay=epsilon_decay)
     collector = DataCollectionProcessor(behavior_net, env, buffer, eps_greedy, factory, device)
 
     train_process = TrainProcessor(buffer, behavior_net, target_net, optimizer, gamma, device)
