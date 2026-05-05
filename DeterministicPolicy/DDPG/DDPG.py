@@ -126,7 +126,7 @@ def main(seed, env_name):
         sync_process_critic.run()
     wandb.finish()
 if __name__ == "__main__":
-    seeds = [1, 2, 3]
+    seeds = [0, 1, 2]
     env_name = "HalfCheetah-v4"
     for seed in seeds:
         main(seed, env_name)
