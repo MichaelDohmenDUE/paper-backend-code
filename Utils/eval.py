@@ -18,7 +18,7 @@ for run in runs:
 
 if final_rewards:
     mean_val = np.mean(final_rewards)
-    std_val = np.std(final_rewards)
+    std_val = np.std(final_rewards, ddof=1)
 
     print(f"Statistics for {len(final_rewards)} seeds:")
     print(f"Mean:    {mean_val:.2f}")
