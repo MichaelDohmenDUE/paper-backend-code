@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from backend.Utils.src.NodeLib.Node import Signal, Graph
+from backend.Utils.src.NodeLib.Node import Signal, Graph, PropsNode
 from backend.Utils.src.NodeLib.NodeLibrary import bellman, detransition, indexing, mean_squared_error
 from backend.Utils.src.NodeLib.NodeLibrary import optimizer_update
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
