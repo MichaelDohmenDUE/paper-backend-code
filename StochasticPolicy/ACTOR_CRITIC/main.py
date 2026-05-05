@@ -1,5 +1,7 @@
 import time
 
+import numpy as np
+
 import wandb
 
 from backend.Utils.src import RolloutBuffer
@@ -24,13 +26,18 @@ def evaluate_policy(policy, env_handler, device, episodes=10):
         state = env_handler.reset()
         done = False
         while not done:
-            state_t = torch.as_tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
+            state_t = torch.as_tensor(state, dtype=torch.float32, device=device)
 
             with torch.no_grad():
                 action_logits, _ = policy(state_t)
-                action = torch.argmax(action_logits, dim=1).item()
-            next_state, reward, done, _ = env_handler.step(action)
-            total_reward += reward
+                action = torch.argmax(action_logits, dim=-1).cpu().numpy()
+
+            next_state, reward, done_flags, info = env_handler.step(action)
+
+            # 3. Handle vector rewards and dones safely
+            total_reward += np.sum(reward)
+            done = np.any(done_flags)
+
             state = next_state
     env_handler.reset()
     policy.train()

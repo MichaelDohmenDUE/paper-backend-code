@@ -45,3 +45,19 @@ class RolloutBuffer:
                 batch[field] = torch.tensor(items)
         self.clear()
         return batch
+
+
+class KStepRolloutBuffer(RolloutBuffer):
+    def __init__(self, spec, rollout_size: int):
+        super().__init__(spec, rollout_size)
+        self.ready = False
+
+    def is_ready(self) -> bool:
+        return self.ready
+
+    def set_ready(self, state: bool) -> None:
+        self.ready = state
+
+    def clear(self):
+        super().clear()
+        self.ready = False

@@ -2,7 +2,7 @@ import numpy as np
 
 from backend.StochasticPolicy.PPO.discrete.src.DataCollectorAtari import EpisodicMetricsNode
 from backend.Utils.src.NodeLib.Node import Node, Graph, PropsNode
-from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, BootStrappingNodeMujoco,
+from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, BootStrappingNodeMujoco
 from backend.Utils.src.NodeLib.NodeLibrary import to_tensor, to_numpy_array
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 

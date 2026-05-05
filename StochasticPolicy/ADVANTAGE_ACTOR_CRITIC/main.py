@@ -8,11 +8,11 @@ from backend.StochasticPolicy.ACTOR_CRITIC.main import evaluate_policy
 from backend.Utils.src import RolloutBuffer
 from backend.Utils.src.BatchTransitioner import TransitionFactory, TransitionSpec
 from backend.Utils.src.EnvFactory import GymEnvFactory
-from backend.Utils.src.RolloutBuffer import RolloutBuffer
+from backend.Utils.src.RolloutBuffer import RolloutBuffer, KStepRolloutBuffer
 import torch
 
 from backend.CommonModels.src.Policy_Reinforce_Baseline import PolicyReinforceBaseline
-from backend.Utils.src.EnviromentHandler import EnvironmentHandler
+from backend.Utils.src.EnviromentHandler import EnvironmentHandler, VecEnvironmentHandler
 from backend.StochasticPolicy.ADVANTAGE_ACTOR_CRITIC.src.DataCollector import DataCollectionProcessor
 from backend.StochasticPolicy.ADVANTAGE_ACTOR_CRITIC.src.Trainer import Trainer
 from backend.Utils.src.utils import setting_global_seed
@@ -34,6 +34,7 @@ def main(seed):
     eval_freq = 1000
     eval_episodes = 10
     algo_name = "ADVANTAGE-ACTOR_CRITIC"
+    rollout_steps = 20
     setting_global_seed(seed)
 
     wandb.init(
@@ -53,19 +54,21 @@ def main(seed):
             "hidden_dim": hidden_dim,
             "eval_freq": eval_freq,
             "eval_episodes": eval_episodes,
+            "rollout_steps": rollout_steps,
             "algo_name": algo_name,
         }
     )
 
     spec = TransitionSpec(["state", "logp", "reward", "done", "next_state"])
     transition_factory = TransitionFactory(spec)
-    replay_buffer = RolloutBuffer(spec)
+    replay_buffer = KStepRolloutBuffer(spec, rollout_steps)
 
     gym_factory = GymEnvFactory(env_name)
-    env_handler = EnvironmentHandler(gym_factory, seed=seed)
-    eval_env_handler = EnvironmentHandler(gym_factory, seed=seed+100)
+    env_handler = VecEnvironmentHandler(gym_factory, seed=seed, num_envs=1)
+    eval_env_handler = VecEnvironmentHandler(gym_factory, seed=seed+100, num_envs=1)
 
     observation_size, action_size, _ = env_handler.get_env_specs()
+    observation_size = observation_size[0]
     policy = PolicyReinforceBaseline(observation_size, action_size, hidden_dim=hidden_dim).to(device)
 
     optimizer = torch.optim.Adam(policy.parameters(), lr=learn_rate)
