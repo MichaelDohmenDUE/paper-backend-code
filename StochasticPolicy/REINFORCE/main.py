@@ -1,5 +1,6 @@
 import time
 
+import numpy as np
 import wandb
 
 from backend.Utils.src import RolloutBuffer
@@ -10,7 +11,7 @@ from backend.StochasticPolicy.REINFORCE.src.ActionHandler import ActionHandler
 import torch
 
 from backend.CommonModels.src.Policy_Reinforce import PolicyVPG
-from backend.Utils.src.EnviromentHandler import EnvironmentHandler
+from backend.Utils.src.EnviromentHandler import EnvironmentHandler, VecEnvironmentHandler
 from backend.StochasticPolicy.REINFORCE.src.DataCollector import DataCollectionProcessor
 from backend.StochasticPolicy.REINFORCE.src.ReinforceTrainer import REINFORCETrainer
 from backend.Utils.src.utils import setting_global_seed
@@ -25,12 +26,17 @@ def evaluate_policy(policy, env_handler, device, episodes=10):
         state = env_handler.reset()
         done = False
         while not done:
-            state_t = torch.as_tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
+            state_t = torch.as_tensor(state, dtype=torch.float32, device=device)
+
             with torch.no_grad():
                 action_logits = policy(state_t)
-                action = torch.argmax(action_logits, dim=1).item()
+                action = torch.argmax(action_logits, dim=-1).cpu().numpy()
+
             next_state, reward, done, _ = env_handler.step(action)
-            total_reward += reward
+
+            total_reward += np.sum(reward)
+            done = done[0]
+
             state = next_state
     env_handler.reset()
     policy.train()
@@ -49,7 +55,7 @@ def main(seed):
     env_name = "CartPole-v1"
     beta = 0.01
     gamma = 0.99
-    eval_freq = 1000
+    eval_freq = 10_000
     eval_episodes = 10
     algo_name = "REINFORCE"
     opt = "Adam"
@@ -79,12 +85,13 @@ def main(seed):
 
     spec = TransitionSpec(["logp", "reward", "done"])
     transition_factory = TransitionFactory(spec)
-    replay_buffer = RolloutBuffer(spec)
+    replay_buffer = RolloutBuffer(spec, rollout_size=500)
 
     gym_factory = GymEnvFactory(env_name)
-    env_handler = EnvironmentHandler(gym_factory, seed=seed)
-    eval_env_handler = EnvironmentHandler(gym_factory, seed=seed + 100)
+    env_handler = VecEnvironmentHandler(gym_factory, seed=seed, num_envs=1)
+    eval_env_handler = VecEnvironmentHandler(gym_factory, seed=seed + 100, num_envs=1)
     observation_size, action_size, _ = env_handler.get_env_specs()
+    observation_size = observation_size[0]
     policy = PolicyVPG(observation_size, action_size, hidden_dim=hidden_dim).to(device)
     optimizer = torch.optim.Adam(policy.parameters(), lr=learn_rate)
 

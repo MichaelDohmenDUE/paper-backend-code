@@ -1,6 +1,6 @@
 import torch
 
-
+from Utils.src.NodeLib.Node import PropsNode, Signal, Node, Graph
 from backend.CommonModels.src.Policy_Reinforce import PolicyVPG
 from backend.Utils.src import ReplayBuffer, RolloutBuffer
 from backend.Utils.src.NodeLib.NodeLibrary import detransition, optimizer_update, policy_loss, normalize
@@ -18,35 +18,57 @@ class REINFORCETrainer:
                  ):
         self.rollout_buffer = rollout_buffer
         self.optimizer = optimizer
-        self.beta = beta
-        self.gamma = gamma
         self.device = device
 
-    def run(self):
-        rollout = self.rollout_buffer.sample()
-        logps, rewards, dones = detransition(self.rollout_buffer.spec.fields, rollout, self.device)
-        with torch.no_grad():
-            G = discounted_cumulative_reward(self.gamma, rewards.cpu(), dones.cpu())
-            G = torch.tensor(G, dtype=torch.float32).to(self.device).view(-1)
-        loss = policy_loss(logps, G)
-
-        self.optimizer.zero_grad()
-        loss.backward()
-
-        total_squared_norm = 0.0
-        n_params = 0
-        for group in self.optimizer.param_groups:
-            for p in group['params']:
-                if p.grad is not None:
-                    total_squared_norm += p.grad.detach().pow(2).sum().item()
-                    n_params += p.numel()
-
-        rms_grad = (total_squared_norm / n_params) ** 0.5 if n_params > 0 else 0
-        self.optimizer.step()
-
-        return {
-            "grad/rms_policy": rms_grad,
-            "grad/rms_gradient": rms_grad,
-            "grad/total_parameters": n_params,
-            "losses/policy_loss": loss.item()
+        self.context = {
+            "buffer": rollout_buffer,
+            "spec_fields": rollout_buffer.spec.fields,
+            "optimizer": optimizer,
+            "gamma": gamma,
+            "device": device,
         }
+
+        nodes = [
+            PropsNode("Sample", ["buffer"], ["rollout"],
+                      function=lambda b: b.sample() if b.reached_rollout_size() else Signal.NOSIGNAL),
+
+            Node("Detransition", ["spec_fields", "rollout", "device"], ["logps", "rewards", "dones"],
+                 function=detransition, no_grad=False),
+
+            Node("ComputeReturns", ["rewards", "dones", "gamma", "device"], ["G"],
+                 function=lambda r, d, g, dev: torch.as_tensor(
+                     discounted_cumulative_reward(g, r.cpu().numpy(), d.cpu().numpy()),
+                     dtype=torch.float32, device=dev).view(-1), no_grad=True),
+
+            Node("LossCalculation", ["logps", "G"], ["loss"],
+                 function=policy_loss, no_grad=False),
+
+            Node("TrainStep", ["optimizer", "loss"], ["metrics"],
+                 function=optimizer_update, no_grad=False)
+        ]
+
+        self.graph = Graph(nodes, initial_keys=list(self.context.keys()))
+
+    def run(self):
+        self.graph.run(self.context)
+
+        metrics_node_output = self.context.get("metrics")
+
+        if metrics_node_output is None or isinstance(metrics_node_output, Signal):
+            return {}
+
+        G = self.context["G"]
+        loss = self.context["loss"]
+
+        final_metrics = metrics_node_output
+
+        final_metrics.update({
+            "charts/returns_mean": G.mean().item(),
+            "charts/returns_var": G.var().item(),
+            "losses/policy_loss": loss.item()
+        })
+
+        for key in ["rollout", "logps", "rewards", "dones", "G", "loss", "metrics"]:
+            self.context.pop(key, None)
+
+        return final_metrics
