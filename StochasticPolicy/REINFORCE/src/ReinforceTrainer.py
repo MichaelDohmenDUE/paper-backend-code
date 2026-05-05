@@ -63,8 +63,7 @@ class REINFORCETrainer:
         final_metrics = metrics_node_output
 
         final_metrics.update({
-            "charts/returns_mean": G.mean().item(),
-            "charts/returns_var": G.var().item(),
+            "charts/var": G.var().item(),
             "losses/policy_loss": loss.item()
         })
 
