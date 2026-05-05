@@ -1,15 +1,13 @@
 import numpy as np
 import torch
-import wandb
 from torch import nn
 
 from StochasticPolicy.PPO.discrete.src.DataCollectorGraphMujoco import merge_final_observations
 from Utils.src.NodeLib.Node import Node, PropsNode, Graph
 from Utils.src.RolloutBuffer import KStepRolloutBuffer
-from backend.Utils.src import RolloutBuffer
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
-from backend.Utils.src.NodeLib.NodeLibrary import reset_handler, categorical_distribution, sample_distribution, \
+from backend.Utils.src.NodeLib.NodeLibrary import categorical_distribution, sample_distribution, \
     to_tensor, to_numpy_array, TransitionNode, BufferAppendingNode
 
 
@@ -95,7 +93,7 @@ class DataCollectionProcessor:
     def run(self):
         self.graph.run(self.context)
 
-        #Logging
+        # Logging
         reward = self.context["reward"]
         done = self.context["done"]
         time_to_train = self.context["time_to_train"]

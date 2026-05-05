@@ -253,6 +253,21 @@ def clipped_surrogate_objective(new_logp, old_logps, advantage, clip_eps):
     policy_loss = -torch.min(surrogate_objective, surrogate_objective2).mean()
     return policy_loss
 
+def extract_final_states(next_state, num_envs):
+    final_next_states = next_state[-num_envs:]
+    if final_next_states.dim() == 1:
+        final_next_states = final_next_states.unsqueeze(0)
+    return final_next_states
+
+
+def compute_n_step_returns(rewards, dones, next_value_final, gamma):
+    returns = torch.zeros_like(rewards)
+    G = next_value_final
+    for t in reversed(range(len(rewards))):
+        G = rewards[t] + gamma * (1.0 - dones[t]) * G
+        returns[t] = G
+    return returns
+
 
 class TransitionNode(Node):
     def __init__(self, factory, input_mapping: dict[str, str], default_kwargs: dict = None):

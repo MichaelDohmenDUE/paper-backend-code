@@ -106,11 +106,14 @@ def main(seed):
     step = 0
     eval_step = 0
     while step < max_steps:
-        metrics = {}
+
         metrics_ep = data_collector.run()
+
+        metrics_train = trainer.run()
+        # Logging
+        metrics = {}
         if metrics_ep:
             metrics.update(metrics_ep)
-        metrics_train = trainer.run()
         if metrics_train:
             metrics.update(metrics_train)
         step = data_collector.context["total_steps"]

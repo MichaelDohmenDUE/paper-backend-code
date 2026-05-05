@@ -11,8 +11,8 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = ["backend", "NodeLib"]
-package-dir = {"backend" = ".", "NodeLib" = "Utils/src/NodeLib"}
+packages = ["backend", "NodeLib", "CommonModels"]
+package-dir = { "backend" = ".", "NodeLib" = "Utils/src/NodeLib", "CommonModels" = "CommonModels" }
 
 [build-system]
 requires = ["setuptools>=61.0"]

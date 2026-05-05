@@ -4,26 +4,7 @@ from Utils.src.NodeLib.Node import PropsNode, Node, Graph, Signal
 from Utils.src.RolloutBuffer import KStepRolloutBuffer
 from backend.CommonModels.src.Policy_Reinforce_Baseline import PolicyReinforceBaseline
 from backend.Utils.src.NodeLib.NodeLibrary import detransition, optimizer_update, policy_loss, mean_squared_error, \
-    combined_loss, bellman
-
-
-# --- Helper Functions for the Nodes ---
-
-def extract_final_states(next_state, num_envs):
-    final_next_states = next_state[-num_envs:]
-    if final_next_states.dim() == 1:
-        final_next_states = final_next_states.unsqueeze(0)
-    return final_next_states
-
-
-def compute_n_step_returns(rewards, dones, next_value_final, gamma):
-    """Calculates G by iterating backwards through the N-step rollout."""
-    returns = torch.zeros_like(rewards)
-    G = next_value_final
-    for t in reversed(range(len(rewards))):
-        G = rewards[t] + gamma * (1.0 - dones[t]) * G
-        returns[t] = G
-    return returns
+    combined_loss, bellman, extract_final_states, compute_n_step_returns
 
 
 class Trainer:
