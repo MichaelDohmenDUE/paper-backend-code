@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from backend.Utils.src.NodeLib.Node import Node, Signal, Graph
+from backend.Utils.src.NodeLib.Node import Signal, Graph
 from backend.Utils.src.NodeLib.NodeLibrary import bellman, detransition, indexing, mean_squared_error
 from backend.Utils.src.NodeLib.NodeLibrary import optimizer_update
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
@@ -24,42 +24,43 @@ class TrainProcessor:
             "target_net": target_net.to(device),
             "optimizer": optimizer,
             "gamma": gamma,
-            "warmup_steps" : warmup_steps,
+            "warmup_steps": warmup_steps,
             "device": device,
             "fields": buffer.spec.fields
         }
 
         nodes = [
-            Node("Sample", ["buffer", "warmup_steps"], ["batch"],
-                 function=lambda b, w: b.sample_batch() if len(b) >= w else Signal.NOSIGNAL),
+            PropsNode("Sample", ["buffer", "warmup_steps"], ["batch"],
+                      function=lambda b, w: b.sample_batch() if len(b) >= w else Signal.NOSIGNAL),
 
-            Node("Detransition", ["fields", "batch", "device"], ["state", "action", "reward", "next_state", "done"],
-                 function=detransition),
+            PropsNode("Detransition", ["fields", "batch", "device"],
+                      ["state", "action", "reward", "next_state", "done"],
+                      function=detransition),
 
-            Node("BehaviorForward", ["behavior_net", "state"], ["qs_b"],
-                 function=lambda net, s: net(s.float())),
-            Node("QsaBehavior", ["qs_b", "action"], ["qsa_b"],
-                 function=lambda q, a: indexing(q, a.long().unsqueeze(1)).reshape(-1)),
-            Node("BehaviorNextForward", ["behavior_net", "next_state"], ["next_qs_b"],
-                 function=lambda net, ns: net(ns.float()), no_grad=True),
-            Node("SelectNextAction", ["next_qs_b"], ["next_actions"],
-                 function=lambda q: torch.argmax(q, dim=1).view(-1, 1), no_grad=True),
-            Node("TargetForward", ["target_net", "next_state"], ["qs_t"],
-                 function=lambda net, ns: net(ns.float()), no_grad=True),
-            Node("QsaTarget", ["qs_t", "next_actions"], ["qsa_t"],
-                 function=lambda qt, a: indexing(qt, a).reshape(-1), no_grad=True),
-            Node("Bellman", ["qsa_t", "reward", "done", "gamma"], ["target_val"],
-                 function=bellman),
-            Node("Loss", ["qsa_b", "target_val"], ["loss"],
-                 function=mean_squared_error),
-            Node("Optimize", ["optimizer", "loss"], ["_opt"],
-                 function=optimizer_update),
+            PropsNode("BehaviorForward", ["behavior_net", "state"], ["qs_b"],
+                      function=lambda net, s: net(s.float())),
+            PropsNode("QsaBehavior", ["qs_b", "action"], ["qsa_b"],
+                      function=lambda q, a: indexing(q, a.long().unsqueeze(1)).reshape(-1)),
+            PropsNode("BehaviorNextForward", ["behavior_net", "next_state"], ["next_qs_b"],
+                      function=lambda net, ns: net(ns.float()), no_grad=True),
+            PropsNode("SelectNextAction", ["next_qs_b"], ["next_actions"],
+                      function=lambda q: torch.argmax(q, dim=1).view(-1, 1), no_grad=True),
+            PropsNode("TargetForward", ["target_net", "next_state"], ["qs_t"],
+                      function=lambda net, ns: net(ns.float()), no_grad=True),
+            PropsNode("QsaTarget", ["qs_t", "next_actions"], ["qsa_t"],
+                      function=lambda qt, a: indexing(qt, a).reshape(-1), no_grad=True),
+            PropsNode("Bellman", ["qsa_t", "reward", "done", "gamma"], ["target_val"],
+                      function=bellman),
+            PropsNode("Loss", ["qsa_b", "target_val"], ["loss"],
+                      function=mean_squared_error),
+            PropsNode("Optimize", ["optimizer", "loss"], ["_opt"],
+                      function=optimizer_update),
 
-            Node("Metrics", ["loss", "qsa_b"], ["train_metrics"],
-                 function=lambda l, q: {
-                     "losses/td_loss": l.item(),
-                     "losses/q_values": q.mean().item()
-                 })
+            PropsNode("Metrics", ["loss", "qsa_b"], ["train_metrics"],
+                      function=lambda l, q: {
+                          "losses/td_loss": l.item(),
+                          "losses/q_values": q.mean().item()
+                      })
         ]
 
         self.graph = Graph(nodes, initial_keys=list(self.context.keys()))
