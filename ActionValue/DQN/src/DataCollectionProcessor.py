@@ -1,11 +1,11 @@
 import numpy as np
 import torch
+from backend.Utils.src.NodeLib.Node import PropsNode, Graph
 from torch import nn
 
 from backend.ActionValue.DQN.src.ActionHandler import EpsilonGreedyPolicy
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
-from backend.Utils.src.NodeLib.Node import Node, Graph
 from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, to_numpy_array, to_tensor
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
@@ -32,22 +32,22 @@ class DataCollectionProcessor:
         }
 
         nodes = [
-            Node("FormatToTensor", ["state", "device"], ["state_t"],
-                 function=to_tensor, no_grad=True),
-            Node("BehaviourNet", ["behaviour", "state_t"], ["q_values"],
-                 function=lambda net, s: net(s), no_grad=True),
-            Node("EpsilonGreedy", ["epsilon_greedy", "q_values"], ["action_raw"],
-                 function=lambda epsilon_greed, q: epsilon_greed.forward(q_values=q), no_grad=True),
-            Node("FormatToArray", ["action_raw"], ["action"],
-                 function=to_numpy_array, no_grad=True),
-            Node("EnvStep", ["env", "action"], ["next_state", "reward", "terminated", "truncated", "info"],
-                 function=lambda env, a: env.step_detailed(a), no_grad=True),
+            PropsNode("FormatToTensor", ["state", "device"], ["state_t"],
+                      function=to_tensor, no_grad=True),
+            PropsNode("BehaviourNet", ["behaviour", "state_t"], ["q_values"],
+                      function=lambda net, s: net(s), no_grad=True),
+            PropsNode("EpsilonGreedy", ["epsilon_greedy", "q_values"], ["action_raw"],
+                      function=lambda epsilon_greed, q: epsilon_greed.forward(q_values=q), no_grad=True),
+            PropsNode("FormatToArray", ["action_raw"], ["action"],
+                      function=to_numpy_array, no_grad=True),
+            PropsNode("EnvStep", ["env", "action"], ["next_state", "reward", "terminated", "truncated", "info"],
+                      function=lambda env, a: env.step_detailed(a), no_grad=True),
 
-            Node("CombineDones", ["terminated", "truncated"], ["done"],
-                 function=lambda term, trunc: term | trunc, no_grad=True),
-            Node("ExtractTrueNextState", ["next_state", "done", "info"], ["real_next_state"],
-                 function=lambda ns, d, info: info.get("final_observation", ns) if (
-                         d and isinstance(info, dict)) else ns, no_grad=True),
+            PropsNode("CombineDones", ["terminated", "truncated"], ["done"],
+                      function=lambda term, trunc: term | trunc, no_grad=True),
+            PropsNode("ExtractTrueNextState", ["next_state", "done", "info"], ["real_next_state"],
+                      function=lambda ns, d, info: info.get("final_observation", ns) if (
+                              d and isinstance(info, dict)) else ns, no_grad=True),
             TransitionNode(
                 factory=transition_factory,
                 input_mapping={
@@ -59,8 +59,8 @@ class DataCollectionProcessor:
                 }
             ),
             BufferAppendingNode(),
-            Node("StateUpdate", ["next_state", "_buffer_updated"], ["state"],
-                 function=lambda ns, signal: np.array(ns).astype(np.float32)),
+            PropsNode("StateUpdate", ["next_state", "_buffer_updated"], ["state"],
+                      function=lambda ns, signal: np.array(ns).astype(np.float32)),
         ]
 
         self.graph = Graph(nodes, initial_keys=list(self.context.keys()))

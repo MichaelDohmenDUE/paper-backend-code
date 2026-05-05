@@ -1,15 +1,13 @@
 import numpy as np
 import torch
-import wandb
 from torch import nn
 
-from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
-from NodeLib.Node import Node, Graph, PropsNode
 from backend.ActionValue.DQN.src.ActionHandler import EpsilonGreedyPolicy
 from backend.Utils.src import ReplayBuffer
 from backend.Utils.src.BatchTransitioner import TransitionFactory
-from backend.Utils.src.NodeLib.NodeLibrary import  to_tensor, to_numpy_array, TransitionNode, BufferAppendingNode
-
+from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
+from backend.Utils.src.NodeLib.Node import Graph, PropsNode
+from backend.Utils.src.NodeLib.NodeLibrary import to_tensor, to_numpy_array, TransitionNode, BufferAppendingNode
 
 
 def merge_final_observations(next_state_raw, episode_done, info):
@@ -23,7 +21,7 @@ def merge_final_observations(next_state_raw, episode_done, info):
 
 
 class DataCollectionProcessor:
-    def __init__(self, behaviour_net: nn.Module, env: VecEnvironmentHandler , buffer: ReplayBuffer,
+    def __init__(self, behaviour_net: nn.Module, env: VecEnvironmentHandler, buffer: ReplayBuffer,
                  eps_greedy: EpsilonGreedyPolicy, transition_factory: TransitionFactory, device: torch.device):
         self.behaviour_net = behaviour_net
         self.env = env
@@ -59,14 +57,15 @@ class DataCollectionProcessor:
                       function=lambda epsilon_greed, q: epsilon_greed.forward(q_values=q), no_grad=True),
             PropsNode("FormatToArray", ["action_raw"], ["action"],
                       function=to_numpy_array, no_grad=True),
-            PropsNode("EnvStep", ["action"], ["next_state_raw", "reward", "terminated", "truncated", "info"], props=["env"],
+            PropsNode("EnvStep", ["action"], ["next_state_raw", "reward", "terminated", "truncated", "info"],
+                      props=["env"],
                       function=lambda env, a: env.step_detailed(a), no_grad=True),
             PropsNode("FormatNextState", ["next_state_raw"], ["next_state"],
                       function=lambda ns: np.array(ns).astype(np.uint8), no_grad=True),
-            Node("CombineDones", ["terminated", "truncated"], ["done"],
-                 function=lambda term, trunc: term | trunc, no_grad=True),
-            Node("ExtractTrueNextState", ["next_state", "done", "info"], ["real_next_state"],
-                 function=merge_final_observations),
+            PropsNode("CombineDones", ["terminated", "truncated"], ["done"],
+                      function=lambda term, trunc: term | trunc, no_grad=True),
+            PropsNode("ExtractTrueNextState", ["next_state", "done", "info"], ["real_next_state"],
+                      function=merge_final_observations),
             TransitionNode(
                 factory=transition_factory,
                 input_mapping={
@@ -83,7 +82,6 @@ class DataCollectionProcessor:
         ]
 
         self.graph = Graph(nodes, initial_keys=list(self.context.keys()))
-
 
     def run(self):
         self.graph.run(self.context)
