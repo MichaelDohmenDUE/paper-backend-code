@@ -11,6 +11,17 @@ from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.NodeLib.NodeLibrary import  to_tensor, to_numpy_array, TransitionNode, BufferAppendingNode
 
 
+
+def merge_final_observations(next_state_raw, episode_done, info):
+    true_next = np.array(next_state_raw).copy()
+    if isinstance(info, dict) and "final_observation" in info:
+        final_obs = info["final_observation"]
+        for i, done in enumerate(episode_done):
+            if done and final_obs[i] is not None:
+                true_next[i] = np.array(final_obs[i])
+    return true_next.astype(np.uint8)
+
+
 class DataCollectionProcessor:
     def __init__(self, behaviour_net: nn.Module, env: VecEnvironmentHandler , buffer: ReplayBuffer,
                  eps_greedy: EpsilonGreedyPolicy, transition_factory: TransitionFactory, device: torch.device):
@@ -55,8 +66,7 @@ class DataCollectionProcessor:
             Node("CombineDones", ["terminated", "truncated"], ["done"],
                  function=lambda term, trunc: term | trunc, no_grad=True),
             Node("ExtractTrueNextState", ["next_state", "done", "info"], ["real_next_state"],
-                 function=lambda ns, d, info: info.get("final_observation", ns) if (
-                         d and isinstance(info, dict)) else ns, no_grad=True),
+                 function=merge_final_observations),
             TransitionNode(
                 factory=transition_factory,
                 input_mapping={
