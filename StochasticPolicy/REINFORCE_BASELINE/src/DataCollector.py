@@ -1,48 +1,90 @@
+import numpy as np
 import torch
-import wandb
 from torch import nn
 
+from Utils.src.NodeLib.Node import Node, Graph
 from backend.Utils.src import RolloutBuffer
 from backend.Utils.src.BatchTransitioner import TransitionFactory
-from backend.Utils.src.EnviromentHandler import EnvironmentHandler
-from backend.Utils.src.NodeLib.NodeLibrary import reset_handler, categorical_distribution, sample_distribution
+from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
+from backend.Utils.src.NodeLib.NodeLibrary import categorical_distribution, sample_distribution, \
+    to_numpy_array, TransitionNode, BufferAppendingNode, to_tensor
 
 
 class DataCollectionProcessor:
-    def __init__(self, env_handler: EnvironmentHandler, transition_factory: TransitionFactory,
+    def __init__(self, env_handler: VecEnvironmentHandler, transition_factory: TransitionFactory,
                  rollout_buffer: RolloutBuffer.RolloutBuffer, behaviour: nn.Module, device: torch.device):
         self.env_handler = env_handler
-        self.transition_factory = transition_factory
-        self.rollout_buffer = rollout_buffer
-        self.behaviour = behaviour
-        self.state = self.env_handler.reset()
         self.episode_timesteps = 0
-        self.total_steps = 0
+        self.total_steps =0
         self.episode_reward = 0
-        self.device = device
+
+        self.context = {
+            "state": np.array(self.env_handler.reset()).astype(np.float32),
+            "behaviour": behaviour,
+            "env_handler": env_handler,
+            "transition_factory": transition_factory,
+            "buffer": rollout_buffer,
+            "device": device,
+            "num_envs": self.env_handler.num_envs,
+        }
+
+        nodes = [
+            Node("FormatToTensor", ["state", "device"], ["state_t"],
+                 function=lambda s, d: to_tensor(s, d).unsqueeze(0), no_grad=True),
+
+            Node("PolicyNet", ["behaviour", "state_t"], ["logits", "value"],
+                 function=lambda net, s: net(s), no_grad=False),
+
+            Node("CreateDist", ["logits"], ["dist"],
+                 function=categorical_distribution, no_grad=False),
+
+            Node("SampleAction", ["dist"], ["action_raw", "log_prob"],
+                 function=sample_distribution, no_grad=False),
+
+            Node("FormatToArray", ["action_raw"], ["action"],
+                 function=to_numpy_array, no_grad=True),
+
+            Node("EnvStep", ["env_handler", "action"],
+                 ["next_state", "reward", "done", "info"],
+                 function=lambda env, a: env.step(a), no_grad=True),
+
+            TransitionNode(
+                factory=transition_factory,
+                input_mapping={
+                    "state": "state",
+                    "logp": "log_prob",
+                    "reward": "reward",
+                    "done": "done",
+                }
+            ),
+
+            BufferAppendingNode(),
+
+            Node("StateUpdate", ["next_state", "_buffer_updated"], ["state"],
+                 function=lambda ns, signal: np.array(ns).astype(np.float32)),
+        ]
+
+        self.graph = Graph(nodes, initial_keys=list(self.context.keys()))
 
     def run(self):
-        done = False
-        while not done:
-            state = torch.tensor(self.state, dtype=torch.float32).unsqueeze(0).to(self.device)
-            logits, _ = self.behaviour(state)
-            dist = categorical_distribution(logits)
-            action, log_prob = sample_distribution(dist)
-            next_state, reward, done, _ = self.env_handler.step(action)
-            transition = self.transition_factory.forward(state=state, logp=log_prob, reward=reward, done=done)
-            self.rollout_buffer.append(transition)
-            self.state = reset_handler(self.env_handler, next_state, done)
-            # Logging
-            self.episode_timesteps += 1
-            self.total_steps += 1
-            self.episode_reward += reward
+        self.graph.run(self.context)
 
-            if done:
-                metrics = ({
-                    "charts/episodic_return": self.episode_reward,
-                    "charts/episodic_length": self.episode_timesteps,
-                    "global_step": self.total_steps,
-                })
-                self.episode_timesteps = 0
-                self.episode_reward = 0
-                return metrics
+        reward = self.context["reward"]
+        done = self.context["done"]
+
+        self.episode_reward += reward
+        self.episode_timesteps += 1
+        self.total_steps += 1
+
+        metrics = {}
+        if done:
+            metrics = {
+                "charts/episodic_return": self.episode_reward,
+                "charts/episodic_length": self.episode_timesteps,
+                "global_step": self.total_steps,
+            }
+            # Reset local counters
+            self.episode_reward = 0
+            self.episode_timesteps = 0
+
+        return metrics

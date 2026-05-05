@@ -9,7 +9,7 @@ from backend.Utils.src.RolloutBuffer import RolloutBuffer
 import torch
 
 from backend.CommonModels.src.Policy_Reinforce_Baseline import PolicyReinforceBaseline
-from backend.Utils.src.EnviromentHandler import EnvironmentHandler
+from backend.Utils.src.EnviromentHandler import EnvironmentHandler, VecEnvironmentHandler
 from backend.StochasticPolicy.REINFORCE_BASELINE.src.DataCollector import DataCollectionProcessor
 from backend.StochasticPolicy.REINFORCE_BASELINE.src.ReinforceTrainer import REINFORCETrainer
 from backend.Utils.src.utils import setting_global_seed
@@ -24,10 +24,10 @@ def evaluate_policy(policy, env_handler, device, episodes=10):
         state = env_handler.reset()
         done = False
         while not done:
-            state_t = torch.as_tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
+            state_t = torch.as_tensor(state, dtype=torch.float32, device=device)
             with torch.no_grad():
                 action_logits, _ = policy(state_t)
-                action = torch.argmax(action_logits, dim=1).item()
+                action = [torch.argmax(action_logits, dim=1).item()]
             next_state, reward, done, _ = env_handler.step(action)
             total_reward += reward
             state = next_state
@@ -78,13 +78,14 @@ def main(seed):
 
     spec = TransitionSpec(["state", "logp", "reward", "done"])
     transition_factory = TransitionFactory(spec)
-    replay_buffer = RolloutBuffer(spec)
+    replay_buffer = RolloutBuffer(spec, rollout_size=500)
 
     gym_factory = GymEnvFactory(env_name)
-    env_handler = EnvironmentHandler(gym_factory, seed=seed)
-    eval_env_handler = EnvironmentHandler(gym_factory, seed=seed+100)
+    env_handler = VecEnvironmentHandler(gym_factory, seed=seed, num_envs=1)
+    eval_env_handler = VecEnvironmentHandler(gym_factory, seed=seed + 100, num_envs=1)
 
     observation_size, action_size, _ = env_handler.get_env_specs()
+    observation_size = observation_size[0]
     policy = PolicyReinforceBaseline(observation_size, action_size, hidden_dim=hidden_dim).to(device)
 
     optimizer = torch.optim.Adam(policy.parameters(), lr=learn_rate)
