@@ -21,10 +21,10 @@ def create_ppo_minibatch_graph():
              function=lambda batches, i: (
                  batches[i]["state"].to(device),
                  batches[i]["action"].to(device),
-                 batches[i]["logp"].to(device),
-                 batches[i]["advantage"].to(device),
-                 batches[i]["return"].to(device),
-                 batches[i]["value"].to(device)
+                 batches[i]["logp"].squeeze(-1).to(device),
+                 batches[i]["advantage"].squeeze(-1).to(device),
+                 batches[i]["return"].squeeze(-1).to(device),
+                 batches[i]["value"].squeeze(-1).to(device)
              )),
 
         Node("AgentForward", ["agent", "b_states"], ["dist", "value_tensor"],
@@ -91,25 +91,25 @@ class PPOTrainerProcessor:
                       function=detransition),
 
             PropsNode("AgentForward", ["agent", "state"], ["value"],
-                      function=lambda net, s: net(s)[1]),
+                      function=lambda net, s: net(s)[1], no_grad=True),
 
             PropsNode("AgentForwardNext", ["agent", "next_state"], ["next_value"],
                       function=lambda net, s: net(s)[1], no_grad=True),
 
             PropsNode("td_residual", ["reward", "terminated", "value", "next_value", "gamma", "num_envs"],
                       ["deltas"],
-                      function=td_residual),
+                      function=td_residual, no_grad=True),
 
             PropsNode("RawGAE", ["deltas", "terminated", "gamma", "lam", "num_envs"],
                       ["raw_advantages"],
-                      function=compute_raw_gae),
+                      function=compute_raw_gae, no_grad=True),
 
             PropsNode("ComputeReturns", ["raw_advantages", "value"],
                       ["return"],
-                      function=compute_returns),
+                      function=compute_returns, no_grad=True),
             PropsNode("NormalizeAdvantages", ["raw_advantages"],
                       ["advantage"],
-                      function=normalize),
+                      function=normalize, no_grad=True),
 
             PropsNode("PopulateBuffer",
                       ["replay_buffer", "state", "action", "logp", "advantage", "return", "value"],

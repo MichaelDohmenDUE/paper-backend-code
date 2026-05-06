@@ -84,7 +84,7 @@ class PPOTrainerProcessor:
                       function=detransition),
 
             PropsNode("AgentForward", ["agent", "state"], ["value"],
-                      function=lambda net, s: net(s)[1]),
+                      function=lambda net, s: net(s)[1], no_grad=True),
 
             PropsNode("AgentForwardNext", ["agent", "next_state"], ["next_value"],
                       function=lambda net, s: net(s)[1], no_grad=True),
@@ -95,21 +95,21 @@ class PPOTrainerProcessor:
 
             PropsNode("RawGAE", ["deltas", "terminated", "gamma", "lam", "num_envs"],
                       ["raw_advantages"],
-                      function=compute_raw_gae),
+                      function=compute_raw_gae, no_grad=True),
 
             PropsNode("ComputeReturns", ["raw_advantages", "value"],
                       ["return"],
-                      function=compute_returns),
+                      function=compute_returns, no_grad=True),
 
             PropsNode("PopulateBuffer",
                       ["replay_buffer", "state", "action", "logp", "raw_advantages", "return"],
                       ["ppo_buffer"],
-                      function=lambda buffer, *args: buffer.populate(dict(zip(buffer.spec.fields, args)))),
+                      function=lambda buffer, *args: buffer.populate(dict(zip(buffer.spec.fields, args))), no_grad=True),
 
             PropsNode("GenerateBatches",
                       ["ppo_buffer"],
                       ["all_batches"],
-                      function=lambda buffer: buffer.generate_batches(batch_size, epochs)),
+                      function=lambda buffer: buffer.generate_batches(batch_size, epochs), no_grad=True),
 
             PropsNode("PrepInnerContext", ["inner_context", "all_batches", "metric_history"],
                       ["ready_inner_context"],

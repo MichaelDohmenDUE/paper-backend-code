@@ -83,7 +83,10 @@ class ReplayBuffer:
             for start in range(0, self.size, batch_size):
                 idx = indices[start: start + batch_size]
                 all_batches.append(self.choice(idx))
-
+        #for i, batch in enumerate(all_batches):
+        #    print(f"\n--- Batch {i} Shapes ---")
+        #    for key, tensor in batch.items():
+        #        print(f"  {key}: {tensor.shape}")
         return all_batches
 
     def choice(self, indices: np.ndarray | list[int]) -> dict[str, torch.Tensor]:

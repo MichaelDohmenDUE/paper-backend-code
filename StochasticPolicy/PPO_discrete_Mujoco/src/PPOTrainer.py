@@ -92,7 +92,7 @@ class PPOTrainerProcessor:
                       function=detransition),
 
             PropsNode("CriticForward", ["critic", "state"], ["value"],
-                      function=lambda net, s: net(s)),
+                      function=lambda net, s: net(s), no_grad=True),
 
             PropsNode("CriticForwardNext", ["critic", "next_state"], ["next_value"],
                       function=lambda net, s: net(s), no_grad=True),
