@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 import torch
@@ -26,40 +25,40 @@ def dual_optimizer_step(actor, critic, optimizer, loss, max_norm):
 def create_ppo_minibatch_graph():
     nodes = [
 
-        Node("GetBatch", ["all_batches", "_iteration"],
-             ["b_state", "b_action", "b_old_logps", "b_adv", "b_ret"],
-             function=lambda batches, i: (
-                 batches[i]["state"].to(device),
-                 batches[i]["action"].to(device),
-                 batches[i]["logp"].to(device),
-                 batches[i]["advantage"].to(device),
-                 batches[i]["return"].to(device)
-             )),
+        PropsNode("GetBatch", ["all_batches", "_iteration"],
+                  ["b_state", "b_action", "b_old_logps", "b_adv", "b_ret"],
+                  function=lambda batches, i: (
+                      batches[i]["state"].to(device),
+                      batches[i]["action"].to(device),
+                      batches[i]["logp"].to(device),
+                      batches[i]["advantage"].to(device),
+                      batches[i]["return"].to(device)
+                  )),
 
-        Node("ActorForward", ["actor", "b_state"], ["dist"],
-             function=lambda net, s: net(s)),
-        Node("CriticForward", ["critic", "b_state"], ["value_tensor"],
-             function=lambda net, s: net(s)),
-        Node("LogProb", ["dist", "b_action"], ["new_logp"],
-             function=lambda dist, a: dist.log_prob(a).sum(dim=-1) if len(
-                 dist.log_prob(a).shape) > 1 else dist.log_prob(a)),
-        Node("Entropy", ["dist"], ["entropy"],
-             function=lambda dist: dist.entropy().mean()),
+        PropsNode("ActorForward", ["b_state"], ["dist"], props=["actor"],
+                  function=lambda net, s: net(s)),
+        PropsNode("CriticForward", ["b_state"], ["value_tensor"], props=["critic"],
+                  function=lambda net, s: net(s)),
+        PropsNode("LogProb", ["dist", "b_action"], ["new_logp"],
+                  function=lambda dist, a: dist.log_prob(a).sum(dim=-1) if len(
+                      dist.log_prob(a).shape) > 1 else dist.log_prob(a)),
+        PropsNode("Entropy", ["dist"], ["entropy"],
+                  function=lambda dist: dist.entropy().mean()),
 
-        Node("SqueezeValue", ["value_tensor"], ["value_pred"],
-             function=lambda v: v.squeeze(-1)),
-        Node("PolicyLoss", ["new_logp", "b_old_logps", "b_adv", "clip_eps"], ["policy_loss"],
-             function=clipped_surrogate_objective),
-        Node("ValueLoss", ["b_ret", "value_pred"], ["value_loss"],
-             function=lambda ret, v: 0.5 * (ret - v).pow(2).mean()),
-        Node("TotalLoss", ["policy_loss", "value_loss", "entropy", "vf_coef", "ent_coef"], ["loss"],
-             function=lambda policy_loss, value_loss, ent, value_coef, entropy_coef:
-             policy_loss + value_coef * value_loss - entropy_coef * ent),
+        PropsNode("SqueezeValue", ["value_tensor"], ["value_pred"],
+                  function=lambda v: v.squeeze(-1)),
+        PropsNode("PolicyLoss", ["new_logp", "b_old_logps", "b_adv", "clip_eps"], ["policy_loss"],
+                  function=clipped_surrogate_objective),
+        PropsNode("ValueLoss", ["b_ret", "value_pred"], ["value_loss"],
+                  function=lambda ret, v: 0.5 * (ret - v).pow(2).mean()),
+        PropsNode("TotalLoss", ["policy_loss", "value_loss", "entropy", "vf_coef", "ent_coef"], ["loss"],
+                  function=lambda policy_loss, value_loss, ent, value_coef, entropy_coef:
+                  policy_loss + value_coef * value_loss - entropy_coef * ent),
         PropsNode("DualOptimizer", ["loss", "max_grad_norm"], ["_loss_val"], ["actor", "critic", "optimizer"],
                   function=dual_optimizer_step),
-        Node("RecordMetrics", ["metric_history", "policy_loss", "value_loss", "entropy"],
-             ["metric_history"],
-             function=record_metrics)
+        PropsNode("RecordMetrics", ["metric_history", "policy_loss", "value_loss", "entropy"],
+                  ["metric_history"],
+                  function=record_metrics)
     ]
 
     initial_keys = [
@@ -97,10 +96,10 @@ class PPOTrainerProcessor:
                       ["state", "action", "logp", "reward", "terminated", "next_state"],
                       function=detransition),
 
-            PropsNode("CriticForward", ["critic", "state"], ["value"],
+            PropsNode("CriticForward", ["state"], ["value"], props=["critic"],
                       function=lambda net, s: net(s)),
 
-            PropsNode("CriticForwardNxt", ["critic", "next_state"], ["next_value"],
+            PropsNode("CriticForwardNxt", ["next_state"], ["next_value"], props=["critic"],
                       function=lambda net, s: net(s), no_grad=True),
 
             PropsNode("td_residual", ["reward", "terminated", "value", "next_value", "gamma", "num_envs"],
@@ -119,8 +118,8 @@ class PPOTrainerProcessor:
                  function=normalize),
 
             PropsNode("PopulateBuffer",
-                      ["replay_buffer", "state", "action", "logp", "advantage", "return"],
-                      ["ppo_buffer"],
+                      ["state", "action", "logp", "advantage", "return"],
+                      ["ppo_buffer"], props=["replay_buffer"],
                       function=lambda buffer, *args: buffer.populate(dict(zip(buffer.spec.fields, args)))),
 
             PropsNode("GenerateBatches",

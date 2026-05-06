@@ -1,13 +1,12 @@
 import numpy as np
 
-from backend.Utils.src.NodeLib.Node import PropsNode
-from backend.Utils.src.NodeLib.NodeLibrary import to_tensor, to_numpy_array
-from backend.StochasticPolicy.PPO_discrete.PPO_Atari_Baseline.src.DataCollectorAtari import EpisodicMetricsNode
-from backend.Utils.src.NodeLib.Node import Node, Graph
-from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, BootStrappingNodeMujoco
-from backend.Utils.src.RolloutBuffer import RolloutBuffer
-
 from StochasticPolicy.PPO_discrete_Mujoco.src.DataCollectorGraphMujoco import merge_final_observations
+from TobeTranslatedAlgorithms.PPO_Atari_Baseline.src.DataCollectorAtari import EpisodicMetricsNode
+from backend.Utils.src.NodeLib.Node import Node, Graph
+from backend.Utils.src.NodeLib.Node import PropsNode
+from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode
+from backend.Utils.src.NodeLib.NodeLibrary import to_tensor, to_numpy_array
+from backend.Utils.src.RolloutBuffer import RolloutBuffer
 
 
 class DataCollectionProcessor:
@@ -29,24 +28,26 @@ class DataCollectionProcessor:
         }
 
         nodes = [
-            Node("ToTensor", ["state", "device"], ["state_tensor"], function=to_tensor, no_grad=True),
-            Node("ActorForward", ["actor", "state_tensor"], ["dist"], function=lambda net, s: net(s), no_grad=True),
-            Node("CriticForward", ["critic", "state_tensor"], ["value_tensor"], function=lambda net, s: net(s),
-                 no_grad=True),
-            Node("SampleAction", ["dist"], ["action_tensor"], function=lambda dist: dist.sample(), no_grad=True),
-            Node("LogProb", ["dist", "action_tensor"], ["logp_tensor"],
-                 function=lambda dist, a: dist.log_prob(a).sum(dim=-1) if len(
-                     dist.log_prob(a).shape) > 1 else dist.log_prob(a), no_grad=True),
+            PropsNode("ToTensor", ["state", "device"], ["state_tensor"], function=to_tensor, no_grad=True),
+            PropsNode("ActorForward", ["state_tensor"], ["dist"], props=["actor"],
+                      function=lambda net, s: net(s), no_grad=True),
+            PropsNode("CriticForward", ["state_tensor"], ["value_tensor"], props=["critcs"],
+                      function=lambda net, s: net(s), no_grad=True),
+            PropsNode("SampleAction", ["dist"], ["action_tensor"], function=lambda dist: dist.sample(), no_grad=True),
+            PropsNode("LogProb", ["dist", "action_tensor"], ["logp_tensor"],
+                      function=lambda dist, a: dist.log_prob(a).sum(dim=-1) if len(
+                          dist.log_prob(a).shape) > 1 else dist.log_prob(a), no_grad=True),
 
-            Node("SqueezeValue", ["value_tensor"], ["value_t_sq"], function=lambda v: v.squeeze(-1), no_grad=True),
+            PropsNode("SqueezeValue", ["value_tensor"], ["value_t_sq"], function=lambda v: v.squeeze(-1), no_grad=True),
 
-            Node("ToNumpy_a", ["action_tensor"], ["action"], function=to_numpy_array, no_grad=True),
-            Node("ToNumpy_l", ["logp_tensor"], ["logp"], function=to_numpy_array, no_grad=True),
-            Node("ToNumpy_v", ["value_t_sq"], ["value"], function=to_numpy_array, no_grad=True),
+            PropsNode("ToNumpy_a", ["action_tensor"], ["action"], function=to_numpy_array, no_grad=True),
+            PropsNode("ToNumpy_l", ["logp_tensor"], ["logp"], function=to_numpy_array, no_grad=True),
+            PropsNode("ToNumpy_v", ["value_t_sq"], ["value"], function=to_numpy_array, no_grad=True),
 
-            Node("ClipAction", ["action"], ["clipped_action"], function=lambda a: np.clip(a, -1.0, 1.0)),
+            PropsNode("ClipAction", ["action"], ["clipped_action"], function=lambda a: np.clip(a, -1.0, 1.0)),
 
-            PropsNode("EnvStep", ["env", "action"], ["next_state_raw", "reward", "terminated", "truncated", "info"],
+            PropsNode("EnvStep", ["action"], ["next_state_raw", "reward", "terminated", "truncated", "info"],
+                      props=["env"],
                       function=lambda env, a: env.step_detailed(a)),
 
             PropsNode("ExtractTrueNextState", ["next_state_raw", "truncated", "info"], ["next_state"],
