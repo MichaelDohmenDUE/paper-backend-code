@@ -5,7 +5,7 @@ from TobeTranslatedAlgorithms.ACKTR.src.ActionHandler import ActionHandler
 from TobeTranslatedAlgorithms.ACKTR.src.DataCollectionProcessor import DataCollectionProcessor
 from TobeTranslatedAlgorithms.ACKTR.src.KFAC import KFACOptimizer
 from StochasticPolicy.PPO_continuous.src.ActorPPO import ActorPPO
-from backend.CommonModels.src.CriticPPO import CriticPPO
+from StochasticPolicy.PPO_continuous.src.CriticPPO import CriticPPO
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
 from backend.Utils.src.EnvFactory import GymEnvFactory

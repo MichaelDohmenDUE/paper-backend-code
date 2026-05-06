@@ -8,7 +8,7 @@ from backend.ActionValue.DDQN_Atari.src.DataCollectionProcessorAtari import Data
 from backend.ActionValue.DDQN_Atari.src.TrainProcessorAtari import TrainProcessor
 from backend.ActionValue.DQN.DQN import evaluate_policy
 from backend.ActionValue.DQN.src.EpsilonGreedy import EpsilonGreedyPolicy
-from backend.CommonModels.src.BehaviourAtariDQN import BehaviourAtariDQN
+from ActionValue.DQN_Atari.src.BehaviourAtariDQN import BehaviourAtariDQN
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnvFactory import AtariEnvFactory
 from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler

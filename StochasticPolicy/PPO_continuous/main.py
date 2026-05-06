@@ -7,7 +7,7 @@ from torch import optim
 
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 from StochasticPolicy.PPO_continuous.src.ActorPPO import ActorPPO
-from backend.CommonModels.src.CriticPPO import CriticPPO
+from StochasticPolicy.PPO_continuous.src.CriticPPO import CriticPPO
 from StochasticPolicy.PPO_continuous.src.DataCollectionProcessor import DataCollectionProcessor
 from StochasticPolicy.PPO_continuous.src.PPOTrainerProcessor import PPOTrainerProcessor
 from backend.Utils.src.BatchTransitioner import TransitionFactory

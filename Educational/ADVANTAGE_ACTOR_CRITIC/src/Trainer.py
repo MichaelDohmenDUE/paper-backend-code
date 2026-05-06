@@ -2,9 +2,9 @@ import torch
 
 from Utils.src.NodeLib.Node import PropsNode, Node, Graph, Signal
 from Utils.src.RolloutBuffer import KStepRolloutBuffer
-from backend.CommonModels.src.Policy_Reinforce_Baseline import PolicyReinforceBaseline
+from Educational.REINFORCE_BASELINE.src.Policy_Reinforce_Baseline import PolicyReinforceBaseline
 from backend.Utils.src.NodeLib.NodeLibrary import detransition, optimizer_update, policy_loss, mean_squared_error, \
-    combined_loss, bellman, extract_final_states, compute_n_step_returns
+    combined_loss, extract_final_states, compute_n_step_returns
 
 
 class Trainer:

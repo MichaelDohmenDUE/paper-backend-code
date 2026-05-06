@@ -7,8 +7,8 @@ import wandb
 from backend.ActionValue.DQN.src.EpsilonGreedy import EpsilonGreedyPolicy
 from ActionValue.DQN_Atari.src.DataCollectionProcessorAtari import DataCollectionProcessor
 from ActionValue.DQN_Atari.src.TrainProcessorAtari import TrainProcessor
-from backend.CommonModels.src import BehaviourAtariDQN
-from backend.CommonModels.src.BehaviourAtariDQN import BehaviourAtariDQN
+from ActionValue.DQN_Atari.src import BehaviourAtariDQN
+from ActionValue.DQN_Atari.src.BehaviourAtariDQN import BehaviourAtariDQN
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnvFactory import AtariEnvFactory
 from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
