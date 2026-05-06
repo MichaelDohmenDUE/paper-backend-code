@@ -27,29 +27,29 @@ def create_ppo_minibatch_graph():
                  batches[i]["value"].squeeze(-1).to(device)
              )),
 
-        Node("AgentForward", ["agent", "b_states"], ["dist", "value_tensor"],
-             function=lambda net, s: net(s)),
-        Node("LogProb", ["dist", "b_action"], ["new_logp"],
-             function=lambda dist, a: dist.log_prob(a)),
-        Node("Entropy", ["dist"], ["entropy"],
-             function=lambda dist: dist.entropy().mean()),
-        Node("SqueezeValue", ["value_tensor"], ["value_pred"],
-             function=lambda v: v.squeeze(-1)),
-        Node("PolicyLoss", ["new_logp", "b_old_logp", "b_adv", "clip_eps"], ["policy_loss"],
-             function=clipped_surrogate_objective),
+        PropsNode("AgentForward", ["b_states"], ["dist", "value_tensor"], props=["agent"],
+                  function=lambda net, s: net(s)),
+        PropsNode("LogProb", ["dist", "b_action"], ["new_logp"],
+                  function=lambda dist, a: dist.log_prob(a)),
+        PropsNode("Entropy", ["dist"], ["entropy"],
+                  function=lambda dist: dist.entropy().mean()),
+        PropsNode("SqueezeValue", ["value_tensor"], ["value_pred"],
+                  function=lambda v: v.squeeze(-1)),
+        PropsNode("PolicyLoss", ["new_logp", "b_old_logp", "b_adv", "clip_eps"], ["policy_loss"],
+                  function=clipped_surrogate_objective),
 
-        Node("ValueLoss", ["b_ret", "value_pred", "b_old_value", "clip_eps"], ["value_loss"],
-             function=clipped_value_loss),
+        PropsNode("ValueLoss", ["b_ret", "value_pred", "b_old_value", "clip_eps"], ["value_loss"],
+                  function=clipped_value_loss),
 
-        Node("TotalLoss", ["policy_loss", "value_loss", "entropy", "vf_coef", "ent_coef"], ["loss"],
-             function=lambda policy_loss, value_loss, ent, value_coef,
-                             entropy_coef: policy_loss + value_coef * value_loss - entropy_coef * ent),
-        Node("Optimizer Normalized", ["agent", "optimizer", "loss", "max_grad_norm"], ["_loss_val"],
-             function=optimizer_normalized),
+        PropsNode("TotalLoss", ["policy_loss", "value_loss", "entropy", "vf_coef", "ent_coef"], ["loss"],
+                  function=lambda policy_loss, value_loss, ent, value_coef,
+                                  entropy_coef: policy_loss + value_coef * value_loss - entropy_coef * ent),
+        PropsNode("Optimizer Normalized", ["agent", "optimizer", "loss", "max_grad_norm"], ["_loss_val"],
+                  function=optimizer_normalized),
         # LoggingNode
-        Node("RecordMetrics", ["metric_history", "policy_loss", "value_loss", "entropy"],
-             ["metric_history"],
-             function=record_metrics)
+        PropsNode("RecordMetrics", ["metric_history", "policy_loss", "value_loss", "entropy"],
+                  ["metric_history"],
+                  function=record_metrics)
     ]
 
     initial_keys = [
@@ -90,10 +90,10 @@ class PPOTrainerProcessor:
                       ["state", "action", "logp", "reward", "terminated", "next_state"],
                       function=detransition),
 
-            PropsNode("AgentForward", ["agent", "state"], ["value"],
+            PropsNode("AgentForward", ["state"], ["value"], props=["agent"],
                       function=lambda net, s: net(s)[1], no_grad=True),
 
-            PropsNode("AgentForwardNext", ["agent", "next_state"], ["next_value"],
+            PropsNode("AgentForwardNext", ["next_state"], ["next_value"], props=["agent"],
                       function=lambda net, s: net(s)[1], no_grad=True),
 
             PropsNode("td_residual", ["reward", "terminated", "value", "next_value", "gamma", "num_envs"],

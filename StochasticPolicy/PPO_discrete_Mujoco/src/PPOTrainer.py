@@ -1,9 +1,8 @@
 import numpy as np
 import torch
-from torch import nn
 
 from backend.Utils.src.NodeLib.NodeLibrary import detransition, normalize, clipped_surrogate_objective, td_residual, \
-    compute_raw_gae, compute_returns, KUpdateNode, RepeatNode, record_metrics
+    compute_raw_gae, compute_returns, RepeatNode, record_metrics
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -73,7 +72,8 @@ class PPOTrainerProcessor:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.context = {
-            "actor": actor, "critic": critic, "optimizer": optimizer, "buffer": rollout_buffer, "replay_buffer": replay_buffer,
+            "actor": actor, "critic": critic, "optimizer": optimizer, "buffer": rollout_buffer,
+            "replay_buffer": replay_buffer,
             "device": self.device, "gamma": gamma, "lam": lam,
             "num_envs": rollout_buffer.num_envs, "spec_fields": rollout_buffer.spec.fields,
             "inner_context": {
@@ -91,10 +91,10 @@ class PPOTrainerProcessor:
                       ["state", "action", "logp", "reward", "terminated", "next_state"],
                       function=detransition),
 
-            PropsNode("CriticForward", ["critic", "state"], ["value"],
+            PropsNode("CriticForward", ["state"], ["value"], props=["critic"],
                       function=lambda net, s: net(s), no_grad=True),
 
-            PropsNode("CriticForwardNext", ["critic", "next_state"], ["next_value"],
+            PropsNode("CriticForwardNext", ["next_state"], ["next_value"], props=["critic"],
                       function=lambda net, s: net(s), no_grad=True),
 
             PropsNode("td_residual", ["reward", "terminated", "value", "next_value", "gamma", "num_envs"],
@@ -113,8 +113,8 @@ class PPOTrainerProcessor:
                       function=normalize),
 
             PropsNode("PopulateBuffer",
-                      ["replay_buffer", "state", "action", "logp", "advantage", "return"],
-                      ["ppo_buffer"],
+                      ["state", "action", "logp", "advantage", "return"],
+                      ["ppo_buffer"], props=["replay_buffer"],
                       function=lambda buffer, *args: buffer.populate(dict(zip(buffer.spec.fields, args)))),
 
             PropsNode("GenerateBatches",
