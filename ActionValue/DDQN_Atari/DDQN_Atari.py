@@ -4,8 +4,8 @@ from copy import deepcopy
 import torch
 import wandb
 
-from ActionValue.DDQN_Atari.src.DataCollectionProcessorAtari import DataCollectionProcessor
-from ActionValue.DDQN_Atari.src.TrainProcessorAtari import TrainProcessor
+from backend.ActionValue.DDQN_Atari.src.DataCollectionProcessorAtari import DataCollectionProcessor
+from backend.ActionValue.DDQN_Atari.src.TrainProcessorAtari import TrainProcessor
 from backend.ActionValue.DQN.DQN import evaluate_policy
 from backend.ActionValue.DQN.src.EpsilonGreedy import EpsilonGreedyPolicy
 from backend.CommonModels.src.BehaviourAtariDQN import BehaviourAtariDQN
