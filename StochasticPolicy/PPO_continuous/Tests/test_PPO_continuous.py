@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import torch
 
-from backend.StochasticPolicy.PPO.continuous.src.PPOTrainerProcessor import PPOTrainer
+from StochasticPolicy.PPO_continuous.src.PPOTrainerProcessor import PPOTrainer
 
 
 class TestPPOTrainer(unittest.TestCase):

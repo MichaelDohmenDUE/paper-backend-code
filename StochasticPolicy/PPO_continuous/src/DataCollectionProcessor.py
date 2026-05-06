@@ -2,12 +2,12 @@ import numpy as np
 
 from backend.Utils.src.NodeLib.Node import PropsNode
 from backend.Utils.src.NodeLib.NodeLibrary import to_tensor, to_numpy_array
-from backend.StochasticPolicy.PPO.discrete.src.DataCollectorAtari import EpisodicMetricsNode
+from StochasticPolicy.PPO_discrete.PPO_Atari_Baseline.src.DataCollectorAtari import EpisodicMetricsNode
 from backend.Utils.src.NodeLib.Node import Node, Graph
 from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, BootStrappingNodeMujoco
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 
-from backend.StochasticPolicy.PPO.discrete.src.DataCollectorGraphMujoco import merge_final_observations
+from StochasticPolicy.PPO_discrete_Mujoco.src.DataCollectorGraphMujoco import merge_final_observations
 
 
 class DataCollectionProcessor:

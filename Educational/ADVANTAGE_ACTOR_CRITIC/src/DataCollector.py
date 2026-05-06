@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch import nn
 
-from StochasticPolicy.PPO.discrete.src.DataCollectorGraphMujoco import merge_final_observations
+from StochasticPolicy.PPO_discrete_Mujoco.src.DataCollectorGraphMujoco import merge_final_observations
 from Utils.src.NodeLib.Node import Node, PropsNode, Graph
 from Utils.src.RolloutBuffer import KStepRolloutBuffer
 from backend.Utils.src.BatchTransitioner import TransitionFactory
