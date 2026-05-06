@@ -1,10 +1,9 @@
-from backend.Utils.src.GlobalCounter import GlobalCounter
 import torch
 from torch import nn
 
 
 class SyncProcessor:
-    def __init__(self, from_net: nn.Module, to_net: nn.Module, tau: float, sync_freq: int, gl_counter = None):
+    def __init__(self, from_net: nn.Module, to_net: nn.Module, tau: float, sync_freq: int, gl_counter=None):
         self.from_net = from_net
         self.to_net = to_net
         self.tau = tau
