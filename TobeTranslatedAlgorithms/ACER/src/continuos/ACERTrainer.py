@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 from TobeTranslatedAlgorithms.ACER.src.continuos.Actor_ACER import Actor
-from backend.CommonModels.src.Critic import Critic
+from DeterministicPolicy.DDPG.src.Critic import Critic
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

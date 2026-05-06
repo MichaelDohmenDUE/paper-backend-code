@@ -6,8 +6,8 @@ from copy import deepcopy
 import torch
 import wandb
 
-from backend.CommonModels.src.Actor import Actor
-from backend.CommonModels.src.Critic import Critic
+from backend.DeterministicPolicy.DDPG.src.Actor import Actor
+from backend.DeterministicPolicy.DDPG.src.Critic import Critic
 from backend.DeterministicPolicy.DDPG.src.OUNoise import OUNoise
 from backend.DeterministicPolicy.DDPG.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.DeterministicPolicy.DDPG.src.TrainProcessor import TrainProcess
