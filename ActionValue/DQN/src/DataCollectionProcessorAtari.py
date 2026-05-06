@@ -11,13 +11,15 @@ from backend.Utils.src.NodeLib.NodeLibrary import to_tensor, to_numpy_array, Tra
 
 
 def merge_final_observations(next_state_raw, episode_done, info):
-    true_next = np.array(next_state_raw).copy()
+    true_next = np.asarray(next_state_raw, dtype=np.uint8)
+
     if isinstance(info, dict) and "final_observation" in info:
         final_obs = info["final_observation"]
         for i, done in enumerate(episode_done):
             if done and final_obs[i] is not None:
-                true_next[i] = np.array(final_obs[i])
-    return true_next.astype(np.uint8)
+                true_next[i] = np.asarray(final_obs[i], dtype=np.uint8)
+
+    return true_next
 
 
 class DataCollectionProcessor:
@@ -36,7 +38,7 @@ class DataCollectionProcessor:
         self.total_steps = 0
 
         self.context = {
-            "state": np.array(env.reset()).astype(np.uint8),
+            "state": np.asarray(env.reset(), dtype=np.uint8),
             "behaviour_net": behaviour_net,
             "env": env,
             "buffer": buffer,
@@ -48,7 +50,8 @@ class DataCollectionProcessor:
 
         nodes = [
             PropsNode("FormatToTensor", ["state", "device"], ["state_t"],
-                      function=to_tensor, no_grad=True),
+                      function=lambda s, d: torch.as_tensor(s, dtype=torch.uint8, device=d), no_grad=True),
+
             PropsNode("CastFloat", ["state_t"], ["state_net_input"],
                       function=lambda s: s.float(), no_grad=True),
             PropsNode("BehaviourNet", ["state_net_input"], ["q_values"], props=["behaviour_net"],
@@ -61,7 +64,7 @@ class DataCollectionProcessor:
                       props=["env"],
                       function=lambda env, a: env.step_detailed(a), no_grad=True),
             PropsNode("FormatNextState", ["next_state_raw"], ["next_state"],
-                      function=lambda ns: np.array(ns).astype(np.uint8), no_grad=True),
+                      function=lambda ns: np.asarray(ns, dtype=np.uint8), no_grad=True),
             PropsNode("CombineDones", ["terminated", "truncated"], ["done"],
                       function=lambda term, trunc: term | trunc, no_grad=True),
             PropsNode("ExtractTrueNextState", ["next_state", "done", "info"], ["real_next_state"],
