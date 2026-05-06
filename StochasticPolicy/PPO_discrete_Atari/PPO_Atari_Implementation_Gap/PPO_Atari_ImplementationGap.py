@@ -51,7 +51,7 @@ def main(seed, env_name):
     lr = 2.5e-4
     gamma = 0.99
     lam = 0.95
-    eval_freq = 100_000
+    eval_freq = 10_000
     eval_episodes = 5
     algo_name = "PPO_discrete_atari_ImplementationGap"
     num_envs = 8
@@ -115,6 +115,7 @@ def main(seed, env_name):
         metrics_train = trainer.run()
         if metrics_train:
             metrics.update(metrics_train)
+        # Logging
         gl_counter.set(data_collector.context["total_steps"])
         metrics["global_step"] = gl_counter.get()
 
