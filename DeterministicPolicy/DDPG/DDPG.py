@@ -8,7 +8,7 @@ import wandb
 
 from backend.CommonModels.src.Actor import Actor
 from backend.CommonModels.src.Critic import Critic
-from backend.DeterministicPolicy.DDPG.src.ActionHandler import OUNoise, DeterministicPolicyWithNoise
+from backend.DeterministicPolicy.DDPG.src.OUNoise import OUNoise
 from backend.DeterministicPolicy.DDPG.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.DeterministicPolicy.DDPG.src.TrainProcessor import TrainProcess
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
@@ -102,7 +102,6 @@ def main(seed, env_name):
     buffer = ReplayBuffer(spec, max_buffer_size, batch_size)
 
     noise = OUNoise(action_size, theta=0.15, sigma=0.2, device=device)
-    #policy = DeterministicPolicyWithNoise(actor, noise, max_action, device)
 
     gl_counter = GlobalCounter()
 

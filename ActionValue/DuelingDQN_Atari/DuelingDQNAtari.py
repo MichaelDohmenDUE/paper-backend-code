@@ -76,7 +76,12 @@ def main(seed, evn_name):
 
     optimizer = torch.optim.Adam(behavior_net.parameters(), lr)
 
-    buffer = ReplayBuffer(spec, max_buffer_size, batch_size)
+    pointer_mapping = {
+        "next_state": {"source": "state", "offset": 1}
+    }
+
+    buffer = ReplayBuffer(spec, max_buffer_size, batch_size, pointers=pointer_mapping)
+
     eps_greedy = EpsilonGreedyPolicy(epsilon_start=epsilon, epsilon_final=epsilon_final, epsilon_decay=epsilon_decay)
     collector = DataCollectionProcessor(behavior_net, env, buffer, eps_greedy, factory, device)
 
