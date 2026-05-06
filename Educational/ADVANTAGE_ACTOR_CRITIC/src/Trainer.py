@@ -1,10 +1,10 @@
 import torch
 
-from backend.Utils.src.NodeLib.Node import PropsNode, Node, Graph, Signal
-from backend.Utils.src.RolloutBuffer import KStepRolloutBuffer
 from backend.Educational.REINFORCE_BASELINE.src.Policy_Reinforce_Baseline import PolicyReinforceBaseline
+from backend.Utils.src.NodeLib.Node import PropsNode, Graph, Signal
 from backend.Utils.src.NodeLib.NodeLibrary import detransition, optimizer_update, policy_loss, mean_squared_error, \
     combined_loss, extract_final_states, compute_n_step_returns
+from backend.Utils.src.RolloutBuffer import KStepRolloutBuffer
 
 
 class Trainer:
@@ -43,41 +43,41 @@ class Trainer:
             PropsNode("Sample", ["buffer"], ["rollout"],
                       function=lambda b: b.sample() if (b.reached_rollout_size() or b.is_ready()) else Signal.NOSIGNAL),
 
-            Node("Detransition", ["spec_fields", "rollout", "device"],
-                 ["state", "logps", "rewards", "dones", "next_state"],
-                 function=detransition, no_grad=False),
+            PropsNode("Detransition", ["spec_fields", "rollout", "device"],
+                      ["state", "logps", "rewards", "dones", "next_state"],
+                      function=detransition, no_grad=False),
 
-            Node("AgentForward", ["behaviour", "state"], ["_logits", "value"],
-                 function=lambda net, s: net(s), no_grad=False),
+            PropsNode("AgentForward", ["state"], ["_logits", "value"], props=["behaviour"],
+                      function=lambda net, s: net(s), no_grad=False),
 
-            Node("FlattenValue", ["value"], ["value_flat"],
-                 function=lambda v: v.view(-1), no_grad=False),
+            PropsNode("FlattenValue", ["value"], ["value_flat"],
+                      function=lambda v: v.view(-1), no_grad=False),
 
-            Node("ExtractFinalState", ["next_state", "num_envs"], ["final_next_states"],
-                 function=extract_final_states, no_grad=True),
+            PropsNode("ExtractFinalState", ["next_state", "num_envs"], ["final_next_states"],
+                      function=extract_final_states, no_grad=True),
 
-            Node("BootstrapForward", ["behaviour", "final_next_states"], ["_nl", "next_value_final"],
-                 function=lambda net, s: net(s), no_grad=True),
+            PropsNode("BootstrapForward", ["final_next_states"], ["_nl", "next_value_final"], props=["behaviour"],
+                      function=lambda net, s: net(s), no_grad=True),
 
-            Node("FlattenBootstrap", ["next_value_final"], ["next_value_flat"],
-                 function=lambda v: v.view(-1), no_grad=True),
+            PropsNode("FlattenBootstrap", ["next_value_final"], ["next_value_flat"],
+                      function=lambda v: v.view(-1), no_grad=True),
 
-            Node("ComputeReturns", ["rewards", "dones", "next_value_flat", "gamma"], ["G"],
-                 function=compute_n_step_returns, no_grad=True),
+            PropsNode("ComputeReturns", ["rewards", "dones", "next_value_flat", "gamma"], ["G"],
+                      function=compute_n_step_returns, no_grad=True),
 
-            Node("ComputeAdvantage", ["G", "value_flat"], ["advantage"],
-                 function=lambda g, v: g - v.detach(), no_grad=True),
+            PropsNode("ComputeAdvantage", ["G", "value_flat"], ["advantage"],
+                      function=lambda g, v: g - v.detach(), no_grad=True),
 
-            Node("PolicyLoss", ["logps", "advantage"], ["loss_policy"],
-                 function=policy_loss, no_grad=False),
+            PropsNode("PolicyLoss", ["logps", "advantage"], ["loss_policy"],
+                      function=policy_loss, no_grad=False),
 
-            Node("ValueLoss", ["value_flat", "G"], ["loss_value"],
-                 function=mean_squared_error, no_grad=False),
+            PropsNode("ValueLoss", ["value_flat", "G"], ["loss_value"],
+                      function=mean_squared_error, no_grad=False),
 
-            Node("TotalLoss", ["loss_policy", "c_pol", "loss_value", "c_val"], ["loss"],
-                 function=combined_loss, no_grad=False),
-            Node("TrainStep", ["optimizer", "loss"], ["grad_metrics"],
-                 function=optimizer_update, no_grad=False)
+            PropsNode("TotalLoss", ["loss_policy", "c_pol", "loss_value", "c_val"], ["loss"],
+                      function=combined_loss, no_grad=False),
+            PropsNode("TrainStep", ["optimizer", "loss"], ["grad_metrics"],
+                      function=optimizer_update, no_grad=False)
         ]
 
         self.graph = Graph(nodes, initial_keys=list(self.context.keys()))
@@ -85,8 +85,8 @@ class Trainer:
     def run(self):
         self.graph.run(self.context)
 
-        #Logging'
-        #Check if there is anything to Extract
+        # Logging'
+        # Check if there is anything to Extract
         grad_metrics = self.context.get("grad_metrics")
         if grad_metrics is None or isinstance(grad_metrics, Signal):
             return {}

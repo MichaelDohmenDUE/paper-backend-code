@@ -66,7 +66,7 @@ class DataCollectionProcessor:
                 outputs=["action"],
                 no_grad=True
             ),
-            PropsNode("EnvStep", ["env", "action"], ["next_state", "reward", "terminated", "truncated", "info"],
+            PropsNode("EnvStep", ["action"], ["next_state", "reward", "terminated", "truncated", "info"], ["env"],
                       function=lambda env, a: env.step_detailed(a), no_grad=True),
 
             PropsNode("CombineDones", ["terminated", "truncated"], ["done_reset"],

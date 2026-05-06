@@ -1,6 +1,6 @@
 import numpy as np
 
-from backend.Utils.src.NodeLib.Node import Node, Graph
+from backend.Utils.src.NodeLib.Node import Graph, PropsNode
 from backend.Utils.src.NodeLib.NodeLibrary import categorical_distribution, sample_distribution, \
     to_tensor, TransitionNode, BufferAppendingNode, to_numpy_array
 
@@ -28,23 +28,23 @@ class DataCollectionProcessor:
 
         nodes = [
 
-            Node("FormatToTensor", ["state", "device"], ["state_t"],
-                 function=lambda s, d: to_tensor(s, d).unsqueeze(0), no_grad=True),
+            PropsNode("FormatToTensor", ["state", "device"], ["state_t"],
+                      function=lambda s, d: to_tensor(s, d).unsqueeze(0), no_grad=True),
 
-            Node("PolicyNet", ["behaviour", "state_t"], ["logits"],
-                 function=lambda net, s: net(s), no_grad=False),
+            PropsNode("PolicyNet", ["state_t"], ["logits"], props=["behaviour"],
+                      function=lambda net, s: net(s), no_grad=False),
 
-            Node("CreateDist", ["logits"], ["dist"],
-                 function=categorical_distribution, no_grad=False),
+            PropsNode("CreateDist", ["logits"], ["dist"],
+                      function=categorical_distribution, no_grad=False),
 
-            Node("SampleAction", ["dist"], ["action_raw", "log_prob"],
-                 function=sample_distribution, no_grad=False),
+            PropsNode("SampleAction", ["dist"], ["action_raw", "log_prob"],
+                      function=sample_distribution, no_grad=False),
 
-            Node("FormatToArray", ["action_raw"], ["action"],
-                 function=to_numpy_array, no_grad=True),
+            PropsNode("FormatToArray", ["action_raw"], ["action"],
+                      function=to_numpy_array, no_grad=True),
 
-            Node("EnvStep", ["env_handler", "action"], ["next_state", "reward", "done", "info"],
-                 function=lambda env, a: env.step(a), no_grad=True),
+            PropsNode("EnvStep", ["action"], ["next_state", "reward", "done", "info"], props=["env_handler"],
+                      function=lambda env, a: env.step(a), no_grad=True),
 
             TransitionNode(
                 factory=transition_factory,
@@ -55,8 +55,8 @@ class DataCollectionProcessor:
                 }
             ),
             BufferAppendingNode(),
-            Node("StateUpdate", ["next_state", "_buffer_updated"], ["state"],
-                 function=lambda ns, signal: np.array(ns).astype(np.float32)),
+            PropsNode("StateUpdate", ["next_state", "_buffer_updated"], ["state"],
+                      function=lambda ns, signal: np.array(ns).astype(np.float32)),
         ]
 
         self.graph = Graph(nodes, initial_keys=list(self.context.keys()))

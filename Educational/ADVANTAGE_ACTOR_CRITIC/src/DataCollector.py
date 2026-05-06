@@ -3,12 +3,12 @@ import torch
 from torch import nn
 
 from backend.StochasticPolicy.PPO_discrete_Mujoco.src.DataCollectorGraphMujoco import merge_final_observations
-from backend.Utils.src.NodeLib.Node import Node, PropsNode, Graph
-from backend.Utils.src.RolloutBuffer import KStepRolloutBuffer
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
+from backend.Utils.src.NodeLib.Node import PropsNode, Graph
 from backend.Utils.src.NodeLib.NodeLibrary import categorical_distribution, sample_distribution, \
     to_tensor, to_numpy_array, TransitionNode, BufferAppendingNode
+from backend.Utils.src.RolloutBuffer import KStepRolloutBuffer
 
 
 class DataCollectionProcessor:
@@ -36,23 +36,23 @@ class DataCollectionProcessor:
         }
 
         nodes = [
-            Node("FormatToTensor", ["state", "device"], ["state_t"],
-                 function=lambda s, d: to_tensor(s, d).unsqueeze(0), no_grad=True),
+            PropsNode("FormatToTensor", ["state", "device"], ["state_t"],
+                      function=lambda s, d: to_tensor(s, d).unsqueeze(0), no_grad=True),
 
-            Node("PolicyNet", ["behaviour", "state_t"], ["logits", "value"],
-                 function=lambda net, s: net(s), no_grad=False),
+            PropsNode("PolicyNet", ["state_t"], ["logits", "value"], props=["behaviour"],
+                      function=lambda net, s: net(s), no_grad=False),
 
-            Node("CreateDist", ["logits"], ["dist"],
-                 function=categorical_distribution, no_grad=False),
+            PropsNode("CreateDist", ["logits"], ["dist"],
+                      function=categorical_distribution, no_grad=False),
 
-            Node("SampleAction", ["dist"], ["action_raw", "log_prob"],
-                 function=sample_distribution, no_grad=False),
+            PropsNode("SampleAction", ["dist"], ["action_raw", "log_prob"],
+                      function=sample_distribution, no_grad=False),
 
-            Node("FormatToArray", ["action_raw"], ["action"],
-                 function=to_numpy_array, no_grad=True),
+            PropsNode("FormatToArray", ["action_raw"], ["action"],
+                      function=to_numpy_array, no_grad=True),
 
-            Node("EnvStep", ["env_handler", "action"], ["next_state_raw", "reward", "done", "info"],
-                 function=lambda env, a: env.step(a), no_grad=True),
+            PropsNode("EnvStep", ["action"], ["next_state_raw", "reward", "done", "info"], props=["env_handler"],
+                      function=lambda env, a: env.step(a), no_grad=True),
 
             PropsNode("ExtractTrueNextState", ["next_state_raw", "done", "info"], ["true_next_state"],
                       function=merge_final_observations, no_grad=True),
@@ -70,14 +70,14 @@ class DataCollectionProcessor:
 
             BufferAppendingNode(),
 
-            Node("CheckTrainSignal", ["done"], ["time_to_train"],
-                 function=self._update_train_signal, no_grad=True),
+            PropsNode("CheckTrainSignal", ["done"], ["time_to_train"],
+                      function=self._update_train_signal, no_grad=True),
 
-            Node("SetBufferState", ["buffer", "time_to_train"], ["_buffer_flag_set"],
-                 function=lambda b, train_flag: b.set_ready(train_flag), no_grad=True),
+            PropsNode("SetBufferState", ["time_to_train"], ["_buffer_flag_set"], props=["buffer"],
+                      function=lambda b, train_flag: b.set_ready(train_flag), no_grad=True),
 
-            Node("StateUpdate", ["next_state_raw"], ["state"],
-                 function=lambda nsr: np.array(nsr).astype(np.float32), no_grad=True)
+            PropsNode("StateUpdate", ["next_state_raw"], ["state"],
+                      function=lambda nsr: np.array(nsr).astype(np.float32), no_grad=True)
         ]
 
         self.graph = Graph(nodes, initial_keys=list(self.context.keys()))
