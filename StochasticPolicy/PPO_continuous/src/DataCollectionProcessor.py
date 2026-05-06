@@ -31,7 +31,7 @@ class DataCollectionProcessor:
             PropsNode("ToTensor", ["state", "device"], ["state_tensor"], function=to_tensor, no_grad=True),
             PropsNode("ActorForward", ["state_tensor"], ["dist"], props=["actor"],
                       function=lambda net, s: net(s), no_grad=True),
-            PropsNode("CriticForward", ["state_tensor"], ["value_tensor"], props=["critcs"],
+            PropsNode("CriticForward", ["state_tensor"], ["value_tensor"], props=["critic"],
                       function=lambda net, s: net(s), no_grad=True),
             PropsNode("SampleAction", ["dist"], ["action_tensor"], function=lambda dist: dist.sample(), no_grad=True),
             PropsNode("LogProb", ["dist", "action_tensor"], ["logp_tensor"],

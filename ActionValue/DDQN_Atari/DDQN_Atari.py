@@ -27,12 +27,12 @@ def main(seed, env_name):
     eval_episodes = 5
     evaL_frequency = 100_000
     env_name = env_name
-    sync_freq = 1000
+    sync_freq = 10_000
     batch_size = 32
     max_buffer_size = 500_000
     tau = 1.0
     gamma = 0.99
-    max_steps = 10_000_000
+    max_steps = 3_000_000
     seed = seed
     offset = 100
     lr = 1e-4
@@ -88,7 +88,7 @@ def main(seed, env_name):
     eps_greedy = EpsilonGreedyPolicy(epsilon_start=epsilon, epsilon_final=0.05, epsilon_decay=epsilon_decay)
     collector = DataCollectionProcessor(behavior_net, env, buffer, eps_greedy, factory, device)
 
-    train_process = TrainProcessor(buffer, behavior_net, target_net, optimizer, gamma, device)
+    train_process = TrainProcessor(buffer, behavior_net, target_net, optimizer, gamma, device, warmup_steps)
 
     sync_process = SyncProcessor(behavior_net, target_net, tau, sync_freq)
 
