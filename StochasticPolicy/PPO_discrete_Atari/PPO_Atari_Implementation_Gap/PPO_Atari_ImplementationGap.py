@@ -4,9 +4,9 @@ import torch
 import wandb
 from torch import optim
 
-from backend.StochasticPolicy.PPO_discrete.PPO_Atari_Implementation_Gap.src.DataCollector_ImplementationGap import \
+from backend.StochasticPolicy.PPO_discrete_Atari.PPO_Atari_Implementation_Gap.src.DataCollector_ImplementationGap import \
     DataCollectionProcessor
-from backend.StochasticPolicy.PPO_discrete.PPO_Atari_Implementation_Gap.src.PPOTrainer_ImplementationGap import \
+from backend.StochasticPolicy.PPO_discrete_Atari.PPO_Atari_Implementation_Gap.src.PPOTrainer_ImplementationGap import \
     PPOTrainerProcessor
 from backend.StochasticPolicy.PPO_discrete_Mujoco.src.DiscreteActorPPO import AtariPPOAgent
 from backend.Utils.src.BatchTransitioner import TransitionFactory
@@ -40,10 +40,10 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
     return avg_reward
 
 
-def main(seed):
+def main(seed, env_name):
     start_time = time.time()
-    env_name = "BreakoutNoFrameskip-v4"
     seed = seed
+    env_name=env_name
     rollout_size = 1024
     batch_size = 256
     epochs = 4
@@ -53,7 +53,7 @@ def main(seed):
     lam = 0.95
     eval_freq = 100_000
     eval_episodes = 5
-    algo_name = "PPO_discrete_atari_cleanRL"
+    algo_name = "PPO_discrete_atari_ImplementationGap"
     num_envs = 8
     offset = 100
     setting_global_seed(seed)
@@ -137,5 +137,6 @@ def main(seed):
 
 if __name__ == "__main__":
     seeds = [0, 1, 2]
+    env_name = "PongNoFrameskip-v4"
     for seed in seeds:
-        main(seed)
+        main(seed, env_name)

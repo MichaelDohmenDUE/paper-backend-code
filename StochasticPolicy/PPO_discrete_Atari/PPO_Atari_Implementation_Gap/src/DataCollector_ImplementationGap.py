@@ -60,7 +60,7 @@ class DataCollectionProcessor:
             PropsNode("ToNumpy_l", ["logp_tensor"], ["logp"], function=to_numpy_array, no_grad=True),
             PropsNode("ToNumpy_v", ["value_t_sq"], ["value"], function=to_numpy_array, no_grad=True),
             PropsNode("EnvStep", ["env", "action"], ["next_state_raw", "reward", "terminated", "truncated", "info"],
-                      function=lambda env, a: env.step_detailed(a)),
+                      function=lambda env, a: env.step_detailed(a), no_grad=True),
 
             PropsNode("ExtractTrueNextState", ["next_state_raw", "truncated", "info"], ["next_state"],
                       function=merge_final_observations, no_grad=True),
