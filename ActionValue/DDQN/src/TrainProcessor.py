@@ -31,31 +31,32 @@ class TrainProcessor:
         }
 
         nodes = [
-            PropsNode("Sample", ["buffer", "warmup_steps"], ["batch"],
+            PropsNode("Sample", ["warmup_steps"], ["batch"], props=["buffer"],
                       function=lambda b, w: b.sample_batch() if len(b) >= w else Signal.NOSIGNAL),
 
-            PropsNode("Detransition", ["fields", "batch", "device"],
-                      ["state", "action", "reward", "next_state", "done"],
+            PropsNode("Detransition", ["batch", "device"],
+                      ["state", "action", "reward", "next_state", "done"], props=["fields"],
                       function=detransition),
 
-            PropsNode("BehaviorForward", ["behavior_net", "state"], ["qs_b"],
+            PropsNode("BehaviorForward", ["state"], ["qs_b"], props=["behavior_net"],
                       function=lambda net, s: net(s)),
             PropsNode("QsaBehavior", ["qs_b", "action"], ["qsa_b"],
                       function=lambda q, a: indexing(q, a.long().unsqueeze(1)).reshape(-1)),
-            PropsNode("BehaviorNextForward", ["behavior_net", "next_state"], ["next_qs_b"],
+            PropsNode("BehaviorNextForward", ["next_state"], ["next_qs_b"], props=["behavior_net"],
                       function=lambda net, ns: net(ns), no_grad=True),
             PropsNode("SelectNextAction", ["next_qs_b"], ["next_actions"],
                       function=lambda q: torch.argmax(q, dim=1).view(-1, 1), no_grad=True),
-            PropsNode("TargetForward", ["target_net", "next_state"], ["qs_t"],
+            PropsNode("TargetForward", ["next_state"], ["qs_t"], props=["target_net"],
                       function=lambda net, ns: net(ns), no_grad=True),
             PropsNode("QsaTarget", ["qs_t", "next_actions"], ["qsa_t"],
-                      function=lambda qt, a: indexing(qt, a).reshape(-1), no_grad=True),
+                      function=lambda qt, a: indexing(qt, a).reshape(-1).detach()),
             PropsNode("Bellman", ["qsa_t", "reward", "done", "gamma"], ["target_val"],
                       function=bellman),
             PropsNode("Loss", ["qsa_b", "target_val"], ["loss"],
                       function=mean_squared_error),
 
-            PropsNode("Optimize", ["behavior_net", "optimizer", "loss", "max_norm"], ["_opt"],
+            PropsNode("Optimize", ["loss", "max_norm"], ["_opt"],
+                      props=["behavior_net", "optimizer"],
                       function=optimizer_normalized),
 
             PropsNode("Metrics", ["loss", "qsa_b"], ["train_metrics"],
