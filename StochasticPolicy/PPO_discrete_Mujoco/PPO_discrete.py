@@ -5,10 +5,10 @@ import wandb
 from torch import optim
 
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
-from StochasticPolicy.PPO_continuous.src.CriticPPO import CriticPPO
-from StochasticPolicy.PPO_discrete_Mujoco.src.DiscreteActorPPO import DiscreteActorPPO
-from StochasticPolicy.PPO_discrete_Mujoco.src.DataCollectorGraphMujoco import DataCollectionProcessor
-from StochasticPolicy.PPO_discrete_Mujoco.src.PPOTrainer import PPOTrainerProcessor
+from backend.StochasticPolicy.PPO_continuous.src.CriticPPO import CriticPPO
+from backend.StochasticPolicy.PPO_discrete_Mujoco.src.DiscreteActorPPO import DiscreteActorPPO
+from backend.StochasticPolicy.PPO_discrete_Mujoco.src.DataCollectorGraphMujoco import DataCollectionProcessor
+from backend.StochasticPolicy.PPO_discrete_Mujoco.src.PPOTrainer import PPOTrainerProcessor
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
 from backend.Utils.src.EnvFactory import GymEnvFactory

@@ -2,9 +2,9 @@ import numpy as np
 import torch
 from torch import nn
 
-from backend.Utils.src.NodeLib.NodeLibrary import mean_squared_error
-from backend.Utils.src.NodeLib.NodeLibrary import detransition, normalize, clipped_surrogate_objective, \
+from backend.Utils.src.NodeLib.NodeLibrary import detransition, clipped_surrogate_objective, \
     optimizer_normalized, td_residual, compute_returns, record_metrics, RepeatNode, compute_raw_gae
+from backend.Utils.src.NodeLib.NodeLibrary import mean_squared_error
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 

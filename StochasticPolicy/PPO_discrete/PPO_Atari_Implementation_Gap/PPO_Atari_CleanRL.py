@@ -4,9 +4,9 @@ import torch
 import wandb
 from torch import optim
 
-from StochasticPolicy.PPO_discrete_Mujoco.src.DiscreteActorPPO import AtariPPOAgent
-from StochasticPolicy.PPO_discrete.PPO_Atari_Implementation_Gap.src.DataCollectorCleanRL import DataCollectionProcessor
-from StochasticPolicy.PPO_discrete.PPO_Atari_Implementation_Gap.src.PPOTrainerAtariCleanRL import PPOTrainerProcessor
+from backend.StochasticPolicy.PPO_discrete_Mujoco.src.DiscreteActorPPO import AtariPPOAgent
+from backend.StochasticPolicy.PPO_discrete.PPO_Atari_Implementation_Gap.src.DataCollectorCleanRL import DataCollectionProcessor
+from backend.StochasticPolicy.PPO_discrete.PPO_Atari_Implementation_Gap.src.PPOTrainerAtariCleanRL import PPOTrainerProcessor
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
 from backend.Utils.src.EnvFactory import AtariEnvFactory

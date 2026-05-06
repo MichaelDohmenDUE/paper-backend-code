@@ -4,14 +4,14 @@ import torch
 import wandb
 from torch import optim
 
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
-from StochasticPolicy.PPO_discrete_Mujoco.src.DiscreteActorPPO import AtariPPOAgent
-from StochasticPolicy.PPO_discrete.PPO_Atari_Baseline.src.DataCollectorAtari import DataCollectionProcessor
-from StochasticPolicy.PPO_discrete.PPO_Atari_Baseline.src.PPOTrainerAtari import PPOTrainerProcessor
+from backend.StochasticPolicy.PPO_discrete.PPO_Atari_Baseline.src.DataCollectorAtari import DataCollectionProcessor
+from backend.StochasticPolicy.PPO_discrete.PPO_Atari_Baseline.src.PPOTrainerAtari import PPOTrainerProcessor
+from backend.StochasticPolicy.PPO_discrete_Mujoco.src.DiscreteActorPPO import AtariPPOAgent
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
 from backend.Utils.src.EnvFactory import AtariEnvFactory
 from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
+from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 from backend.Utils.src.utils import setting_global_seed
 
@@ -127,7 +127,9 @@ def main(seed):
                "charts/eval_avg_score": eval_trainer(trainer, eval_env_handler, eval_episodes=eval_episodes)}
     wandb.log(metrics, step=step)
     wandb.finish()
+
+
 if __name__ == "__main__":
-    seeds = [2,1,0]
+    seeds = [2, 1, 0]
     for seed in seeds:
         main(seed)
