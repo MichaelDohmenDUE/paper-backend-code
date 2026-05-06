@@ -95,6 +95,8 @@ def main(seed):
         if metrics_train:
             metrics.update(metrics_train)
         sync_process.run()
+
+        # Logging
         metrics["charts/epsilon"] = collector.epsilon_greedy.epsilon
         metrics["global_step"] = step
         if step % 400 == 0:
@@ -107,6 +109,7 @@ def main(seed):
         if len(metrics) > 1:
             wandb.log(metrics, step=step)
     step = max_steps
+    #Final Eval
     metrics = {"global_step": step,
                "charts/eval_avg_score": evaluate_policy(behavior_net, eval_env, episodes=eval_episodes, device=device)}
     wandb.log(metrics, step=step)
