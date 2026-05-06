@@ -8,8 +8,8 @@ from backend.CommonModels.src.DuellingDQN import DuellingAtariDQN
 from backend.Utils.src.EnvFactory import AtariEnvFactory
 from backend.ActionValue.DQN.DQN import evaluate_policy
 from backend.ActionValue.DQN.src.ActionHandler import EpsilonGreedyPolicy
-from backend.ActionValue.DQN.src.DataCollectionProcessorAtari import DataCollectionProcessor
-from backend.ActionValue.DDQN.src.TrainProcessorAtari import TrainProcessor
+from ActionValue.DQN_Atari.src.DataCollectionProcessorAtari import DataCollectionProcessor
+from ActionValue.DDQN_Atari.src.TrainProcessorAtari import TrainProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer

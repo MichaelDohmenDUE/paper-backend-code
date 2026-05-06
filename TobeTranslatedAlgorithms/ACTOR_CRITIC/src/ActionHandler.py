@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from backend.AbstractHandlers.AbstractActionHandler import AbstractActionHandler
+from Utils.src.AbstractHandlers.AbstractActionHandler import AbstractActionHandler
 
 
 class ActionHandler(AbstractActionHandler):

@@ -5,8 +5,8 @@ import torch
 import wandb
 
 from backend.ActionValue.DQN.src.ActionHandler import EpsilonGreedyPolicy
-from backend.ActionValue.DQN.src.DataCollectionProcessorAtari import DataCollectionProcessor
-from backend.ActionValue.DQN.src.TrainProcessorAtari import TrainProcessor
+from ActionValue.DQN_Atari.src.DataCollectionProcessorAtari import DataCollectionProcessor
+from ActionValue.DQN_Atari.src.TrainProcessorAtari import TrainProcessor
 from backend.CommonModels.src import BehaviourAtariDQN
 from backend.CommonModels.src.BehaviourAtariDQN import BehaviourAtariDQN
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory

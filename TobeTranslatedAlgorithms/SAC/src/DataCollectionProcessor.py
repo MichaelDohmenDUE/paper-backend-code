@@ -1,7 +1,6 @@
 import torch
-from torchgen.native_function_generation import self_to_out_signature
 
-from backend.StochasticPolicy.SAC.src.ActionSelector import ActionSelector
+from TobeTranslatedAlgorithms.SAC.src.ActionSelector import ActionSelector
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.NodeLib.NodeLibrary import reset_handler

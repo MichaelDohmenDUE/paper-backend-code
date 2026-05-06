@@ -1,4 +1,4 @@
-from backend.AbstractHandlers.AbstractActionHandler import AbstractActionHandler
+from Utils.src.AbstractHandlers.AbstractActionHandler import AbstractActionHandler
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer

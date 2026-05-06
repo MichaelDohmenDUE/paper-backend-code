@@ -5,9 +5,9 @@ import wandb
 
 from backend.CommonModels.src.ActorSAC import ActorSAC as Actor
 from backend.CommonModels.src.Critic import Critic
-from backend.StochasticPolicy.SAC.src.ActionSelector import ActionSelector
-from backend.StochasticPolicy.SAC.src.DataCollectionProcessor import DataCollectionProcessor
-from backend.StochasticPolicy.SAC.src.TrainProcessor import TrainProcessor
+from TobeTranslatedAlgorithms.SAC.src.ActionSelector import ActionSelector
+from TobeTranslatedAlgorithms.SAC.src.DataCollectionProcessor import DataCollectionProcessor
+from TobeTranslatedAlgorithms.SAC.src.TrainProcessor import TrainProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
