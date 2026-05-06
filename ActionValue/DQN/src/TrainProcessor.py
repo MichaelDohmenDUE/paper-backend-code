@@ -38,11 +38,11 @@ class TrainProcessor:
             PropsNode("Detransition", ["fields", "batch", "device"],
                       ["state", "action", "reward", "next_state", "done"],
                       function=detransition),
-            PropsNode("BehaviorForward", ["behavior_net", "state"], ["qs_b"],
+            PropsNode("BehaviorForward", ["state"], ["qs_b"], props=["behavior_net"],
                       function=lambda net, s: net(s)),
             PropsNode("QsaBehavior", ["qs_b", "action"], ["qsa_b"],
                       function=lambda q, a: indexing(q, a.long().unsqueeze(1)).reshape(-1)),
-            PropsNode("TargetForward", ["target_net", "next_state"], ["qs_t"],
+            PropsNode("TargetForward", ["next_state"], ["qs_t"], props=["target_net"],
                       function=lambda net, ns: net(ns), no_grad=True),
             PropsNode("Max", ["qs_t"], ["max_q_t"],
                       function=lambda qt: nl_max(qt).reshape(-1), no_grad=True),
@@ -50,7 +50,7 @@ class TrainProcessor:
                       function=bellman),
             PropsNode("Loss", ["qsa_b", "target_val"], ["loss"],
                       function=mean_squared_error),
-            PropsNode("Optimize", ["behavior_net", "optimizer", "loss", "max_norm"], ["_opt"],
+            PropsNode("Optimize", ["loss", "max_norm"], ["_opt"], props=["behavior_net", "optimizer"],
                       function=optimizer_normalized),
 
             # Logging
