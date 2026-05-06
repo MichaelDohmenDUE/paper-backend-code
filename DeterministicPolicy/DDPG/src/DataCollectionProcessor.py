@@ -32,20 +32,21 @@ class DataCollectionProcessor:
             PropsNode("ToTensor", ["state", "device"], ["state_tensor"],
                       function=lambda s, d: torch.as_tensor(s, dtype=torch.float32, device=d), no_grad=True),
 
-            PropsNode("ActorForward", ["actor", "state_tensor"], ["action_tensor"],
+            PropsNode("ActorForward", ["state_tensor"], ["action_tensor"], props=["actor"],
                       function=lambda net, s: net(s), no_grad=True),
 
-            PropsNode("AddNoise", ["noise_generator", "action_tensor", "max_action"], ["noisy_action_tensor"],
+            PropsNode("AddNoise", ["action_tensor", "max_action"], ["noisy_action_tensor"], props=["noise_generator"],
                       function=lambda ng, a, m: action_with_noise(ng, action_tensor=a, max_action=m), no_grad=True),
             PropsNode("ToNumpy", ["noisy_action_tensor"], ["action_np"],
                       function=to_numpy_array, no_grad=True),
 
-            PropsNode("EnvStep", ["env", "action_np"], ["next_state", "reward", "terminated", "truncated", "info"],
+            PropsNode("EnvStep", ["action_np"], ["next_state", "reward", "terminated", "truncated", "info"],
+                      props=["env"],
                       function=lambda env, a: env.step_detailed(a), no_grad=True),
 
             PropsNode("CombineDones", ["terminated", "truncated"], ["done_reset"],
                       function=lambda term, trunc: bool(term) or bool(trunc), no_grad=True),
-            PropsNode("ResetNoise", ["noise_generator", "done_reset"], ["_dummy_noise"],
+            PropsNode("ResetNoise", ["done_reset"], ["_dummy_noise"], props=["noise_generator"],
                       function=lambda ng, d: noise_handler(ng, done=d), no_grad=True),
 
             PropsNode("ExtractTrueNextState", ["next_state", "truncated", "info"], ["real_next_state"],
