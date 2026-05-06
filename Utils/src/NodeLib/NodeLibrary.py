@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch import nn
 from torch.distributions import Categorical
 
-from NodeLib.Node import PropsNode, Signal
+from backend.Utils.src.NodeLib.Node import PropsNode, Signal
 from backend.Utils.src.NodeLib.Node import Node
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 
