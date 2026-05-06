@@ -1,6 +1,6 @@
 import numpy as np
 
-from StochasticPolicy.PPO_discrete.PPO_Atari_Baseline.src.DataCollectorAtari import EpisodicMetricsNode
+from backend.StochasticPolicy.PPO_discrete.PPO_Atari_Baseline.src.DataCollectorAtari import EpisodicMetricsNode
 from backend.Utils.src.NodeLib.Node import Node, Graph, PropsNode
 from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, BootStrappingNodeMujoco
 from backend.Utils.src.NodeLib.NodeLibrary import to_tensor, to_numpy_array
