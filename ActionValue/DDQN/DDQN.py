@@ -7,7 +7,7 @@ import wandb
 from backend.ActionValue.DQN.DQN import evaluate_policy
 from backend.CommonModels.src.Policy import Policy
 from backend.ActionValue.DDQN.src.TrainProcessor import TrainProcessor
-from backend.ActionValue.DQN.src.ActionHandler import EpsilonGreedyPolicy
+from backend.ActionValue.DQN.src.EpsilonGreedy import EpsilonGreedyPolicy
 from backend.ActionValue.DQN.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnvFactory import GymEnvFactory

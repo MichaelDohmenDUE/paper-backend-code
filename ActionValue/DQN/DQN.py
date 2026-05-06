@@ -5,7 +5,7 @@ import torch
 import wandb
 from torch import nn
 
-from backend.ActionValue.DQN.src.ActionHandler import EpsilonGreedyPolicy
+from backend.ActionValue.DQN.src.EpsilonGreedy import EpsilonGreedyPolicy
 from backend.ActionValue.DQN.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.ActionValue.DQN.src.TrainProcessor import TrainProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory

@@ -7,7 +7,7 @@ import wandb
 from backend.CommonModels.src.DuellingDQN import DuellingAtariDQN
 from backend.Utils.src.EnvFactory import AtariEnvFactory
 from backend.ActionValue.DQN.DQN import evaluate_policy
-from backend.ActionValue.DQN.src.ActionHandler import EpsilonGreedyPolicy
+from backend.ActionValue.DQN.src.EpsilonGreedy import EpsilonGreedyPolicy
 from ActionValue.DQN_Atari.src.DataCollectionProcessorAtari import DataCollectionProcessor
 from ActionValue.DDQN_Atari.src.TrainProcessorAtari import TrainProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory

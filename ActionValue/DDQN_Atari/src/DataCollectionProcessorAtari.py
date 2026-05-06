@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch import nn
 
-from backend.ActionValue.DQN.src.ActionHandler import EpsilonGreedyPolicy
+from backend.ActionValue.DQN.src.EpsilonGreedy import EpsilonGreedyPolicy
 from backend.Utils.src import ReplayBuffer
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
