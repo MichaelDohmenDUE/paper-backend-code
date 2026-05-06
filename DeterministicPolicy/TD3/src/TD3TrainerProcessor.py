@@ -79,7 +79,7 @@ class TrainProcessor:
 
             PropsNode("CurrentQ1", ["state", "action"], ["current_Q1"], props=["critic_1"],
                       function=lambda net, s, a: net(s, a).squeeze()),
-            PropsNode("CurrentQ2", ["critic_2", "state", "action"], ["current_Q2"], props=["critic_2"],
+            PropsNode("CurrentQ2", ["state", "action"], ["current_Q2"], props=["critic_2"],
                       function=lambda net, s, a: net(s, a).squeeze()),
             PropsNode("CriticLoss1", ["current_Q1", "target_Q"], ["critic_loss_1"],
                       function=mean_squared_error),
