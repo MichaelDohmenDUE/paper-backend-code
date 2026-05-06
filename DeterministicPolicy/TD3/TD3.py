@@ -6,8 +6,8 @@ import torch
 import wandb
 from torch import optim
 
-from DeterministicPolicy.DDPG.src.Actor import Actor
-from DeterministicPolicy.DDPG.src.Critic import Critic
+from backend.DeterministicPolicy.DDPG.src.Actor import Actor
+from backend.DeterministicPolicy.DDPG.src.Critic import Critic
 from backend.DeterministicPolicy.TD3.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.DeterministicPolicy.TD3.src.TD3TrainerProcessor import TrainProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory

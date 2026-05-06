@@ -1,12 +1,11 @@
 import torch
-import torch.nn.functional as F
 from torch import nn
 
+from backend.Utils.src.NodeLib.Node import PropsNode, Graph
 from backend.Utils.src.NodeLib.NodeLibrary import bellman, optimizer_update, detransition, mean_squared_error, \
     deterministic_policy_gradient
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
-from backend.Utils.src.NodeLib.Node import PropsNode, Graph
 
 class TrainProcess:
     def __init__(self, replay_buffer: ReplayBuffer, actor: nn.Module, actor_target: nn.Module, critic: nn.Module,
