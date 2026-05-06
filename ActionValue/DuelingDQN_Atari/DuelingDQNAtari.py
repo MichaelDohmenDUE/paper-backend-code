@@ -28,7 +28,7 @@ def main(seed, evn_name):
     env_name = evn_name
     sync_freq = 2000
     batch_size = 32
-    max_buffer_size = 1_000_000
+    max_buffer_size = 500_000
     tau = 1.0
     gamma = 0.99
     max_steps = 1_000_000
@@ -115,7 +115,7 @@ def main(seed, evn_name):
     wandb.log(metrics, step=step)
     wandb.finish()
 if __name__ == '__main__':
-    seeds = [0, 1, 2]
-    evn_name = "BreakoutNoFrameskip-v4"
+    seeds = [0,1,2]
+    evn_name = "PongNoFrameskip-v4"
     for seed in seeds:
         main(seed, evn_name)
