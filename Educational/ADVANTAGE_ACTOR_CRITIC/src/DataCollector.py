@@ -2,9 +2,9 @@ import numpy as np
 import torch
 from torch import nn
 
-from StochasticPolicy.PPO_discrete_Mujoco.src.DataCollectorGraphMujoco import merge_final_observations
-from Utils.src.NodeLib.Node import Node, PropsNode, Graph
-from Utils.src.RolloutBuffer import KStepRolloutBuffer
+from backend.StochasticPolicy.PPO_discrete_Mujoco.src.DataCollectorGraphMujoco import merge_final_observations
+from backend.Utils.src.NodeLib.Node import Node, PropsNode, Graph
+from backend.Utils.src.RolloutBuffer import KStepRolloutBuffer
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.NodeLib.NodeLibrary import categorical_distribution, sample_distribution, \

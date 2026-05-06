@@ -9,10 +9,10 @@ from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 import torch
 
-from Educational.REINFORCE.src.Policy_Reinforce import PolicyVPG
+from backend.Educational.REINFORCE.src.Policy_Reinforce import PolicyVPG
 from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
-from Educational.REINFORCE.src.DataCollector import DataCollectionProcessor
-from Educational.REINFORCE.src.ReinforceTrainer import REINFORCETrainer
+from backend.Educational.REINFORCE.src.DataCollector import DataCollectionProcessor
+from backend.Educational.REINFORCE.src.ReinforceTrainer import REINFORCETrainer
 from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

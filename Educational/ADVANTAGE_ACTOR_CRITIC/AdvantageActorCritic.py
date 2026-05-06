@@ -2,16 +2,15 @@ import time
 
 import numpy as np
 import wandb
-
+import torch
 from backend.Utils.src.BatchTransitioner import TransitionFactory, TransitionSpec
 from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.RolloutBuffer import KStepRolloutBuffer
-import torch
 
-from Educational.REINFORCE_BASELINE.src.Policy_Reinforce_Baseline import PolicyReinforceBaseline
+from backend.Educational.REINFORCE_BASELINE.src.Policy_Reinforce_Baseline import PolicyReinforceBaseline
 from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
-from Educational.ADVANTAGE_ACTOR_CRITIC.src.DataCollector import DataCollectionProcessor
-from Educational.ADVANTAGE_ACTOR_CRITIC.src.Trainer import Trainer
+from backend.Educational.ADVANTAGE_ACTOR_CRITIC.src.DataCollector import DataCollectionProcessor
+from backend.Educational.ADVANTAGE_ACTOR_CRITIC.src.Trainer import Trainer
 from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

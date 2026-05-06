@@ -1,17 +1,16 @@
 import time
-
+import torch
 import wandb
 
 from backend.Utils.src import RolloutBuffer
 from backend.Utils.src.BatchTransitioner import TransitionFactory, TransitionSpec
 from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
-import torch
 
-from Educational.REINFORCE_BASELINE.src.Policy_Reinforce_Baseline import PolicyReinforceBaseline
+from backend.Educational.REINFORCE_BASELINE.src.Policy_Reinforce_Baseline import PolicyReinforceBaseline
 from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
-from Educational.REINFORCE_BASELINE.src.DataCollector import DataCollectionProcessor
-from Educational.REINFORCE_BASELINE.src.ReinforceTrainer import REINFORCETrainer
+from backend.Educational.REINFORCE_BASELINE.src.DataCollector import DataCollectionProcessor
+from backend.Educational.REINFORCE_BASELINE.src.ReinforceTrainer import REINFORCETrainer
 from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
