@@ -104,15 +104,15 @@ class PPOTrainerProcessor:
 
             PropsNode("td_residual", ["reward", "terminated", "value", "next_value", "gamma", "num_envs"],
                       ["deltas"],
-                      function=td_residual),
+                      function=td_residual, no_grad=True),
 
             Node("RawGAE", ["deltas", "terminated", "gamma", "lam", "num_envs"],
                  ["raw_advantages"],
-                 function=compute_raw_gae),
+                 function=compute_raw_gae, no_grad=True),
 
             Node("ComputeReturns", ["raw_advantages", "value"],
                  ["return"],
-                 function=compute_returns),
+                 function=compute_returns, no_grad=True),
             Node("NormalizeAdvantages", ["raw_advantages"],
                  ["advantage"],
                  function=normalize),
@@ -120,12 +120,12 @@ class PPOTrainerProcessor:
             PropsNode("PopulateBuffer",
                       ["state", "action", "logp", "advantage", "return"],
                       ["ppo_buffer"], props=["replay_buffer"],
-                      function=lambda buffer, *args: buffer.populate(dict(zip(buffer.spec.fields, args)))),
+                      function=lambda buffer, *args: buffer.populate(dict(zip(buffer.spec.fields, args))), no_grad=True),
 
             PropsNode("GenerateBatches",
                       ["ppo_buffer"],
                       ["all_batches"],
-                      function=lambda buffer: buffer.generate_batches(batch_size, epochs)),
+                      function=lambda buffer: buffer.generate_batches(batch_size, epochs), no_grad=True),
 
             PropsNode("PrepInnerContext", ["inner_context", "all_batches", "metric_history"],
                       ["ready_inner_context"],
