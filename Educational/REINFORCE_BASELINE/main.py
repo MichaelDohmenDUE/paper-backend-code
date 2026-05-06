@@ -9,9 +9,9 @@ from backend.Utils.src.RolloutBuffer import RolloutBuffer
 import torch
 
 from backend.CommonModels.src.Policy_Reinforce_Baseline import PolicyReinforceBaseline
-from backend.Utils.src.EnviromentHandler import EnvironmentHandler, VecEnvironmentHandler
-from backend.StochasticPolicy.REINFORCE_BASELINE.src.DataCollector import DataCollectionProcessor
-from backend.StochasticPolicy.REINFORCE_BASELINE.src.ReinforceTrainer import REINFORCETrainer
+from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
+from Educational.REINFORCE_BASELINE.src.DataCollector import DataCollectionProcessor
+from Educational.REINFORCE_BASELINE.src.ReinforceTrainer import REINFORCETrainer
 from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

@@ -12,36 +12,11 @@ import torch
 
 from backend.CommonModels.src.Policy_Reinforce_Baseline import PolicyReinforceBaseline
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
-from TobeTranslatedAlgorithms.ACTOR_CRITIC.src.DataCollector import DataCollectionProcessor
-from TobeTranslatedAlgorithms.ACTOR_CRITIC.src.Trainer import Trainer
+from Educational.ACTOR_CRITIC.src.DataCollector import DataCollectionProcessor
+from Educational.ACTOR_CRITIC.src.Trainer import Trainer
 from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-def evaluate_policy(policy, env_handler, device, episodes=10):
-    policy.eval()
-    total_reward = 0
-    for _ in range(episodes):
-        state = env_handler.reset()
-        done = False
-        while not done:
-            state_t = torch.as_tensor(state, dtype=torch.float32, device=device)
-
-            with torch.no_grad():
-                action_logits, _ = policy(state_t)
-                action = torch.argmax(action_logits, dim=-1).cpu().numpy()
-
-            next_state, reward, done_flags, info = env_handler.step(action)
-
-            # 3. Handle vector rewards and dones safely
-            total_reward += np.sum(reward)
-            done = np.any(done_flags)
-
-            state = next_state
-    env_handler.reset()
-    policy.train()
-    return total_reward / episodes
 
 def main(seed):
     """
