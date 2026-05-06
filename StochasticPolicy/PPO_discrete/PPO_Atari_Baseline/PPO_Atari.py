@@ -5,7 +5,7 @@ import wandb
 from torch import optim
 
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
-from backend.CommonModels.src.DiscreteActorPPO import AtariPPOAgent
+from StochasticPolicy.PPO_discrete_Mujoco.src.DiscreteActorPPO import AtariPPOAgent
 from StochasticPolicy.PPO_discrete.PPO_Atari_Baseline.src.DataCollectorAtari import DataCollectionProcessor
 from StochasticPolicy.PPO_discrete.PPO_Atari_Baseline.src.PPOTrainerAtari import PPOTrainerProcessor
 from backend.Utils.src.BatchTransitioner import TransitionFactory

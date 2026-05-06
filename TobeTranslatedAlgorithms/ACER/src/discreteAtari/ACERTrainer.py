@@ -2,9 +2,8 @@ import copy
 
 import numpy as np
 import torch
-from torch import optim
 import torch.distributions
-from backend.CommonModels.src.ActorACerMujoco import ACERNet
+from TobeTranslatedAlgorithms.ACER.src.discreteAtari.ActorACerMujoco import ACERNet
 import torch.nn.functional as F
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

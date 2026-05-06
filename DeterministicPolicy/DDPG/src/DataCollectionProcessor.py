@@ -1,19 +1,18 @@
 import numpy as np
 import torch
-from backend.CommonModels.src.Policy import Policy
+
 from backend.Utils.src import ReplayBuffer, GlobalCounter
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
-from backend.Utils.src.NodeLib.NodeLibrary import reset_handler, noise_handler, action_with_noise
-
 from backend.Utils.src.NodeLib.Node import Graph, PropsNode
 from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, to_numpy_array
+from backend.Utils.src.NodeLib.NodeLibrary import noise_handler, action_with_noise
+
 
 class DataCollectionProcessor:
     def __init__(self, env: EnvironmentHandler, actor, noise_generator, buffer: ReplayBuffer,
                  transition_factory: TransitionFactory, global_counter: GlobalCounter, max_action,
                  device: torch.device):
-
         self.context = {
             "state": np.array(env.reset()).astype(np.float32),
             "env": env,

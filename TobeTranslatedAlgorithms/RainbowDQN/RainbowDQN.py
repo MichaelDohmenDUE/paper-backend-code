@@ -4,7 +4,7 @@ from copy import deepcopy
 import torch
 import wandb
 
-from backend.CommonModels.src.RainbowDuellingDQN import RainbowDuellingDQN
+from TobeTranslatedAlgorithms.RainbowDQN.src.RainbowDuellingDQN import RainbowDuellingDQN
 from TobeTranslatedAlgorithms.RainbowDQN.src.ActionHandler import GreedyPolicy
 from TobeTranslatedAlgorithms.RainbowDQN.src.DataCollectionProcessor import DataCollectionProcessor
 from TobeTranslatedAlgorithms.RainbowDQN.src.TrainProcessor import TrainProcessor

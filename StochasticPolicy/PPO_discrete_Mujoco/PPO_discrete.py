@@ -6,7 +6,7 @@ from torch import optim
 
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.CommonModels.src.CriticPPO import CriticPPO
-from backend.CommonModels.src.DiscreteActorPPO import DiscreteActorPPO
+from StochasticPolicy.PPO_discrete_Mujoco.src.DiscreteActorPPO import DiscreteActorPPO
 from StochasticPolicy.PPO_discrete_Mujoco.src.DataCollectorGraphMujoco import DataCollectionProcessor
 from StochasticPolicy.PPO_discrete_Mujoco.src.PPOTrainer import PPOTrainerProcessor
 from backend.Utils.src.BatchTransitioner import TransitionFactory

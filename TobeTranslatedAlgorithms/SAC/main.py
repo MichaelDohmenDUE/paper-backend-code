@@ -3,7 +3,7 @@ from copy import deepcopy
 import torch
 import wandb
 
-from backend.CommonModels.src.ActorSAC import ActorSAC as Actor
+from TobeTranslatedAlgorithms.SAC.src.ActorSAC import ActorSAC as Actor
 from backend.CommonModels.src.Critic import Critic
 from TobeTranslatedAlgorithms.SAC.src.ActionSelector import ActionSelector
 from TobeTranslatedAlgorithms.SAC.src.DataCollectionProcessor import DataCollectionProcessor

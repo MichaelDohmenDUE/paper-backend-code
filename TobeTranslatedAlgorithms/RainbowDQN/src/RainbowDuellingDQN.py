@@ -1,6 +1,6 @@
 import torch.nn as nn
 
-from backend.CommonModels.src.NoisyLinearLayer import NoisyLinearLayer
+from TobeTranslatedAlgorithms.RainbowDQN.src.NoisyLinearLayer import NoisyLinearLayer
 
 
 class RainbowDuellingDQN(nn.Module):

@@ -9,7 +9,7 @@ from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
 import torch
 
-from backend.CommonModels.src.Policy_Reinforce import PolicyVPG
+from Educational.REINFORCE.src.Policy_Reinforce import PolicyVPG
 from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
 from Educational.REINFORCE.src.DataCollector import DataCollectionProcessor
 from Educational.REINFORCE.src.ReinforceTrainer import REINFORCETrainer
