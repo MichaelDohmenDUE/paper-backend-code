@@ -1,25 +1,57 @@
 import copy
 import time
 
+import numpy as np
 import torch
 import wandb
 from torch import optim
 
 from backend.CommonModels.src.Actor import Actor
 from backend.CommonModels.src.Critic import Critic
-from backend.DeterministicPolicy.TD3.src.ActionHandler import ActionHandler
 from backend.DeterministicPolicy.TD3.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.DeterministicPolicy.TD3.src.TD3TrainerProcessor import TrainProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
-from backend.Utils.src.EvaluationHelper import eval_trainer
 from backend.Utils.src.GlobalCounter import GlobalCounter
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
 from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+def eval_trainer(trainer, env_handler, eval_episodes=5):
+    trainer.actor.eval()
+
+    episode_returns = []
+    current_episode_reward = 0.0
+
+    state = env_handler.reset()
+    if isinstance(state, tuple):
+        state = state[0]
+    while len(episode_returns) < eval_episodes:
+        state_t = torch.as_tensor(state, dtype=torch.float32, device=device)
+        if state_t.dim() == 1:
+            state_t = state_t.unsqueeze(0)
+        with torch.no_grad():
+            action = trainer.actor(state_t).cpu().numpy()
+
+        next_state, reward, done, _ = env_handler.step(action)
+        r = reward[0] if isinstance(reward, np.ndarray) else reward
+        current_episode_reward += r
+        if done[0]:
+            episode_returns.append(current_episode_reward)
+            current_episode_reward = 0.0
+
+        state = next_state
+
+    trainer.actor.train()
+
+    metrics = {
+        "eval/eval_avg_reward": float(np.mean(episode_returns)),
+    }
+
+    return metrics
 
 
 def main(seed, env_name):
@@ -88,7 +120,6 @@ def main(seed, env_name):
     optimizer_critic_1 = optim.Adam(critic_1.parameters(), lr=learning_rate)
     optimizer_critic_2 = optim.Adam(critic_2.parameters(), lr=learning_rate)
 
-    action_handler = ActionHandler(actor, action_size, max_action, expl_noise, noise_clip, warmup, device)
     replay_buffer = ReplayBuffer(spec=spec, max_buffer_size=buffer_size, batch_size=batch_size)
 
     gl_counter = GlobalCounter()
