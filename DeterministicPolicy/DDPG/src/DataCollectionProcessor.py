@@ -48,7 +48,7 @@ class DataCollectionProcessor:
             PropsNode("ResetNoise", ["noise_generator", "done_reset"], ["_dummy_noise"],
                       function=lambda ng, d: noise_handler(ng, done=d), no_grad=True),
 
-            PropsNode("ExtractTrueNextState", ["next_state", "done_reset", "info"], ["real_next_state"],
+            PropsNode("ExtractTrueNextState", ["next_state", "truncated", "info"], ["real_next_state"],
                       function=lambda ns, done, info: info.get("final_observation", ns) if done else ns, no_grad=True),
 
             TransitionNode(

@@ -79,15 +79,21 @@ class PPOTrainerProcessor:
         nodes = [
             PropsNode("Sample", ["buffer"], ["rollout"],
                       function=lambda b: b.sample() if b.reached_rollout_size() else Signal.NOSIGNAL),
-
             PropsNode("Detransition", ["spec_fields", "rollout", "device"],
-                      ["state", "action", "logp", "reward", "done", "value", "bootstrap"],
+                      ["state", "action", "logp", "reward", "terminated", "next_state"],
                       function=detransition),
-            PropsNode("td_residual", ["reward", "done", "value", "bootstrap", "gamma", "num_envs"],
+
+            PropsNode("AgentForward", ["agent", "state"], ["value"],
+                      function=lambda net, s: net(s)[1]),
+
+            PropsNode("AgentForwardNext", ["agent", "next_state"], ["next_value"],
+                      function=lambda net, s: net(s)[1], no_grad=True),
+
+            PropsNode("td_residual", ["reward", "terminated", "value", "next_value", "gamma", "num_envs"],
                       ["deltas"],
                       function=td_residual),
 
-            PropsNode("RawGAE", ["deltas", "done", "gamma", "lam", "num_envs"],
+            PropsNode("RawGAE", ["deltas", "terminated", "gamma", "lam", "num_envs"],
                       ["raw_advantages"],
                       function=compute_raw_gae),
 

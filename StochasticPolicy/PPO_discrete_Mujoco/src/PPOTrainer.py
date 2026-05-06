@@ -94,7 +94,7 @@ class PPOTrainerProcessor:
             PropsNode("CriticForward", ["critic", "state"], ["value"],
                       function=lambda net, s: net(s)),
 
-            PropsNode("CriticForwardNxt", ["critic", "next_state"], ["next_value"],
+            PropsNode("CriticForwardNext", ["critic", "next_state"], ["next_value"],
                       function=lambda net, s: net(s), no_grad=True),
 
             PropsNode("td_residual", ["reward", "terminated", "value", "next_value", "gamma", "num_envs"],

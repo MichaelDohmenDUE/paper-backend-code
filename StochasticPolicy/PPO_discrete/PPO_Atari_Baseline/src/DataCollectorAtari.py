@@ -59,12 +59,10 @@ class DataCollectionProcessor:
             PropsNode("ToNumpy_a", ["action_tensor"], ["action"], function=to_numpy_array, no_grad=True),
             PropsNode("ToNumpy_l", ["logp_tensor"], ["logp"], function=to_numpy_array, no_grad=True),
             PropsNode("ToNumpy_v", ["value_t_sq"], ["value"], function=to_numpy_array, no_grad=True),
-            PropsNode("EnvStep", ["env", "action"], ["next_state_raw", "reward", "done", "truncated", "info"],
+            PropsNode("EnvStep", ["env", "action"], ["next_state_raw", "reward", "terminated", "truncated", "info"],
                       function=lambda env, a: env.step_detailed(a)),
-            PropsNode("CombineDones", ["done", "truncated"], ["episode_done"],
-                      function=lambda term, trunc: term | trunc, no_grad=True),
 
-            PropsNode("ExtractTrueNextState", ["next_state_raw", "episode_done", "info"], ["next_state"],
+            PropsNode("ExtractTrueNextState", ["next_state_raw", "truncated", "info"], ["next_state"],
                       function=merge_final_observations, no_grad=True),
 
             TransitionNode(
@@ -74,19 +72,17 @@ class DataCollectionProcessor:
                     "action": "action",
                     "logp": "logp",
                     "reward": "reward",
-                    "done": "done",
-                    "value": "value"
+                    "terminated": "terminated",
+                    "next_state": "next_state",
                 },
-                default_kwargs={
-                    "bootstrap_value": 0.0
-                }
             ),
             BufferAppendingNode(),
-            BootStrappingNode(rollout_size),
 
-            Node("OverwriteState", ["next_state", "_buffer_updated"], ["state"],
-                 function=lambda ns, _: np.asarray(ns, dtype=np.uint8)),
+            PropsNode("CombineDones", ["terminated", "truncated"], ["episode_done"],
+                      function=lambda term, trunc: term | trunc, no_grad=True),
 
+            Node("State", ["next_state_raw", "_buffer_updated"], ["state"],
+                 function=lambda ns, _: np.array(ns).astype(np.float32)),
             EpisodicMetricsNode(),
             Node("CountSteps", ["total_steps", "num_envs"], ["total_steps"], function=lambda steps, n: steps + n),
         ]

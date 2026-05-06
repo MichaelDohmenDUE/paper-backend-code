@@ -4,9 +4,11 @@ import torch
 import wandb
 from torch import optim
 
+from backend.StochasticPolicy.PPO_discrete.PPO_Atari_Implementation_Gap.src.DataCollector_ImplementationGap import \
+    DataCollectionProcessor
+from backend.StochasticPolicy.PPO_discrete.PPO_Atari_Implementation_Gap.src.PPOTrainer_ImplementationGap import \
+    PPOTrainerProcessor
 from backend.StochasticPolicy.PPO_discrete_Mujoco.src.DiscreteActorPPO import AtariPPOAgent
-from backend.StochasticPolicy.PPO_discrete.PPO_Atari_Implementation_Gap.src.DataCollectorCleanRL import DataCollectionProcessor
-from backend.StochasticPolicy.PPO_discrete.PPO_Atari_Implementation_Gap.src.PPOTrainerAtariCleanRL import PPOTrainerProcessor
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
 from backend.Utils.src.EnvFactory import AtariEnvFactory
@@ -81,7 +83,7 @@ def main(seed):
         }
     )
 
-    spec = TransitionSpec(["state", "action", "logp", "reward", "done", "value", "bootstrap_value"])
+    spec = TransitionSpec(["state", "action", "logp", "reward", "terminated", "next_state"])
     replay_spec = TransitionSpec(["state", "action", "logp", "advantage", "return", "value"])
     transition_factory = TransitionFactory(spec)
     factory = AtariEnvFactory(env_name)
@@ -134,6 +136,6 @@ def main(seed):
 
 
 if __name__ == "__main__":
-    seeds = [0,1,2]
+    seeds = [0, 1, 2]
     for seed in seeds:
         main(seed)

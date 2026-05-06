@@ -80,7 +80,7 @@ def main(seed):
         }
     )
 
-    spec = TransitionSpec(["state", "action", "logp", "reward", "done", "value", "bootstrap_value"])
+    spec = TransitionSpec(["state", "action", "logp", "reward", "terminated", "next_state"])
     replay_spec = TransitionSpec(["state", "action", "logp", "advantage", "return"])
     transition_factory = TransitionFactory(spec)
     factory = AtariEnvFactory(env_name)
