@@ -8,7 +8,7 @@ from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.NodeLib.NodeLibrary import BufferAppendingNode, TransitionNode, ConditionNode
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
-from StochasticPolicy.PPO_discrete_Mujoco.src.DataCollectorGraphMujoco import merge_final_observations
+from backend.StochasticPolicy.PPO_discrete_Mujoco.src.DataCollectorGraphMujoco import merge_final_observations
 
 
 def random_action(env, behaviour, state, expl_noise, max_action, action_size, device):
@@ -76,8 +76,11 @@ class DataCollectionProcessor:
             TransitionNode(
                 factory=transition_factory,
                 input_mapping={
-                    "state": "state", "action": "action", "reward": "reward",
-                    "next_state": "real_next_state", "done": "terminated"
+                    "state": "state",
+                    "action": "action",
+                    "reward": "reward",
+                    "next_state": "real_next_state",
+                    "done": "terminated"
                 }
             ),
             BufferAppendingNode(),
@@ -115,6 +118,8 @@ class DataCollectionProcessor:
 
     def run(self):
         self.graph.run(self.context)
+
+        # Metrics for Logging
         metrics = self.context.get("metrics", {})
         if metrics:
             metrics["global_step"] = self.context["global_counter"].get()
