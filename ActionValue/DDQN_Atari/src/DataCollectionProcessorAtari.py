@@ -3,7 +3,7 @@ import torch
 from torch import nn
 
 from backend.ActionValue.DQN.src.EpsilonGreedy import EpsilonGreedyPolicy
-from backend.Utils.src import ReplayBuffer
+from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
 from backend.Utils.src.NodeLib.Node import Graph, PropsNode
@@ -77,6 +77,7 @@ class DataCollectionProcessor:
     def run(self):
         self.graph.run(self.context)
 
+        #Logging
         rewards = np.atleast_1d(self.context["reward"])
         dones = np.atleast_1d(self.context["done"])
 

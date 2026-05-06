@@ -4,7 +4,7 @@ from copy import deepcopy
 import torch
 import wandb
 
-from ActionValue.DuelingDQN.src.DuellingDQN import DuellingAtariDQN
+from backend.ActionValue.DuelingDQN.src.DuellingDQN import DuellingAtariDQN
 from backend.Utils.src.EnvFactory import AtariEnvFactory
 from backend.ActionValue.DQN.DQN import evaluate_policy
 from backend.ActionValue.DQN.src.EpsilonGreedy import EpsilonGreedyPolicy
