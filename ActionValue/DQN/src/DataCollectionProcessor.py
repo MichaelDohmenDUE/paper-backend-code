@@ -34,13 +34,13 @@ class DataCollectionProcessor:
         nodes = [
             PropsNode("FormatToTensor", ["state", "device"], ["state_t"],
                       function=to_tensor, no_grad=True),
-            PropsNode("BehaviourNet", ["behaviour", "state_t"], ["q_values"],
+            PropsNode("BehaviourNet", [ "state_t"], ["q_values"], props=["behaviour"],
                       function=lambda net, s: net(s), no_grad=True),
-            PropsNode("EpsilonGreedy", ["epsilon_greedy", "q_values"], ["action_raw"],
+            PropsNode("EpsilonGreedy", ["q_values"], ["action_raw"], props=["epsilon_greedy"],
                       function=lambda epsilon_greed, q: epsilon_greed.forward(q_values=q), no_grad=True),
             PropsNode("FormatToArray", ["action_raw"], ["action"],
                       function=to_numpy_array, no_grad=True),
-            PropsNode("EnvStep", ["env", "action"], ["next_state", "reward", "terminated", "truncated", "info"],
+            PropsNode("EnvStep", ["action"], ["next_state", "reward", "terminated", "truncated", "info"], props=["env"],
                       function=lambda env, a: env.step_detailed(a), no_grad=True),
 
             PropsNode("CombineDones", ["terminated", "truncated"], ["done"],
