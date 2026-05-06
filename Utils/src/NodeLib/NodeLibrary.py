@@ -172,7 +172,7 @@ def optimizer_normalized(net: nn.Module, optimizer: torch.optim.Optimizer, loss:
     return loss
 
 
-def optimize_step_normalized(optimizer, actor, loss, max_grad_norm):  # TODO Unify this later , looks up
+def optimize_step_normalized(optimizer, actor, loss, max_grad_norm):
     optimizer.zero_grad()
     loss.backward()
     torch.nn.utils.clip_grad_norm_(actor.parameters(), max_grad_norm)
