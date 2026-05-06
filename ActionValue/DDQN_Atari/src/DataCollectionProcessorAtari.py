@@ -9,19 +9,6 @@ from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
 from backend.Utils.src.NodeLib.Node import Graph, PropsNode
 from backend.Utils.src.NodeLib.NodeLibrary import to_tensor, to_numpy_array, TransitionNode, BufferAppendingNode
 
-
-def merge_final_observations(next_state_raw, episode_done, info):
-    true_next = np.asarray(next_state_raw, dtype=np.uint8)
-
-    if isinstance(info, dict) and "final_observation" in info:
-        final_obs = info["final_observation"]
-        for i, done in enumerate(episode_done):
-            if done and final_obs[i] is not None:
-                true_next[i] = np.asarray(final_obs[i], dtype=np.uint8)
-
-    return true_next
-
-
 class DataCollectionProcessor:
     def __init__(self, behaviour_net: nn.Module, env: VecEnvironmentHandler, buffer: ReplayBuffer,
                  eps_greedy: EpsilonGreedyPolicy, transition_factory: TransitionFactory, device: torch.device):
@@ -69,15 +56,14 @@ class DataCollectionProcessor:
                       function=lambda ns: np.asarray(ns, dtype=np.uint8), no_grad=True),
             PropsNode("CombineDones", ["terminated", "truncated"], ["done"],
                       function=lambda term, trunc: term | trunc, no_grad=True),
-            PropsNode("ExtractTrueNextState", ["next_state", "done", "info"], ["real_next_state"],
-                      function=merge_final_observations),
+
             TransitionNode(
                 factory=transition_factory,
                 input_mapping={
                     "state": "state",
                     "action": "action",
                     "reward": "reward",
-                    "next_state": "real_next_state",
+                    "next_state": "next_state",
                     "done": "done"
                 }
             ),
