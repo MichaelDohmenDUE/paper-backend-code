@@ -1,8 +1,8 @@
 import torch
 
-from backend.StochasticPolicy.ACER.src.continuos.ACERDataCollector import ACERDataCollector
-from backend.StochasticPolicy.ACER.src.continuos.ACERTrainProcessor import ACERTrainProcessor
-from backend.StochasticPolicy.ACER.src.continuos.ACERTrainer import ACERTrainer
+from TobeTranslatedAlgorithms.ACER.src.continuos.ACERDataCollector import ACERDataCollector
+from TobeTranslatedAlgorithms.ACER.src.continuos.ACERTrainProcessor import ACERTrainProcessor
+from TobeTranslatedAlgorithms.ACER.src.continuos.ACERTrainer import ACERTrainer
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler

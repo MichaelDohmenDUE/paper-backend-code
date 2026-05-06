@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from backend.StochasticPolicy.ACER.src.discreteAtari.ACERTrainer import ACERTrainer
+from TobeTranslatedAlgorithms.ACER.src.discreteAtari.ACERTrainer import ACERTrainer
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer

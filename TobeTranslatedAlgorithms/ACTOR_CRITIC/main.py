@@ -12,8 +12,8 @@ import torch
 
 from backend.CommonModels.src.Policy_Reinforce_Baseline import PolicyReinforceBaseline
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
-from backend.StochasticPolicy.ACTOR_CRITIC.src.DataCollector import DataCollectionProcessor
-from backend.StochasticPolicy.ACTOR_CRITIC.src.Trainer import Trainer
+from TobeTranslatedAlgorithms.ACTOR_CRITIC.src.DataCollector import DataCollectionProcessor
+from TobeTranslatedAlgorithms.ACTOR_CRITIC.src.Trainer import Trainer
 from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

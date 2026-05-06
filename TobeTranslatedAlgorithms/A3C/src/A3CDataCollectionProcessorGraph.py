@@ -1,6 +1,6 @@
 import torch
 
-from backend.StochasticPolicy.A3C.src.A3CNodes import build_a3c_rollout_graph
+from TobeTranslatedAlgorithms.A3C.src.A3CNodes import build_a3c_rollout_graph
 from backend.Utils.src.NodeLib.Node import Graph
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

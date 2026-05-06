@@ -2,7 +2,7 @@ import torch
 import wandb
 from torch import nn
 
-from backend.ActionValue.RainbowDQN.src.ActionHandler import GreedyPolicy
+from TobeTranslatedAlgorithms.RainbowDQN.src.ActionHandler import GreedyPolicy
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler
 from backend.Utils.src.NodeLib.NodeLibrary import reset_handler

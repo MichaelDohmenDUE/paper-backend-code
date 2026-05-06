@@ -2,8 +2,8 @@ import torch
 import torch.multiprocessing as mp
 from torch import optim
 
-from backend.StochasticPolicy.A3C.src.A3CDataCollectionProcessor import A3CDataCollectionProcessor
-from backend.StochasticPolicy.A3C.src.A3CTrainingProcessor import A3CTrainingProcessor
+from TobeTranslatedAlgorithms.A3C.src.A3CDataCollectionProcessor import A3CDataCollectionProcessor
+from TobeTranslatedAlgorithms.A3C.src.A3CTrainingProcessor import A3CTrainingProcessor
 from backend.CommonModels.src.ActorCriticA3C import ActorCritic
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnvFactory import GymEnvFactory

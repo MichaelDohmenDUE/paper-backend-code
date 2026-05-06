@@ -5,9 +5,9 @@ import torch
 import wandb
 
 from backend.CommonModels.src.RainbowDuellingDQN import RainbowDuellingDQN
-from backend.ActionValue.RainbowDQN.src.ActionHandler import GreedyPolicy
-from backend.ActionValue.RainbowDQN.src.DataCollectionProcessor import DataCollectionProcessor
-from backend.ActionValue.RainbowDQN.src.TrainProcessor import TrainProcessor
+from TobeTranslatedAlgorithms.RainbowDQN.src.ActionHandler import GreedyPolicy
+from TobeTranslatedAlgorithms.RainbowDQN.src.DataCollectionProcessor import DataCollectionProcessor
+from TobeTranslatedAlgorithms.RainbowDQN.src.TrainProcessor import TrainProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler

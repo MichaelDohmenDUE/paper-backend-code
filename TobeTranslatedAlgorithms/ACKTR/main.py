@@ -1,9 +1,9 @@
 import torch
 
-from backend.StochasticPolicy.ACKTR.src.ACTRTrainerProcessor import ACKTRTrainerProcessor
-from backend.StochasticPolicy.ACKTR.src.ActionHandler import ActionHandler
-from backend.StochasticPolicy.ACKTR.src.DataCollectionProcessor import DataCollectionProcessor
-from backend.StochasticPolicy.ACKTR.src.KFAC import KFACOptimizer
+from TobeTranslatedAlgorithms.ACKTR.src.ACTRTrainerProcessor import ACKTRTrainerProcessor
+from TobeTranslatedAlgorithms.ACKTR.src.ActionHandler import ActionHandler
+from TobeTranslatedAlgorithms.ACKTR.src.DataCollectionProcessor import DataCollectionProcessor
+from TobeTranslatedAlgorithms.ACKTR.src.KFAC import KFACOptimizer
 from backend.CommonModels.src.ActorPPO import ActorPPO
 from backend.CommonModels.src.CriticPPO import CriticPPO
 from backend.Utils.src.BatchTransitioner import TransitionFactory

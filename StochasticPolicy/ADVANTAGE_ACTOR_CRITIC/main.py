@@ -1,18 +1,15 @@
 import time
 
-from torch.optim import SGD
-
 import wandb
-from backend.StochasticPolicy.ACTOR_CRITIC.main import evaluate_policy
+from TobeTranslatedAlgorithms.ACTOR_CRITIC.main import evaluate_policy
 
-from backend.Utils.src import RolloutBuffer
 from backend.Utils.src.BatchTransitioner import TransitionFactory, TransitionSpec
 from backend.Utils.src.EnvFactory import GymEnvFactory
-from backend.Utils.src.RolloutBuffer import RolloutBuffer, KStepRolloutBuffer
+from backend.Utils.src.RolloutBuffer import KStepRolloutBuffer
 import torch
 
 from backend.CommonModels.src.Policy_Reinforce_Baseline import PolicyReinforceBaseline
-from backend.Utils.src.EnviromentHandler import EnvironmentHandler, VecEnvironmentHandler
+from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
 from backend.StochasticPolicy.ADVANTAGE_ACTOR_CRITIC.src.DataCollector import DataCollectionProcessor
 from backend.StochasticPolicy.ADVANTAGE_ACTOR_CRITIC.src.Trainer import Trainer
 from backend.Utils.src.utils import setting_global_seed
