@@ -29,7 +29,7 @@ def main(seed, env_name):
     env_name = env_name
     sync_freq = 1000
     batch_size = 32
-    max_buffer_size = 1_000_000
+    max_buffer_size = 500_000
     tau = 1.0
     gamma = 0.99
     max_steps = 10_000_000
@@ -80,7 +80,11 @@ def main(seed, env_name):
 
     optimizer = torch.optim.Adam(behavior_net.parameters(), lr)
 
-    buffer = ReplayBuffer(spec, max_buffer_size, batch_size)
+    pointer_mapping = {
+        "next_state": {"source": "state", "offset": 1}
+    }
+
+    buffer = ReplayBuffer(spec, max_buffer_size, batch_size, pointers=pointer_mapping)
     eps_greedy = EpsilonGreedyPolicy(epsilon_start=epsilon, epsilon_final=0.05, epsilon_decay=epsilon_decay)
     collector = DataCollectionProcessor(behavior_net, env, buffer, eps_greedy, factory, device)
 
@@ -93,9 +97,10 @@ def main(seed, env_name):
         metrics_data = collector.run()
         if metrics_data:
             metrics.update(metrics_data)
-        metrics_train = train_process.run()
-        if metrics_train:
-            metrics.update(metrics_train)
+        if step % 4 == 0 and step > 0:
+            metrics_train = train_process.run()
+            if metrics_train:
+                metrics.update(metrics_train)
         sync_process.run()
         metrics["charts/epsilon"] = collector.epsilon_greedy.epsilon
         metrics["global_step"] = step
@@ -118,6 +123,6 @@ def main(seed, env_name):
 
 if __name__ == '__main__':
     seeds = [0, 1, 2]
-    env_name = "PongNoFrameskip-v4"
+    env_name = "BreakoutNoFrameskip-v4"
     for seed in seeds:
         main(seed, env_name)

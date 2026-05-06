@@ -18,7 +18,7 @@ class ReplayBuffer:
     https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/common/buffers.py
     as Inspiration but adapt lazy loading so the Replaybuffer harmonize with the Transitionfactory
     """
-    def __init__(self, spec: TransitionSpec, max_buffer_size: int = 10_000, batch_size: int = 32):
+    def __init__(self, spec: TransitionSpec, max_buffer_size: int = 10_000, batch_size: int = 32,pointers: dict = None):
         self.spec = spec
         self.max_buffer_size = max_buffer_size
         self.batch_size = batch_size
@@ -27,11 +27,15 @@ class ReplayBuffer:
         self.size: int = 0
         self._initialized: bool = False
 
+        self.pointers = pointers if pointers is not None else {}
+
     def __len__(self) -> int:
         return self.size
 
     def _init_buffer(self, first_transition: Any) -> None:
         for field in self.spec.fields:
+            if field in self.pointers:#Pointers do not need Ram
+                continue
             if not hasattr(first_transition, field):
                 raise ValueError(f"Transition missing field: {field}")
             val = np.array(getattr(first_transition, field))
@@ -43,6 +47,8 @@ class ReplayBuffer:
         if not self._initialized:
             self._init_buffer(x)
         for field in self.spec.fields:
+            if field in self.pointers:# Again, Skip Pointers
+                continue
             self.data[field][self.ptr] = getattr(x, field)
 
         self.ptr = (self.ptr + 1) % self.max_buffer_size
@@ -83,7 +89,13 @@ class ReplayBuffer:
     def choice(self, indices: np.ndarray | list[int]) -> dict[str, torch.Tensor]:
         batch = {}
         for field in self.spec.fields:
-            numpy_batch = self.data[field][indices]
+            if field in self.pointers:
+                source_field = self.pointers[field]["source"]
+                offset = self.pointers[field]["offset"]
+                ptr_indices = (np.array(indices) + offset) % self.max_buffer_size
+                numpy_batch = self.data[source_field][ptr_indices]
+            else:
+                numpy_batch = self.data[field][indices]
 
             batch[field] = torch.as_tensor(numpy_batch)
 

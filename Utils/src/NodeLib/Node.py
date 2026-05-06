@@ -100,7 +100,7 @@ class Graph:
             raise ValueError(f"Error - Circle found : {unresolved}")
 
         self.execution_order_list = sorted_nodes
-
+"""
 class Graph:
     def __init__(self, nodes, initial_keys: list[str]):
         self.nodes: list[Node] = nodes
@@ -141,3 +141,4 @@ class Graph:
 
         if len(self.execution_order_list) != len(self.nodes):
             raise ValueError("Cycle detected")
+        """

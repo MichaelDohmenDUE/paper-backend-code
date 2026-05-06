@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from backend.Utils.src.NodeLib.Node import Signal, Graph
+from backend.Utils.src.NodeLib.Node import Signal, Graph, PropsNode
 from backend.Utils.src.NodeLib.NodeLibrary import bellman, detransition, indexing, mean_squared_error, \
     optimizer_normalized
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
@@ -32,7 +32,7 @@ class TrainProcessor:
 
         nodes = [
             PropsNode("Sample", ["buffer", "warmup_steps"], ["batch"],
-                 function=lambda b, w: b.sample_batch() if len(b) >= w else Signal.NOSIGNAL),
+                      function=lambda b, w: b.sample_batch() if len(b) >= w else Signal.NOSIGNAL),
 
             PropsNode("Detransition", ["fields", "batch", "device"],
                       ["state", "action", "reward", "next_state", "done"],
