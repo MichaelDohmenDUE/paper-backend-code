@@ -62,7 +62,7 @@ def main(seed):
         project="my-ppo-benchmarks",
         group=algo_name,
         name=f"{algo_name}-{env_name}-seed-{seed}",
-        tags=[env_name, "baseline", algo_name],
+        tags=[env_name, "debugging", algo_name],
         reinit=True,
         entity="michael_dohmen-",
         config={
@@ -83,7 +83,7 @@ def main(seed):
         }
     )
 
-    spec = TransitionSpec(["state", "action", "logp", "reward", "done", "value", "bootstrap_value"])
+    spec = TransitionSpec(["state", "action", "logp", "reward", "terminated", "next_state"])
     replay_spec = TransitionSpec(["state", "action", "logp", "advantage", "return"])
     transition_factory = TransitionFactory(spec)
     factory = GymEnvFactory(env_name)

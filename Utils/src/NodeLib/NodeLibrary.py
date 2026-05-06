@@ -180,16 +180,13 @@ def optimize_step_normalized(optimizer, actor, loss, max_grad_norm):  # TODO Uni
     return True
 
 
-def td_residual(rewards, dones, values, bootstrap_values, gamma, num_envs=None):
+def td_residual(rewards, dones, values, next_values, gamma, num_envs=None):
     if num_envs is not None:
         rewards = rewards.view(-1, num_envs)
         dones = dones.view(-1, num_envs)
         values = values.view(-1, num_envs)
-        bootstrap_values = bootstrap_values.view(-1, num_envs)
+        next_values = values.view(-1, num_envs)
     next_non_terminal = 1.0 - dones
-    assert (bootstrap_values[:-1] == 0.0).all(), "bootstrap_value Error"
-    # Shift values by 1 and Bootstrap the bootstrapValue
-    next_values = torch.cat([values[1:], bootstrap_values[-1:]], dim=0)
     deltas = rewards + gamma * next_values * next_non_terminal - values
 
     return deltas
@@ -230,7 +227,7 @@ def detransition(fields, batch, device: torch.device):
         elif "action" in key:
             is_discrete = not t.is_floating_point() or torch.all(t == t.long())
             processed[key] = t.long() if is_discrete else t.float()
-        elif key in ["reward", "done"]:
+        elif key in ["reward", "done", "terminated"]:
             processed[key] = t.float().view(-1)
 
         else:

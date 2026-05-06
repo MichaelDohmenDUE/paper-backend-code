@@ -62,7 +62,7 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
 
 def main(seed):
     start_time = time.time()
-    env_name = "Hopper-v4"
+    env_name = "HalfCheetah-v4"
     num_envs = 8
     seed = seed
     rollout_size = 2048
@@ -104,9 +104,8 @@ def main(seed):
         }
     )
 
-    spec = TransitionSpec(["state", "action", "logp", "reward", "done", "value", "bootstrap_value"])
+    spec = TransitionSpec(["state", "action", "logp", "reward", "terminated", "next_state"])
     replay_spec = TransitionSpec(["state", "action", "logp", "advantage", "return"])
-    transition_factory = TransitionFactory(spec)
     transition_factory = TransitionFactory(spec)
     factory = GymEnvFactory(env_name)
     env_handler = NormalizedVecHandler(factory, seed, num_envs=num_envs)
@@ -120,7 +119,10 @@ def main(seed):
     rollout_buffer = RolloutBuffer(spec, rollout_size=rollout_size)
     replay_buffer = ReplayBuffer(replay_spec, rollout_size, batch_size)
 
-    trainer = PPOTrainerProcessor(actor, critic, optimizer, rollout_buffer, replay_buffer, epochs, gamma=gamma, lam=lam)
+    trainer = PPOTrainerProcessor(
+        actor, critic, optimizer, rollout_buffer, replay_buffer,
+        batch_size=batch_size, epochs=epochs, gamma=gamma, lam=lam
+    )
 
     data_collector = DataCollectionProcessor(env_handler, transition_factory, rollout_buffer, rollout_size,
                                              actor, critic, device)

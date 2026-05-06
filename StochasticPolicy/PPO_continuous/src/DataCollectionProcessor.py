@@ -46,13 +46,10 @@ class DataCollectionProcessor:
 
             Node("ClipAction", ["action"], ["clipped_action"], function=lambda a: np.clip(a, -1.0, 1.0)),
 
-            PropsNode("EnvStep", ["env", "action"], ["next_state_raw", "reward", "done", "truncated", "info"],
+            PropsNode("EnvStep", ["env", "action"], ["next_state_raw", "reward", "terminated", "truncated", "info"],
                       function=lambda env, a: env.step_detailed(a)),
 
-            PropsNode("CombineDones", ["done", "truncated"], ["episode_done"],
-                      function=lambda term, trunc: term | trunc, no_grad=True),
-
-            PropsNode("ExtractTrueNextState", ["next_state_raw", "episode_done", "info"], ["next_state"],
+            PropsNode("ExtractTrueNextState", ["next_state_raw", "truncated", "info"], ["next_state"],
                       function=merge_final_observations, no_grad=True),
 
             TransitionNode(
@@ -62,18 +59,16 @@ class DataCollectionProcessor:
                     "action": "action",
                     "logp": "logp",
                     "reward": "reward",
-                    "done": "done",
-                    "value": "value"
+                    "terminated": "terminated",
+                    "next_state": "next_state",
                 },
-                default_kwargs={
-                    "bootstrap_value": 0.0
-                }
             ),
             BufferAppendingNode(),
 
-            BootStrappingNodeMujoco(rollout_size),
+            PropsNode("CombineDones", ["terminated", "truncated"], ["episode_done"],
+                      function=lambda term, trunc: term | trunc, no_grad=True),
 
-            Node("State", ["next_state", "_buffer_updated"], ["state"],
+            Node("State", ["next_state_raw", "_buffer_updated"], ["state"],
                  function=lambda ns, _: np.array(ns).astype(np.float32)),
             EpisodicMetricsNode(),
             Node("CountSteps", ["total_steps", "num_envs"], ["total_steps"], function=lambda steps, n: steps + n),

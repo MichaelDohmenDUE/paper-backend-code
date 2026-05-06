@@ -7,7 +7,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 import torch
 
 from backend.Utils.src.NodeLib.NodeLibrary import detransition, normalize, clipped_surrogate_objective, td_residual, \
-    compute_raw_gae, compute_returns, record_metrics
+    compute_raw_gae, compute_returns, record_metrics, RepeatNode
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -81,7 +81,7 @@ class PPOTrainerProcessor:
             "actor": actor, "critic": critic, "optimizer": optimizer, "buffer": rollout_buffer,
             "replay_buffer": replay_buffer,
             "device": self.device, "gamma": gamma, "lam": lam,
-            "num_envs": rollout_buffer.num_envs, "fields": rollout_buffer.spec.fields,
+            "num_envs": rollout_buffer.num_envs, "spec_fields": rollout_buffer.spec.fields,
             "inner_context": {
                 "actor": actor, "critic": critic, "optimizer": optimizer, "clip_eps": clip_eps,
                 "vf_coef": vf_coef, "pl_coef": pl_coef, "max_grad_norm": max_grad_norm, "ent_coef": ent_coef,
@@ -91,17 +91,23 @@ class PPOTrainerProcessor:
         minibatch_graph = create_ppo_minibatch_graph()
 
         nodes = [
-            Node("Sample", ["buffer"], ["rollout"],
-                 function=lambda b: b.sample() if b.reached_rollout_size() else Signal.NOSIGNAL),
-            Node("Detransition", ["fields", "rollout", "device"],
-                 ["state", "action", "logp", "reward", "done", "value", "bootstrap"],
-                 function=detransition),
+            PropsNode("Sample", ["buffer"], ["rollout"],
+                      function=lambda b: b.sample() if b.reached_rollout_size() else Signal.NOSIGNAL),
+            PropsNode("Detransition", ["spec_fields", "rollout", "device"],
+                      ["state", "action", "logp", "reward", "terminated", "next_state"],
+                      function=detransition),
 
-            Node("td_residual", ["reward", "done", "value", "bootstrap", "gamma", "num_envs"],
-                 ["deltas"],
-                 function=td_residual),
+            PropsNode("CriticForward", ["critic", "state"], ["value"],
+                      function=lambda net, s: net(s)),
 
-            Node("RawGAE", ["deltas", "done", "gamma", "lam", "num_envs"],
+            PropsNode("CriticForwardNxt", ["critic", "next_state"], ["next_value"],
+                      function=lambda net, s: net(s), no_grad=True),
+
+            PropsNode("td_residual", ["reward", "terminated", "value", "next_value", "gamma", "num_envs"],
+                      ["deltas"],
+                      function=td_residual),
+
+            Node("RawGAE", ["deltas", "terminated", "gamma", "lam", "num_envs"],
                  ["raw_advantages"],
                  function=compute_raw_gae),
 
