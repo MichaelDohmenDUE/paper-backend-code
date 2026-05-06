@@ -62,7 +62,7 @@ def create_ppo_minibatch_graph():
 class PPOTrainerProcessor:
     def __init__(self, agent: nn.Module, optimizer: torch.optim.Optimizer, rollout_buffer: RolloutBuffer,
                  replay_buffer: ReplayBuffer, learn_rate: float, global_counter, max_steps, batch_size=64,
-                 epochs=10, clip_eps=0.2, vf_coef=0.5, ent_coef=0.01, max_grad_norm=0.5, gamma=0.99, lam=0.95):
+                 epochs=10, clip_eps=0.1, vf_coef=0.5, ent_coef=0.01, max_grad_norm=0.5, gamma=0.99, lam=0.95):
         self.agent = agent
         self.rollout_buffer = rollout_buffer
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

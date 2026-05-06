@@ -92,7 +92,7 @@ def main(seed, env_name):
     state_dim, action_dim, _ = env_handler.get_env_specs()
     channels = state_dim[0]
     agent = AtariPPOAgent(action_dim, channels).to(device)
-    optimizer = optim.Adam(agent.parameters(), lr=lr)
+    optimizer = optim.Adam(agent.parameters(), lr=lr, eps=1e-5)
 
     rollout_buffer = RolloutBuffer(spec, rollout_size)
     replay_buffer = ReplayBuffer(replay_spec, rollout_size, batch_size)
