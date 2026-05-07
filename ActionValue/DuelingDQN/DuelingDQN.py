@@ -6,9 +6,9 @@ import wandb
 
 from backend.ActionValue.DQN.DQN import evaluate_policy
 from backend.ActionValue.DuelingDQN.src.DuellingDQN import DuellingDQN
-from backend.ActionValue.DQN.src.EpsilonGreedy import EpsilonGreedyPolicy
-from backend.ActionValue.DQN.src.DataCollectionProcessor import DataCollectionProcessor
-from backend.ActionValue.DDQN.src.TrainProcessor import TrainProcessor
+from backend.ActionValue.DuelingDQN.src.EpsilonGreedy import EpsilonGreedyPolicy
+from backend.ActionValue.DuelingDQN.src.DataCollectionProcessor import DataCollectionProcessor
+from backend.ActionValue.DuelingDQN.src.TrainProcessor import TrainProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
