@@ -5,12 +5,12 @@ import torch
 import wandb
 from torch import nn
 
-from backend.ActionValue.DQN.src.EpsilonGreedy import EpsilonGreedyPolicy
 from backend.ActionValue.DQN.src.DataCollectionProcessor import DataCollectionProcessor
+from backend.ActionValue.DQN.src.EpsilonGreedy import EpsilonGreedyPolicy
 from backend.ActionValue.DQN.src.TrainProcessor import TrainProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnvFactory import GymEnvFactory
-from backend.Utils.src.EnviromentHandler import EnvironmentHandler, VecEnvironmentHandler
+from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.SyncProcessor import SyncProcessor
 
@@ -46,6 +46,7 @@ def evaluate_policy(policy, env_handler, episodes=5, device="cpu"):
 
     policy.train()
     return total_reward / episodes
+
 
 def main(seed):
     # initialization
@@ -127,7 +128,8 @@ def main(seed):
             metrics["charts/epsilon"] = collector.epsilon_greedy.epsilon
 
         if step % 10_000 == 0 and step > warmup_steps:
-            metrics["charts/eval_avg_score"] = evaluate_policy(behavior_net, eval_env, episodes=eval_episodes, device=device)
+            metrics["charts/eval_avg_score"] = evaluate_policy(behavior_net, eval_env, episodes=eval_episodes,
+                                                               device=device)
 
         if len(metrics) > 1:
             wandb.log(metrics, step=step)
@@ -136,7 +138,8 @@ def main(seed):
     wandb.log(metrics, step=step)
     wandb.finish()
 
+
 if __name__ == '__main__':
-    seeds = [0,1,2]
+    seeds = [0, 1, 2]
     for seed in seeds:
         main(seed)

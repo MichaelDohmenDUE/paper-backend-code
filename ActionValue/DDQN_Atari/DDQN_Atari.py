@@ -6,9 +6,9 @@ import wandb
 
 from backend.ActionValue.DDQN_Atari.src.DataCollectionProcessorAtari import DataCollectionProcessor
 from backend.ActionValue.DDQN_Atari.src.TrainProcessorAtari import TrainProcessor
-from backend.ActionValue.DQN.DQN import evaluate_policy
-from backend.ActionValue.DQN.src.EpsilonGreedy import EpsilonGreedyPolicy
-from backend.ActionValue.DQN_Atari.src.BehaviourAtariDQN import BehaviourAtariDQN
+from backend.ActionValue.DDQN.DDQN import evaluate_policy
+from backend.ActionValue.DDQN.src.EpsilonGreedy import EpsilonGreedyPolicy
+from backend.ActionValue.DDQN_Atari.src.BehaviourAtariDDQN import BehaviourAtariDDQN
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnvFactory import AtariEnvFactory
 from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
@@ -75,7 +75,7 @@ def main(seed, env_name):
     eval_env = VecEnvironmentHandler(gym_factory, seed + offset, num_envs=1)
     obs_size, action_size, _ = env.get_env_specs()
 
-    behavior_net = BehaviourAtariDQN(action_size).to(device)
+    behavior_net = BehaviourAtariDDQN(action_size).to(device)
     target_net = deepcopy(behavior_net).to(device)
 
     optimizer = torch.optim.Adam(behavior_net.parameters(), lr)
