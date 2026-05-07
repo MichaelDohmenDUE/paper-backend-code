@@ -4,11 +4,10 @@ from copy import deepcopy
 import torch
 import wandb
 
-from backend.ActionValue.DQN.DQN import evaluate_policy
-from DeterministicPolicy.DDPG.src.Policy import Policy
+from backend.DeterministicPolicy.DDPG.src.Policy import Policy
 from backend.ActionValue.DDQN.src.TrainProcessor import TrainProcessor
-from backend.ActionValue.DQN.src.EpsilonGreedy import EpsilonGreedyPolicy
-from backend.ActionValue.DQN.src.DataCollectionProcessor import DataCollectionProcessor
+from backend.ActionValue.DDQN.src.EpsilonGreedy import EpsilonGreedyPolicy
+from backend.ActionValue.DDQN.src.DataCollectionProcessor import DataCollectionProcessor
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
@@ -17,6 +16,38 @@ from backend.Utils.src.SyncProcessor import SyncProcessor
 from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+
+def evaluate_policy(policy, env_handler, episodes=5, device="cpu"):
+    """
+    Generated with GEemini
+    """
+    policy.eval()
+    total_reward = 0.0
+
+    for _ in range(episodes):
+        state = env_handler.reset()
+        done = False
+        episode_reward = 0.0
+        steps = 0
+
+        while not done:
+            state_tensor = torch.tensor(state, device=device).float()
+            with torch.no_grad():
+                q_values = policy(state_tensor)
+                action_int = torch.argmax(q_values, dim=1).item()
+            action_batch = [action_int]
+            next_state, reward, done, _ = env_handler.step(action_batch)
+            episode_reward += reward[0]
+            state = next_state
+            steps += 1
+            done = done[0]
+
+        total_reward += episode_reward
+
+    policy.train()
+    return total_reward / episodes
 
 
 def main(seed):

@@ -35,7 +35,7 @@ def main(seed, evn_name):
     seed = seed
     offset = 100
     lr = 1e-4
-    warmup_steps = 50_000
+    warmup_steps = 80_000
     setting_global_seed(seed)
 
     wandb.init(
