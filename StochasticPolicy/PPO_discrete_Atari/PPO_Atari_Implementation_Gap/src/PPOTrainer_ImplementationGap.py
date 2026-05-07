@@ -20,7 +20,7 @@ def create_ppo_minibatch_graph():
              ["b_states", "b_action", "b_old_logp", "b_adv", "b_ret", "b_old_value"],
              function=lambda batches, i: (
                  batches[i]["state"].to(device),
-                 batches[i]["action"].to(device),
+                 batches[i]["action"].squeeze(-1).to(device),
                  batches[i]["logp"].squeeze(-1).to(device),
                  batches[i]["advantage"].squeeze(-1).to(device),
                  batches[i]["return"].squeeze(-1).to(device),

@@ -65,13 +65,16 @@ class DataCollectionProcessor:
             PropsNode("ExtractTrueNextState", ["next_state_raw", "truncated", "info"], ["next_state"],
                       function=merge_final_observations, no_grad=True),
 
+            PropsNode("ClipReward", ["reward"], ["clipped_reward"],
+                      function=lambda r: np.sign(r), no_grad=True),
+
             TransitionNode(
                 factory=transition_factory,
                 input_mapping={
                     "state": "state",
                     "action": "action",
                     "logp": "logp",
-                    "reward": "reward",
+                    "reward": "clipped_reward",
                     "terminated": "terminated",
                     "next_state": "next_state",
                 },
@@ -82,7 +85,7 @@ class DataCollectionProcessor:
                       function=lambda term, trunc: term | trunc, no_grad=True),
 
             PropsNode("State", ["next_state_raw", "_buffer_updated"], ["state"],
-                      function=lambda ns, _: np.array(ns).astype(np.float32)),
+                      function=lambda ns, _: np.array(ns).astype(np.uint8), no_grad=True),
             EpisodicMetricsNode(),
 
             PropsNode("CountSteps", ["total_steps", "num_envs"], ["total_steps"], function=lambda steps, n: steps + n),

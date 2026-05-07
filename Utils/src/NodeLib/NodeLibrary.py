@@ -185,7 +185,7 @@ def td_residual(rewards, dones, values, next_values, gamma, num_envs=None):
         rewards = rewards.view(-1, num_envs)
         dones = dones.view(-1, num_envs)
         values = values.view(-1, num_envs)
-        next_values = values.view(-1, num_envs)
+        next_values = next_values.view(-1, num_envs)
     next_non_terminal = 1.0 - dones
     deltas = rewards + gamma * next_values * next_non_terminal - values
 
@@ -193,6 +193,7 @@ def td_residual(rewards, dones, values, next_values, gamma, num_envs=None):
 
 def compute_raw_gae(deltas, d, gamma, lam, num_envs):
     d = d.view(-1, num_envs)
+    deltas = deltas.view(-1, num_envs)
     all_advantages = torch.zeros_like(deltas)
 
     last_gae = torch.zeros(num_envs, device=deltas.device)
