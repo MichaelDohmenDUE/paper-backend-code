@@ -5,7 +5,7 @@ import wandb
 from torch import optim
 
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
-from backend.StochasticPolicy.PPO_continuous.src.CriticPPO import CriticPPO
+from backend.StochasticPolicy.PPO_discrete_Mujoco.src.CriticPPO import CriticPPO
 from backend.StochasticPolicy.PPO_discrete_Mujoco.src.DiscreteActorPPO import DiscreteActorPPO
 from backend.StochasticPolicy.PPO_discrete_Mujoco.src.DataCollectorGraphMujoco import DataCollectionProcessor
 from backend.StochasticPolicy.PPO_discrete_Mujoco.src.PPOTrainer import PPOTrainerProcessor

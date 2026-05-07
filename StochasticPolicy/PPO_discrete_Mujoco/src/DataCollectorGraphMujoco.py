@@ -1,6 +1,5 @@
 import numpy as np
 
-from TobeTranslatedAlgorithms.PPO_Atari_Baseline.src.DataCollectorAtari import EpisodicMetricsNode
 from backend.Utils.src.NodeLib.Node import Node, Graph, PropsNode
 from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode
 from backend.Utils.src.NodeLib.NodeLibrary import to_tensor, to_numpy_array
@@ -16,6 +15,22 @@ def merge_final_observations(next_state_raw, episode_done, info):
                 true_next[i] = final_obs[i]
     return true_next.astype(np.float32)
 
+class EpisodicMetricsNode(Node):
+    def __init__(self):
+        super().__init__("EpisodicMetrics", ["running_rewards", "metrics_queue", "reward", "episode_done"], [])
+
+    def forward(self, running_rewards, metrics_queue, reward, done):
+        reward = np.atleast_1d(reward)
+        done = np.atleast_1d(done)
+
+        running_rewards += reward
+
+        for i in range(len(done)):
+            if done[i]:
+                metrics_queue.append({
+                    "charts/episodic_return": running_rewards[i]
+                })
+                running_rewards[i] = 0
 
 class DataCollectionProcessor:
     def __init__(self, env_handler, transition_factory, rollout_buffer: RolloutBuffer, rollout_size, actor, critic,

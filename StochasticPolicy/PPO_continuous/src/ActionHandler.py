@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch import nn
 
-from  backend.Utils.src.AbstractHandlers.AbstractActionHandler import AbstractActionHandler
+from backend.Utils.src.AbstractHandlers.AbstractActionHandler import AbstractActionHandler
 
 
 class ActionHandler(AbstractActionHandler):
@@ -25,4 +25,3 @@ class ActionHandler(AbstractActionHandler):
         value = value.item()
 
         return action, logp, value
-
