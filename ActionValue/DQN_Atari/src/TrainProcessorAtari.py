@@ -33,16 +33,16 @@ class TrainProcessor:
         }
 
         nodes = [
-            PropsNode("Sample", ["warmup_steps"], ["batch"], props=["batch"],
+            PropsNode("Sample", ["buffer", "warmup_steps"], ["batch"],
                       function=lambda b, w: b.sample_batch() if len(b) >= w else Signal.NOSIGNAL),
             PropsNode("Detransition", ["fields", "batch", "device"],
                       ["state", "action", "reward", "next_state", "done"],
                       function=detransition),
-            PropsNode("BehaviorForward", ["state"], ["qs_b"], props=["behavior_net"],
+            PropsNode("BehaviorForward", ["behavior_net", "state"], ["qs_b"],
                       function=lambda net, s: net(s.float().squeeze(1))),
             PropsNode("QsaBehavior", ["qs_b", "action"], ["qsa_b"],
                       function=lambda q, a: indexing(q, a.long().view(-1, 1)).reshape(-1)),
-            PropsNode("TargetForward", ["next_state"], ["qs_t"], props=["target_val"],
+            PropsNode("TargetForward", ["target_net", "next_state"], ["qs_t"],
                       function=lambda net, ns: net(ns.float().squeeze(1)), no_grad=True),
             PropsNode("Max", ["qs_t"], ["max_q_t"],
                       function=lambda qt: nl_max(qt).reshape(-1), no_grad=True),
@@ -50,7 +50,7 @@ class TrainProcessor:
                       function=bellman),
             PropsNode("Loss", ["qsa_b", "target_val"], ["loss"],
                       function=mean_squared_error),
-            PropsNode("Optimize", ["loss", "max_norm"], ["_opt"], props=["behavior_net", "optimizer"],
+            PropsNode("Optimize", ["behavior_net", "optimizer", "loss", "max_norm"], ["_opt"],
                       function=optimizer_normalized),
 
             # Logging
