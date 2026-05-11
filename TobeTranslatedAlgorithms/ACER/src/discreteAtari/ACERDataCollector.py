@@ -38,12 +38,12 @@ class ACERDataCollector:
             self.state, return_params=True
         )
 
-        next_state, reward, done, done_bool = self.env.step(action)
+        next_state, reward, done, info = self.env.step(action)
         next_state = np.array(next_state, dtype=np.uint8)
         clipped_reward = np.clip(reward, -1, 1)
 
         transition = self.factory.forward(state=self.state, action=np.int16(action), reward=np.int8(clipped_reward),
-                                          next_state=next_state, mask=np.uint8(1 - done_bool),
+                                          next_state=next_state, mask=np.uint8(1 - done),
                                           mu_logp=np.float16(mu_logp), mu_logits=logtis.astype(np.float16))
 
         self.rollout.append(transition)
