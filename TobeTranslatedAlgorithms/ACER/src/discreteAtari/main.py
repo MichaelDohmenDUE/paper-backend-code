@@ -54,6 +54,7 @@ def main():
     replay_ratio = 4
     trust_region_delta = 0.01
     gamma = 0.99
+    warm_up = 20000
     reward_scale = 1.0
 
     factory = AtariEnvFactory(env_name)
@@ -85,11 +86,11 @@ def main():
 
     for step in range(max_timesteps):
         on_policy_rollouts = collector.run()
-
-        if on_policy_rollouts is not None:
+        if on_policy_rollouts is not None and len(buffer) > warm_up:
+            #print(f"Buffer Level: {len(buffer)} / {warm_up}")
             train_process.run(on_policy_rollouts)
 
-        if step % 1000 == 0 and step > 0 :
+        if step % 1000 == 0 and step > warm_up :
             score = acer_evaluate(trainer, vec_env_handler, episodes=5)
             print(f"[EVAL] Step {step}: Mean Score = {score}")
 
