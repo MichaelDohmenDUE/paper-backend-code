@@ -65,7 +65,7 @@ def main():
 
     # Trainer
     trainer = ACERTrainer(
-        state_size=state_dim[0],
+        state_size=state_dim,
         action_size=action_dim,
         hidden_size=hidden_dim,
         learning_rate=learning_rate,
