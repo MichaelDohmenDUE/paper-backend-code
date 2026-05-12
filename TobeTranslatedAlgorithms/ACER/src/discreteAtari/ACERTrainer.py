@@ -148,9 +148,10 @@ class ACERTrainer:
         return -(rho_bar_t * logp_t * advantage_t).mean()
 
     def _compute_kl(self, logits, ref_logits):
-        p = torch.softmax(logits, dim=-1)
-        q = torch.softmax(ref_logits, dim=-1)
-        return (p * (p.log() - q.log())).sum(dim=-1)
+        log_p = F.log_softmax(logits, dim=-1)
+        log_q = F.log_softmax(ref_logits, dim=-1)
+        p = torch.exp(log_p)
+        return (p * (log_p - log_q)).sum(dim=-1)
 
     def select_action(self, state, return_params=False):
         state_t = torch.from_numpy(state).unsqueeze(0).float().to(device)
@@ -214,6 +215,7 @@ class ACERTrainer:
         # PI(a|s)
         pi_logits, _ = self.model(flat_states)
         pi_logits = torch.clamp(pi_logits, -20, 20)
+        #print("logits", pi_logits)
         pi_dist = torch.distributions.Categorical(logits=pi_logits)
         pi_probs = pi_dist.probs
         entropy = pi_dist.entropy().mean()
@@ -223,14 +225,14 @@ class ACERTrainer:
         mu_dist = torch.distributions.Categorical(logits=mu_logits_flat)
         mu_probs = mu_dist.probs
 
-        rho_all = pi_probs / (mu_probs + 1e-8)
+        rho_all = pi_probs.detach() / (mu_probs + 1e-8)
         v_flat = v_vals.view(-1)
-        adv_all = q_vals_all_actions.detach() - v_flat.unsqueeze(-1)
+        adv_all = q_vals_all_actions.detach() - v_flat.detach().unsqueeze(-1)
         rho_excess = torch.clamp(rho_all - self.c_bar, min=0.0)
 
         bias_term = (pi_probs * rho_excess * adv_all).sum(dim=-1)
 
-        policy_logp = self.model.log_prob(flat_states, flat_actions).view(B, T)
+        policy_logp = self.model.log_prob(flat_states, flat_actions).view(B, T).detach()
         rho, rho_bar, c = self._compute_importance_weights(policy_logp, mu_logps)
 
         v_last = self._compute_bootstrap_value_stable(next_states[:, -1], not_dones[:, -1])
