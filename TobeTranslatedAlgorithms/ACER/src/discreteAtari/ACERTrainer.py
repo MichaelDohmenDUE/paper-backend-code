@@ -228,7 +228,7 @@ class ACERTrainer:
         rho_all = pi_probs.detach() / (mu_probs + 1e-8)
         v_flat = v_vals.view(-1)
         adv_all = q_vals_all_actions.detach() - v_flat.detach().unsqueeze(-1)
-        rho_excess = torch.clamp(rho_all - self.c_bar, min=0.0)
+        rho_excess = torch.clamp(rho_all - self.c_bar, min=0.0, max=10.0)
 
         bias_term = (pi_probs * rho_excess * adv_all).sum(dim=-1)
 
