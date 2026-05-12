@@ -42,16 +42,16 @@ def acer_evaluate(trainer, env_factory, episodes=10):
 def main():
     env_name = "PongNoFrameskip-v4"
     seed = 1
-    max_timesteps = 100000
+    max_timesteps = 10_000_000
     num_envs = 16
-    batch_size = 32
+    batch_size = 16
     learning_rate = 3e-4
     hidden_dim = 200
     tau = 0.01
     buffer_size = 250_000
     seq_len = 20
     replay_ratio = 4
-    trust_region_delta = 1.0
+    trust_region_delta = 0.01
     gamma = 0.99
     reward_scale = 1.0
 

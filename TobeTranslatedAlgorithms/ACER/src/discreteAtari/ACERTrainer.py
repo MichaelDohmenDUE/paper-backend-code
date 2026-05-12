@@ -21,7 +21,7 @@ class ACERTrainer:
         self.tau = tau
         self.delta = trust_region_delta
         self.rho_bar = 10.0
-        self.c_bar = 10.0
+        self.c_bar = 1.0
         self.seq_len = 20
         self.retrace_lambda = 1.0
         self.entropy_scale = 0.01
