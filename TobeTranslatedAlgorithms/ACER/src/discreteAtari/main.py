@@ -12,31 +12,32 @@ from backend.Utils.src.ReplayBuffer import ReplayBuffer
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def acer_evaluate(trainer, env_factory, episodes=10):
+def acer_evaluate(trainer, vec_env_handler, episodes=10):
+    """
+    LLMs GEnerated
+    """
     scores = []
-    env = env_factory.create()
     for i in range(episodes):
-        state, _ = env.reset()
-        state = np.asarray(state, dtype=np.float32)
+        state = vec_env_handler.reset()
         done = False
         episode_reward = 0.0
 
         while not done:
-            state_t = torch.from_numpy(state).unsqueeze(0).float().to(device)
+            state_t = torch.from_numpy(state).float().to(device)
+
             with torch.no_grad():
                 logits, _ = trainer.model(state_t)
-                dist = torch.distributions.Categorical(logits=logits)
-                action = dist.sample().item()
+                action = torch.argmax(logits, dim=-1).cpu().numpy()
 
-            next_state, reward, terminated, truncated, _ = env.step(action)
-            done = terminated or truncated
-            state = np.asarray(next_state, dtype=np.float32)
-            episode_reward += reward
+            next_state, reward, terminated, truncated, _ = vec_env_handler.step_detailed(action)
+
+            done = terminated[0] or truncated[0]
+            episode_reward += reward[0]
+            state = next_state
 
         scores.append(episode_reward)
         print(f"Eval Episode {i + 1} Score: {episode_reward}")
 
-    env.close()
     return np.mean(scores)
 
 def main():
@@ -58,6 +59,7 @@ def main():
     factory = AtariEnvFactory(env_name)
 
     env_handler = VecEnvironmentHandler(factory, seed, num_envs)
+    vec_env_handler = VecEnvironmentHandler(factory, seed + 100, 1)
     state_dim, action_dim, max_action = env_handler.get_env_specs()
     # Transition spec for ACER
     spec = TransitionSpec(["state", "action", "reward", "next_state", "mask", "mu_logp", "mu_logits"])
@@ -88,7 +90,7 @@ def main():
             train_process.run(on_policy_rollouts)
 
         if step % 1000 == 0 and step > 0 :
-            score = acer_evaluate(trainer, factory, episodes=5)
+            score = acer_evaluate(trainer, vec_env_handler, episodes=5)
             print(f"[EVAL] Step {step}: Mean Score = {score}")
 
 
