@@ -22,7 +22,7 @@ def acer_evaluate(trainer, env_factory, episodes=10):
         episode_reward = 0.0
 
         while not done:
-            state_t = torch.from_numpy(state).unsqueeze(0).float().to(device) / 255.0
+            state_t = torch.from_numpy(state).unsqueeze(0).float().to(device)
             with torch.no_grad():
                 logits, _ = trainer.model(state_t)
                 dist = torch.distributions.Categorical(logits=logits)
@@ -58,7 +58,7 @@ def main():
     factory = AtariEnvFactory(env_name)
 
     env_handler = VecEnvironmentHandler(factory, seed, num_envs)
-    state_dim, action_dim,max_action = env_handler.get_env_specs()
+    state_dim, action_dim, max_action = env_handler.get_env_specs()
     # Transition spec for ACER
     spec = TransitionSpec(["state", "action", "reward", "next_state", "mask", "mu_logp", "mu_logits"])
     transition_factory = TransitionFactory(spec)
