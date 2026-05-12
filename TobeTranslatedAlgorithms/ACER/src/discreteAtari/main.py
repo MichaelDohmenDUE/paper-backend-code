@@ -6,7 +6,7 @@ from TobeTranslatedAlgorithms.ACER.src.discreteAtari.ACERTrainProcessor import A
 from TobeTranslatedAlgorithms.ACER.src.discreteAtari.ACERTrainer import (ACERTrainer)
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnvFactory import AtariEnvFactory
-from backend.Utils.src.EnviromentHandler import EnvironmentHandler
+from backend.Utils.src.EnviromentHandler import EnvironmentHandler, VecEnvironmentHandler
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -14,7 +14,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def acer_evaluate(trainer, env_factory, episodes=10):
     scores = []
-    env = env_factory.forward(render_mode="human")
+    env = env_factory.create()
     for i in range(episodes):
         state, _ = env.reset()
         state = np.asarray(state, dtype=np.float32)
@@ -34,13 +34,13 @@ def acer_evaluate(trainer, env_factory, episodes=10):
             episode_reward += reward
 
         scores.append(episode_reward)
-        #print(f"Eval Episode {i + 1} Score: {episode_reward}")
+        print(f"Eval Episode {i + 1} Score: {episode_reward}")
 
     env.close()
     return np.mean(scores)
 
 def main():
-    env_name = "ALE/Breakout-v5"
+    env_name = "PongNoFrameskip-v4"
     seed = 1
     max_timesteps = 100000
     num_envs = 16
@@ -57,15 +57,16 @@ def main():
 
     factory = AtariEnvFactory(env_name)
 
-    env_handlers = [EnvironmentHandler(factory, seed + i, reward_scale=reward_scale) for i in range(num_envs)]
+    env_handler = VecEnvironmentHandler(factory, seed, num_envs)
+    state_dim, action_dim,max_action = env_handler.get_env_specs()
     # Transition spec for ACER
     spec = TransitionSpec(["state", "action", "reward", "next_state", "mask", "mu_logp", "mu_logits"])
     transition_factory = TransitionFactory(spec)
 
     # Trainer
     trainer = ACERTrainer(
-        state_size=env_handlers[0].state_dim,
-        action_size=env_handlers[0].action_dim,
+        state_size=state_dim[0],
+        action_size=action_dim,
         hidden_size=hidden_dim,
         learning_rate=learning_rate,
         gamma=gamma,
@@ -75,22 +76,18 @@ def main():
 
     buffer = ReplayBuffer(spec, buffer_size, batch_size)
 
-    collectors = [ACERDataCollector(trainer, env_handlers[i], buffer, transition_factory, device, seq_len)
-                  for i in range(num_envs)]
+    collector = ACERDataCollector(trainer, env_handler, buffer, transition_factory, device, seq_len)
+
     train_process = ACERTrainProcessor(trainer, buffer, seq_len, replay_ratio, batch_size, tau)
     # sync_process = SyncProcessor(trainer.actor, trainer.trust_region_actor, tau, sync_freq=1)
 
     for step in range(max_timesteps):
-        on_policy_rollouts = []
-        for collector in collectors:
-            rollout = collector.run()
-            if rollout is not None:
-                on_policy_rollouts.append(rollout)
+        on_policy_rollouts = collector.run()
 
-        if len(on_policy_rollouts) == num_envs:
+        if on_policy_rollouts is not None:
             train_process.run(on_policy_rollouts)
 
-        if step % 1000 == 0 and step > 0:
+        if step % 1000 == 0:
             score = acer_evaluate(trainer, factory, episodes=5)
             print(f"[EVAL] Step {step}: Mean Score = {score}")
 
