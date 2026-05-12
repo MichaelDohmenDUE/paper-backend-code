@@ -90,7 +90,7 @@ def main():
             #print(f"Buffer Level: {len(buffer)} / {warm_up}")
             train_process.run(on_policy_rollouts)
 
-        if step % 1000 == 0 and step > warm_up :
+        if step % 1000 == 0 and len(buffer) > warm_up:
             score = acer_evaluate(trainer, vec_env_handler, episodes=5)
             print(f"[EVAL] Step {step}: Mean Score = {score}")
 
