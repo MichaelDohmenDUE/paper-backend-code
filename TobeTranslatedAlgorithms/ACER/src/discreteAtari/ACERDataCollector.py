@@ -1,3 +1,5 @@
+from collections import deque
+
 import numpy as np
 import torch
 
@@ -21,7 +23,11 @@ class ACERDataCollector:
 
         self.rollouts = [[] for _ in range(self.num_envs)]
         self.state = np.array(env.reset(), dtype=np.uint8)
-
+        ##LLL
+        self.running_rewards = np.zeros(self.num_envs, dtype=np.float32)
+        self.recent_scores = deque(maxlen=100)  # Tracks the last 100 completed episodes
+        self.episodes_completed = 0
+        #LLM End
     def run(self):
         state_t = torch.from_numpy(self.state).float().to(self.device)
         with torch.no_grad():
@@ -36,6 +42,18 @@ class ACERDataCollector:
         mu_logits = logits.cpu().numpy()
 
         next_state_raw, reward, done, info = self.env.step(action)
+        self.running_rewards += reward
+        ### LLM for Debugging
+        for i in range(self.num_envs):
+            if done[i]:
+                self.recent_scores.append(self.running_rewards[i])
+                self.episodes_completed += 1
+                self.running_rewards[i] = 0.0
+                if self.episodes_completed % 20 == 0:
+                    mean_score = np.mean(self.recent_scores)
+                    print(
+                        f"[TRAIN ROLLOUT] Episodes: {self.episodes_completed} | Recent 100-ep Mean Score: {mean_score:.2f}")
+        ### LLM END
         next_state_raw = np.array(next_state_raw, dtype=np.uint8)
         clipped_reward = np.clip(reward, -1, 1)
 
