@@ -87,7 +87,7 @@ def main():
         if on_policy_rollouts is not None:
             train_process.run(on_policy_rollouts)
 
-        if step % 1000 == 0:
+        if step % 1000 == 0 and step > 0 :
             score = acer_evaluate(trainer, factory, episodes=5)
             print(f"[EVAL] Step {step}: Mean Score = {score}")
 

@@ -23,7 +23,7 @@ class ACERDataCollector:
         self.state = np.array(env.reset(), dtype=np.uint8)
 
     def run(self):
-        state_t = torch.from_numpy(self.state).float().to(self.device) / 255.0
+        state_t = torch.from_numpy(self.state).float().to(self.device)
         with torch.no_grad():
             logits, _ = self.trainer.model(state_t)
             logits = torch.clamp(logits, -20, 20)

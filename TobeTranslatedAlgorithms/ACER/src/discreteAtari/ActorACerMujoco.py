@@ -3,6 +3,10 @@ import torch.nn.functional as F
 from torch.distributions import Categorical
 
 
+def preprocess(state):
+    return state / 255.0
+
+
 class ACERNet(nn.Module):
     def __init__(self, action_dim):
         super().__init__()
@@ -18,7 +22,8 @@ class ACERNet(nn.Module):
         self.critic_head = nn.Linear(512, action_dim)
 
     def forward(self, state):
-        x = self.conv(state)
+        x = preprocess(state)
+        x = self.conv(x)
         x = x.reshape(x.size(0), -1)
         x = F.relu(self.fc_shared(x))
         logits = self.actor_head(x)

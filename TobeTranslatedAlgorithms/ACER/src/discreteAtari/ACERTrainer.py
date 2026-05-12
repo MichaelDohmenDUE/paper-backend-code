@@ -31,11 +31,11 @@ class ACERTrainer:
             rollouts = replay_buffer  # list of B rollouts, each length T
 
             # Convert nested lists to NumPy arrays first (fast)
-            states_np = np.array([[tr.state for tr in rollout] for rollout in rollouts])/ 255.0
+            states_np = np.array([[tr.state for tr in rollout] for rollout in rollouts])
             actions_np = np.array([[tr.action for tr in rollout] for rollout in rollouts])
             rewards_np = np.array([[tr.reward for tr in rollout] for rollout in rollouts])
             not_dones_np = np.array([[tr.mask for tr in rollout] for rollout in rollouts])
-            next_states_np = np.array([[tr.next_state for tr in rollout] for rollout in rollouts])/ 255.0
+            next_states_np = np.array([[tr.next_state for tr in rollout] for rollout in rollouts])
             mu_logps_np = np.array([[tr.mu_logp for tr in rollout] for rollout in rollouts])
             mu_logits_np = np.array([[tr.mu_logits for tr in rollout] for rollout in rollouts])
             states = torch.tensor(states_np, device=device, dtype=torch.float32)
@@ -63,8 +63,8 @@ class ACERTrainer:
         else:
             batch = replay_buffer.sample_sequence_batch(self.seq_len, batch_size)
 
-            states = batch["state"].to(device).float() / 255.0
-            next_states = batch["next_state"].to(device).float() / 255.0
+            states = batch["state"].to(device).float()
+            next_states = batch["next_state"].to(device).float()
             actions = batch["action"].long().to(device)
             rewards = batch["reward"].to(device).squeeze(-1)
             not_dones = batch["mask"].to(device).squeeze(-1)
@@ -153,7 +153,7 @@ class ACERTrainer:
         return (p * (p.log() - q.log())).sum(dim=-1)
 
     def select_action(self, state, return_params=False):
-        state_t = torch.from_numpy(state).unsqueeze(0).float().to(device) / 255.0
+        state_t = torch.from_numpy(state).unsqueeze(0).float().to(device)
         logits, _ = self.model(state_t)
         logits = torch.clamp(logits, -20, 20)
         dist = torch.distributions.Categorical(logits=logits)
