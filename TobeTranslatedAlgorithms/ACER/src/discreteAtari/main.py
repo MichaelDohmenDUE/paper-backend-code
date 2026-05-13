@@ -36,7 +36,7 @@ def acer_evaluate(trainer, vec_env_handler, episodes=10):
             state = next_state
 
         scores.append(episode_reward)
-        print(f"Eval Episode {i + 1} Score: {episode_reward}")
+        #print(f"Eval Episode {i + 1} Score: {episode_reward}")
 
     return np.mean(scores)
 
@@ -49,10 +49,10 @@ def main():
     learning_rate = 3e-4
     hidden_dim = 200
     tau = 0.01
-    buffer_size = 250_000
+    buffer_size = 300_000
     seq_len = 20
     replay_ratio = 4
-    trust_region_delta = 0.01
+    trust_region_delta = 1.0
     gamma = 0.99
     warm_up = 20000
     reward_scale = 1.0
@@ -84,16 +84,21 @@ def main():
     train_process = ACERTrainProcessor(trainer, buffer, seq_len, replay_ratio, batch_size, tau)
     # sync_process = SyncProcessor(trainer.actor, trainer.trust_region_actor, tau, sync_freq=1)
 
-    for step in range(max_timesteps):
+    max_frames = 10_000_000
+    transitions_per_rollout = num_envs
+
+    for step in range(int(max_frames / transitions_per_rollout)):
         on_policy_rollouts = collector.run()
-        if on_policy_rollouts is not None and len(buffer) > warm_up:
-            #print(f"Buffer Level: {len(buffer)} / {warm_up}")
-            train_process.run(on_policy_rollouts)
 
-        if step % 1000 == 0 and len(buffer) > warm_up:
+        global_step = (step + 1) * transitions_per_rollout
+
+        if on_policy_rollouts is not None:
+            if len(buffer) > warm_up:
+                train_process.run(on_policy_rollouts)
+
+        if global_step % 32_000 == 0 and len(buffer) > warm_up:
             score = acer_evaluate(trainer, vec_env_handler, episodes=5)
-            print(f"[EVAL] Step {step}: Mean Score = {score}")
-
+            print(f"[EVAL] Frame {global_step}: Mean Score = {score}")
 
 if __name__ == "__main__":
     main()

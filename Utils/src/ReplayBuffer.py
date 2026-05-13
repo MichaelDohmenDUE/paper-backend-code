@@ -64,9 +64,14 @@ class ReplayBuffer:
 
     def sample_sequence_batch(self, seq_len: int, batch_size: int) -> dict[str, torch.Tensor]:
         if seq_len > self.size:
-            raise BufferError(f"Buffersize {self.size}) < {seq_len} .")
+            raise BufferError(f"Buffersize {self.size} < {seq_len}.")
 
-        valid_starts = np.random.randint(0, self.size - seq_len + 1, size=batch_size)
+        num_blocks = self.size // seq_len
+
+        block_idxs = np.random.randint(0, num_blocks, size=batch_size)
+
+        valid_starts = block_idxs * seq_len
+
         seq_idxs = valid_starts[:, None] + np.arange(seq_len)
 
         return self.choice(seq_idxs)
