@@ -4,6 +4,7 @@ import torch
 from TobeTranslatedAlgorithms.ACER.src.discreteAtari.ACERDataCollector import ACERDataCollector
 from TobeTranslatedAlgorithms.ACER.src.discreteAtari.ACERTrainProcessor import ACERTrainProcessor
 from TobeTranslatedAlgorithms.ACER.src.discreteAtari.ACERTrainer import (ACERTrainer)
+from Utils.src.utils import setting_global_seed
 from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
 from backend.Utils.src.EnvFactory import AtariEnvFactory
 from backend.Utils.src.EnviromentHandler import EnvironmentHandler, VecEnvironmentHandler
@@ -56,6 +57,7 @@ def main():
     gamma = 0.99
     warm_up = 20000
     reward_scale = 1.0
+    setting_global_seed(seed)
 
     factory = AtariEnvFactory(env_name)
 

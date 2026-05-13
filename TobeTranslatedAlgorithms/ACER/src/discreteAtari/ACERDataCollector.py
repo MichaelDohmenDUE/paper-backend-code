@@ -71,8 +71,8 @@ class ACERDataCollector:
                 reward=np.int8(clipped_reward[i]),
                 next_state=true_next_state[i],
                 mask=np.uint8(1 - done[i]),
-                mu_logp=np.float16(mu_logp[i]),
-                mu_logits=mu_logits[i].astype(np.float16)
+                mu_logp=np.float32(mu_logp[i]),
+                mu_logits=mu_logits[i].astype(np.float32)
             )
             self.rollouts[i].append(tr)
 

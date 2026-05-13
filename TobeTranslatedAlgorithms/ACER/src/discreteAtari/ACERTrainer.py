@@ -181,9 +181,14 @@ class ACERTrainer:
 
         k_dot_g = sum((kg * gg).sum() for kg, gg in zip(k, g))
         k_norm_sq = sum((kg * kg).sum() for kg in k) + 1e-8
-        alpha = (k_dot_g - self.delta) / k_norm_sq
-        alpha = torch.clamp(alpha, min=0.0, max=1.0) if k_dot_g > 0 else torch.tensor(0.0, device=device)
+        kl_change = -k_dot_g
+        violation = kl_change - self.delta
 
+        if violation > 0:
+            alpha = violation / k_norm_sq
+            alpha = torch.clamp(alpha, min=0.0, max=1.0)
+        else:
+            alpha = torch.tensor(0.0, device=device)
         entropy_loss = -self.entropy_scale * entropy
         unprojected_loss = critic_loss + entropy_loss
         unprojected_loss.backward()
