@@ -57,11 +57,11 @@ def main(seed):
     epsilon_decay = 100_000
     eval_episodes = 10
     env_name = "CartPole-v1"
-    sync_freq = 500
-    hidden_size = 64
+    sync_freq = 1
+    hidden_size = 128
     batch_size = 128
     max_buffer_size = 100000
-    tau = 1.0
+    tau = 0.005
     gamma = 0.99
     max_steps = 1_000_000
     seed = seed
