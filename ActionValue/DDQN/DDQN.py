@@ -54,7 +54,7 @@ def main(seed):
     start_time = time.time()
     epsilon = 1.0
     epsilon_final = 0.05
-    epsilon_decay = 1_000
+    epsilon_decay = 100_000
     eval_episodes = 10
     env_name = "CartPole-v1"
     sync_freq = 500

@@ -17,7 +17,7 @@ class EpsilonGreedyPolicy:
 
     def select_action(self, q_values: torch.Tensor):
         if random.random() < self.epsilon:
-            return random.randrange(q_values.shape[0])
+            return random.randrange(q_values.shape[-1])
         else:
             return torch.argmax(q_values).item()
 
