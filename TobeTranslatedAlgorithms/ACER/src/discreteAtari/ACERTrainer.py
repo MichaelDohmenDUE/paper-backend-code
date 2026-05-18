@@ -66,6 +66,9 @@ class ACERTrainer:
 
             states = batch["state"].to(device).float()
             next_states = batch["next_state"].to(device).float()
+            if states.ndim == 5 and states.shape[-1] == 4:
+                states = states.permute(0, 1, 4, 2, 3)
+                next_states = next_states.permute(0, 1, 4, 2, 3)
             actions = batch["action"].long().to(device)
             rewards = batch["reward"].to(device).squeeze(-1)
             not_dones = batch["mask"].to(device).squeeze(-1)
@@ -118,16 +121,22 @@ class ACERTrainer:
         B, T = rewards.shape
         G = v_tp1[:, -1].clone()
         retrace_targets = []
+
         for t in reversed(range(T)):
-            q_t = q_vals[:, t]
-            v_tp1_t = v_tp1[:, t]
             r_t = rewards[:, t]
             nd_t = not_dones[:, t]
-            c_t = c[:, t]
-            delta_t = r_t + nd_t * self.gamma * v_tp1_t - q_t
-            #delta_t = delta_t.clamp(-10.0, 10.0)
-            G = q_t + c_t * (delta_t + nd_t * self.gamma * self.retrace_lambda * (G - v_tp1_t))
-            retrace_targets.insert(0, G)
+            v_tp1_t = v_tp1[:, t]
+
+            if t == T - 1:
+                Q_ret_t = r_t + nd_t * self.gamma * v_tp1_t
+            else:
+                c_tp1 = c[:, t + 1]
+                q_tp1 = q_vals[:, t + 1]
+                Q_ret_t = r_t + nd_t * self.gamma * v_tp1_t + nd_t * self.gamma * c_tp1 * (G - q_tp1)
+
+            retrace_targets.insert(0, Q_ret_t)
+            G = Q_ret_t
+
         return torch.stack(retrace_targets, dim=1)
 
     def _compute_q_opc(self, rewards, not_dones, v_vals):
@@ -186,7 +195,7 @@ class ACERTrainer:
 
         if violation > 0:
             alpha = violation / k_norm_sq
-            alpha = torch.clamp(alpha, min=0.0, max=1.0)
+            alpha = torch.clamp(alpha, min=0.0)
         else:
             alpha = torch.tensor(0.0, device=device)
         entropy_loss = -self.entropy_scale * entropy
@@ -195,7 +204,7 @@ class ACERTrainer:
 
         for p, gg, kg in zip(self.model.parameters(), g, k):
             if p.grad is not None:
-                p.grad.copy_(p.grad + (gg - alpha * kg))
+                p.grad.copy_(p.grad + (gg + alpha * kg))
 
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=10.0)
         self.optimzer.step()
@@ -234,9 +243,9 @@ class ACERTrainer:
         rho_all = pi_probs.detach() / (mu_probs + 1e-8)
         v_flat = v_vals.view(-1)
         adv_all = q_vals_all_actions.detach() - v_flat.detach().unsqueeze(-1)
-        rho_excess = torch.clamp(rho_all - self.c_bar, min=0.0, max=10.0)
+        rho_excess = torch.clamp(rho_all - self.rho_bar, min=0.0)
 
-        bias_term = (pi_probs * rho_excess * adv_all).sum(dim=-1).view(B, T)
+        bias_term = (pi_probs * (rho_excess / rho_all) * adv_all).sum(dim=-1).view(B, T)
 
         policy_logp = self.model.log_prob(flat_states, flat_actions).view(B, T).detach()
         rho, rho_bar, c = self._compute_importance_weights(policy_logp, mu_logps)
@@ -268,7 +277,7 @@ class ACERTrainer:
         kl_for_grad = (kl_for_grad * not_dones).mean()
         alp = self._perform_combined_update(actor_loss, 0.5 * critic_loss, kl_for_grad, entropy)
         self.log_counter += 1
-        if self.log_counter % 100 == 0 or self.log_counter % 96 == 0:
+        if self.log_counter % 1 == 0:
             print(
                 f"[TRAIN] Updates: {self.log_counter} | "
                 f"critic_loss={critic_loss.item():.4f}, "
