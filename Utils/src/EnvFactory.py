@@ -54,6 +54,6 @@ class AtariEnvFactory(EnvFactory):
             noop_max=30,
             frame_skip=4
         )
-        env = FrameStack(env, self.frames)
         env = FireResetEnv(env)
+        env = FrameStack(env, self.frames)
         return env
