@@ -238,7 +238,7 @@ class ACERTrainer:
             print(
                 f"critic_loss={critic_loss.item():.3f}, "
                 f"actor_loss={actor_loss.item():.3f}, "
-                f"entropy={entropy.item():.3f}, "  # --- CHANGE: Monitoring entropy ---
+                f"entropy={entropy.item():.3f}, "  
                 f"mean_rho={rho.mean().item():.3f}, "
                 f"mean_c={c.mean().item():.3f},"
                 f"mean_kl={kl.item():.5f}")

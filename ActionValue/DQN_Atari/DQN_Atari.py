@@ -59,7 +59,7 @@ def main(seed, env_name):
     epsilon_final = 0.01
     epsilon_decay = 1_000_000
     batch_size = 32
-    max_buffer_size = 1_000_000
+    max_buffer_size = 500_000
     tau = 1.0
     gamma = 0.99
     max_steps = 10_000_000
@@ -104,7 +104,11 @@ def main(seed, env_name):
 
     target_net = deepcopy(behavior_net).to(device)
 
-    buffer = ReplayBuffer(spec, max_buffer_size, batch_size)
+    pointer_mapping = {
+        "next_state": {"source": "state", "offset": 1}
+    }
+
+    buffer = ReplayBuffer(spec, max_buffer_size, batch_size, pointers=pointer_mapping)
 
     eps_greedy = EpsilonGreedyPolicy(epsilon_start=epsilon, epsilon_final=epsilon_final, epsilon_decay=epsilon_decay)
     collector = DataCollectionProcessor(behavior_net, env, buffer, eps_greedy, factory, device)
@@ -139,4 +143,4 @@ def main(seed, env_name):
 if __name__ == '__main__':
     seeds = [0, 1, 2]
     for seed in seeds:
-        main(seed, env_name="PongNoFrameskip-v4")
+        main(seed, env_name="BreakoutNoFrameskip-v4")
