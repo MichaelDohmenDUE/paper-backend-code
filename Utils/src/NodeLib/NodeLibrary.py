@@ -288,47 +288,7 @@ class BufferAppendingNode(Node):
         #print(transitions)
         for t in transitions:
             buffer.append(t)
-        return True  # DummySignal
-
-
-class KUpdateNode(Node):
-    def __init__(self, name, inputs, outputs, inner_graph, iterations, batch_size):
-        super().__init__(name, inputs, outputs)
-        self.inner_graph = inner_graph
-        self.iterations = iterations
-        self.batch_size = batch_size
-
-    def forward(self, dataset_dict, inner_context):
-        dataset_size = len(next(iter(dataset_dict.values())))
-        indices = np.arange(dataset_size)
-        p_losses, v_losses, entropies = [], [], []
-
-        for _ in range(self.iterations):
-            np.random.shuffle(indices)
-            for start in range(0, dataset_size, self.batch_size):
-                idx = indices[start: start + self.batch_size]
-
-                current_inner_context = inner_context.copy()
-
-                minibatch_dict = {key: tensor[idx] for key, tensor in dataset_dict.items()}
-
-                current_inner_context.update({
-                    "minibatch_dict": minibatch_dict,
-                    "minibatch_fields": ["states", "actions", "logps", "advantages", "returns"]
-                })
-
-                self.inner_graph.run(current_inner_context)
-
-                p_losses.append(current_inner_context["policy_loss"].item())
-                v_losses.append(current_inner_context["value_loss"].item())
-                entropies.append(current_inner_context["entropy"].item())
-
-        return {
-            "losses/policy_loss": np.mean(p_losses),
-            "losses/value_loss": np.mean(v_losses),
-            "losses/entropy": np.mean(entropies)
-        }
-
+        return True  # DummySignall0
 
 class RepeatNode(Node):
     def __init__(self, name, inputs, outputs, inner_graph, iterations):

@@ -23,15 +23,16 @@ def main(seed, evn_name):
     start_time = time.time()
     epsilon = 1.0
     epsilon_final = 0.05
-    epsilon_decay = 250_000
+    epsilon_decay = 1_000_000
     eval_episodes = 10
     env_name = evn_name
     sync_freq = 2000
+    train_freq = 4
     batch_size = 32
     max_buffer_size = 500_000
     tau = 1.0
     gamma = 0.99
-    max_steps = 1_000_000
+    max_steps = 1_000_0000
     seed = seed
     offset = 100
     lr = 1e-4
@@ -94,13 +95,14 @@ def main(seed, evn_name):
         metrics_data = collector.run()
         if metrics_data:
             metrics.update(metrics_data)
-        metrics_train = train_process.run()
-        if metrics_train:
-            metrics.update(metrics_train)
+        if step % train_freq == 0:
+            metrics_train = train_process.run()
+            if metrics_train:
+                metrics.update(metrics_train)
         sync_process.run()
         metrics["charts/epsilon"] = collector.epsilon_greedy.epsilon
         metrics["global_step"] = step
-        if step % 400 == 0:
+        if step % 10_000 == 0:
             metrics["charts/SPS"] = int(step / max(time.time() - start_time, 1e-6))
             metrics["charts/epsilon"] = collector.epsilon_greedy.epsilon
 
