@@ -32,7 +32,7 @@ def main(seed, env_name):
     max_buffer_size = 500_000
     tau = 1.0
     gamma = 0.99
-    max_steps = 3_000_000
+    max_steps = 10_000_000
     seed = seed
     offset = 100
     lr = 1e-4
