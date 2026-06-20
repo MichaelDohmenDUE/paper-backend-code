@@ -1,6 +1,6 @@
 import torch
 
-from backend.Educational.REINFORCE_BASELINE.src.Policy_Reinforce_Baseline import PolicyReinforceBaseline
+from StochasticPolicy.REINFORCE_BASELINE.src.Policy_Reinforce_Baseline import PolicyReinforceBaseline
 from backend.Utils.src.NodeLib.Node import PropsNode, Graph, Signal
 from backend.Utils.src.NodeLib.NodeLibrary import detransition, optimizer_update, policy_loss, mean_squared_error, \
     combined_loss, extract_final_states, compute_n_step_returns
