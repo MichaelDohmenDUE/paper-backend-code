@@ -51,7 +51,7 @@ def main(seed, env_name):
     lr = 2.5e-4
     gamma = 0.99
     lam = 0.95
-    eval_freq = 10_000
+    eval_freq = 500_000
     eval_episodes = 5
     algo_name = "PPO_discrete_atari_ImplementationGap"
     num_envs = 8
@@ -138,6 +138,6 @@ def main(seed, env_name):
 
 if __name__ == "__main__":
     seeds = [0, 1, 2]
-    env_name = "PongNoFrameskip-v4"
+    env_name = "BreakoutNoFrameskip-v4"
     for seed in seeds:
         main(seed, env_name)
