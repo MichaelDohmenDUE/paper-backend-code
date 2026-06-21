@@ -62,7 +62,7 @@ class DataCollectionProcessor:
                 input_mapping={
                     "state": "state",
                     "action": "action",
-                    "reward": "reward",
+                    "reward": "clipped_reward",
                     "next_state": "next_state",
                     "done": "done"
                 }
