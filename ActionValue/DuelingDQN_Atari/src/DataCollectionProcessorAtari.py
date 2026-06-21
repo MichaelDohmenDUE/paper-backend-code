@@ -63,6 +63,8 @@ class DataCollectionProcessor:
             PropsNode("EnvStep", ["action"], ["next_state_raw", "reward", "terminated", "truncated", "info"],
                       props=["env"],
                       function=lambda env, a: env.step_detailed(a), no_grad=True),
+            PropsNode("ClipReward", ["reward"], ["clipped_reward"],
+                      function=lambda r: np.sign(r), no_grad=True),
             PropsNode("FormatNextState", ["next_state_raw"], ["next_state"],
                       function=lambda ns: np.asarray(ns, dtype=np.uint8), no_grad=True),
             PropsNode("CombineDones", ["terminated", "truncated"], ["done"],
@@ -74,7 +76,7 @@ class DataCollectionProcessor:
                 input_mapping={
                     "state": "state",
                     "action": "action",
-                    "reward": "reward",
+                    "reward": "clipped_reward",
                     "next_state": "real_next_state",
                     "done": "done"
                 }
