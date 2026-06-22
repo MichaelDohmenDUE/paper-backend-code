@@ -19,7 +19,7 @@ To set up the environment and install dependencies, follow this guide for Linux/
 # 1. Install uv (if not already installed)
 curl -LsSf [https://astral.sh/uv/install.sh](https://astral.sh/uv/install.sh) | sh
 # 2. Open the Backend folder
-cd DeepRLWebPlayground/backend
+cd <yourfolder>/backend
 # 3. Create a virtual environment and install dependencies from the lockfile
 uv sync
 ```
