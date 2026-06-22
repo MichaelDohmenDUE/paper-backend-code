@@ -1,9 +1,12 @@
 import copy
+import os
 import time
 
 import numpy as np
 import torch
 import wandb
+from dotenv import load_dotenv
+
 from torch import optim
 
 from backend.DeterministicPolicy.TD3.src.Actor import Actor
@@ -20,6 +23,7 @@ from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+load_dotenv()
 def eval_trainer(trainer, env_handler, eval_episodes=5):
     trainer.actor.eval()
 
@@ -72,9 +76,9 @@ def main(seed, env_name):
     hidden_dim = 256
     buffer_size = int(1e6)
     setting_global_seed(seed)
-
+    wandb_entity = os.getenv("WANDB_ENTITY")
     wandb.init(
-        entity="michael_dohmen-",
+        entity=wandb_entity,
         project="my-Td3-benchmarks",
         name=f"TD3_{env_name}_seed{seed}",
         tags=["v1.0-benchmark", "official-run"],

@@ -1,7 +1,9 @@
+import os
 import time
 
 import torch
 import wandb
+from dotenv import load_dotenv
 from torch import optim
 
 from backend.StochasticPolicy.PPO_discrete_Atari.PPO_Atari_Implementation_Gap.src.DataCollector_ImplementationGap import \
@@ -19,7 +21,7 @@ from backend.Utils.src.RolloutBuffer import RolloutBuffer
 from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+load_dotenv()
 
 def eval_trainer(trainer, env_handler, eval_episodes=5):
     avg_reward = 0.0
@@ -57,9 +59,9 @@ def main(seed, env_name):
     num_envs = 8
     offset = 100
     setting_global_seed(seed)
-
+    wandb_entity = os.getenv("WANDB_ENTITY")
     wandb.init(
-        project="my-ppo-benchmarks",
+        entity=wandb_entity,
         group=algo_name,
         name=f"{algo_name}-{env_name}-seed-{seed}",
         tags=[env_name, "benching", algo_name],

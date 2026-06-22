@@ -1,8 +1,10 @@
+import os
 import time
 from copy import deepcopy
 
 import torch
 import wandb
+from dotenv import load_dotenv
 
 from backend.ActionValue.DuelingDQN_Atari.src.BehaviourAtari import BehaviourAtari
 from backend.Utils.src.EnvFactory import AtariEnvFactory
@@ -38,9 +40,9 @@ def main(seed, evn_name):
     lr = 1e-4
     warmup_steps = 80_000
     setting_global_seed(seed)
-
+    wandb_entity = os.getenv("WANDB_ENTITY")
     wandb.init(
-        entity="michael_dohmen-",
+        entity=wandb_entity,
         project="my-DuelingDQN-benchmarks",
         name=f"DuelingDQN{env_name}_seed-{seed}",
         tags=["benchmarking", "DuelingDQN"],

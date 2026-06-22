@@ -1,6 +1,7 @@
+import os
 import time
 from copy import deepcopy
-
+from dotenv import load_dotenv
 import torch
 import wandb
 
@@ -18,6 +19,7 @@ from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+load_dotenv()
 
 def main(seed, env_name):
     start_time = time.time()
@@ -39,9 +41,9 @@ def main(seed, env_name):
     warmup_steps = 80_000
 
     setting_global_seed(seed)
-
+    wandb_entity = os.getenv("WANDB_ENTITY")
     wandb.init(
-        entity="michael_dohmen-",
+        entity=wandb_entity,
         project="my-ddqn-benchmarks",
         name=f"DDQN_{env_name}_seed{seed}",
         tags=["benchmarking", "DDQN"],

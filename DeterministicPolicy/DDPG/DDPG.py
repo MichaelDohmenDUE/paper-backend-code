@@ -1,10 +1,11 @@
-
+import os
 import time
 from copy import deepcopy
 
 
 import torch
 import wandb
+from dotenv import load_dotenv
 
 from backend.DeterministicPolicy.DDPG.src.Actor import Actor
 from backend.DeterministicPolicy.DDPG.src.Critic import Critic
@@ -20,7 +21,7 @@ from backend.Utils.src.SyncProcessor import SyncProcessor
 from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+load_dotenv()
 
 def eval_trainer(trainer, env_handler, eval_episodes=5):
     avg_reward = 0.0
@@ -62,10 +63,9 @@ def main(seed, env_name):
     eval_freq = 5000
     eval_episodes = 10
     setting_global_seed(seed)
-
+    wandb_entity = os.getenv("WANDB_ENTITY")
     wandb.init(
-        entity="michael_dohmen-",
-        project="my-DDPG-benchmarks",
+        entity=wandb_entity,
         name=f"DDPG_{env_name}_seed_{seed}",
         tags=["v1.0-benchmark", "official-run"],
         config={

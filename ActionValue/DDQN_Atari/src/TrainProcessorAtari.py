@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+import torch.nn.functional as F
 
 from backend.Utils.src.NodeLib.Node import Signal, Graph, PropsNode
 from backend.Utils.src.NodeLib.NodeLibrary import bellman, detransition, indexing, mean_squared_error
@@ -52,7 +53,7 @@ class TrainProcessor:
             PropsNode("Bellman", ["qsa_t", "reward", "done", "gamma"], ["target_val"],
                       function=bellman),
             PropsNode("Loss", ["qsa_b", "target_val"], ["loss"],
-                      function=mean_squared_error),
+                      function=F.smooth_l1_loss),
             PropsNode("Optimize", ["loss"], ["_opt"], props=["optimizer"],
                       function=optimizer_update),
 

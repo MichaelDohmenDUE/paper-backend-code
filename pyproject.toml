@@ -5,9 +5,10 @@ dependencies = [
     "torch",
     "numpy",
     "wandb",
-    "gymnasium[atari,accept-rom-license]==0.29.1",
+   "gymnasium[atari,accept-rom-license,mujoco]==0.29.1",
     "opencv-python",
     "shimmy>=0.2.1",
+    "python-dotenv",
 ]
 
 [tool.setuptools]

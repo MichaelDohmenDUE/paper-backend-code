@@ -1,7 +1,9 @@
+import os
 import time
 
 import torch
 import wandb
+from dotenv import load_dotenv
 from torch import optim
 
 from backend.Utils.src.ReplayBuffer import ReplayBuffer
@@ -17,7 +19,7 @@ from backend.Utils.src.RolloutBuffer import RolloutBuffer
 from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+load_dotenv()
 
 def eval_trainer(trainer, env_handler, eval_episodes=5):
     avg_reward = 0.0
@@ -57,14 +59,14 @@ def main(seed):
     offset = 100
     setting_global_seed(seed)
     algo_name = "ppo_discrete_mujoco"
-
+    wandb_entity = os.getenv("WANDB_ENTITY")
     wandb.init(
+        entity=wandb_entity,
         project="my-ppo-benchmarks",
         group=algo_name,
         name=f"{algo_name}-{env_name}-seed-{seed}",
         tags=[env_name, "debugging", algo_name],
         reinit=True,
-        entity="michael_dohmen-",
         config={
             "env_id": env_name,
             "exp_name": f"PPO_{env_name}_seed-{seed}",

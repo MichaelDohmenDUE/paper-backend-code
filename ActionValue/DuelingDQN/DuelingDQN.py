@@ -1,8 +1,10 @@
+import os
 import time
 from copy import deepcopy
 
 import torch
 import wandb
+from dotenv import load_dotenv
 
 from backend.ActionValue.DQN.DQN import evaluate_policy
 from backend.ActionValue.DuelingDQN.src.DuellingDQN import DuellingDQN
@@ -17,7 +19,7 @@ from backend.Utils.src.SyncProcessor import SyncProcessor
 from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+load_dotenv()
 
 def main(seed):
     start_time = time.time()
@@ -38,9 +40,9 @@ def main(seed):
     lr = 2.5e-4
     warmup_steps = 1000
     setting_global_seed(seed)
-
+    wandb_entity = os.getenv("WANDB_ENTITY")
     wandb.init(
-        entity="michael_dohmen-",
+        entity=wandb_entity,
         project="my-DuelingDQN-benchmarks",
         name=f"DuelingDQN{env_name}_seed{seed}",
         tags=["benchmarking", "DuelingDQN"],

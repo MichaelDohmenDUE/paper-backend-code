@@ -1,8 +1,10 @@
+import os
 import time
 
 import numpy as np
 import torch
 import wandb
+from dotenv import load_dotenv
 from torch import optim
 
 from backend.Utils.src.RolloutBuffer import RolloutBuffer
@@ -18,7 +20,7 @@ from backend.Utils.src.ReplayBuffer import ReplayBuffer
 from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+load_dotenv()
 import gymnasium as gym
 
 
@@ -78,9 +80,9 @@ def main(seed):
     offset = 100
     setting_global_seed(seed)
     algo_name = "ppo_continous_mujoco"
-
+    wandb_entity = os.getenv("WANDB_ENTITY")
     wandb.init(
-        entity="michael_dohmen-",
+        entity=wandb_entity,
         project="my-ppo-benchmarks",
         group=algo_name,
         name=f"{algo_name}-{env_name}-seed-{seed}",

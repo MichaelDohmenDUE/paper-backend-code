@@ -1,8 +1,11 @@
+import os
 import time
 
 import numpy as np
 import wandb
 import torch
+from dotenv import load_dotenv
+
 from backend.Utils.src.BatchTransitioner import TransitionFactory, TransitionSpec
 from backend.Utils.src.EnvFactory import GymEnvFactory
 from backend.Utils.src.RolloutBuffer import KStepRolloutBuffer
@@ -14,7 +17,7 @@ from StochasticPolicy.ADVANTAGE_ACTOR_CRITIC.src.Trainer import Trainer
 from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+load_dotenv()
 
 
 def evaluate_policy(policy, env_handler, device, episodes=10):
@@ -59,9 +62,9 @@ def main(seed):
     algo_name = "ADVANTAGE-ACTOR_CRITIC"
     rollout_steps = 20
     setting_global_seed(seed)
-
+    wandb_entity = os.getenv("WANDB_ENTITY")
     wandb.init(
-        entity="michael_dohmen-",
+        entity=wandb_entity,
         project="Educational_Benchmarks",
         group=algo_name,
         name=f"{algo_name}-seed-{seed}",

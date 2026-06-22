@@ -1,6 +1,8 @@
+import os
 import time
 import torch
 import wandb
+from dotenv import load_dotenv
 
 from backend.Utils.src import RolloutBuffer
 from backend.Utils.src.BatchTransitioner import TransitionFactory, TransitionSpec
@@ -14,7 +16,7 @@ from StochasticPolicy.REINFORCE_BASELINE.src.ReinforceTrainer import REINFORCETr
 from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+load_dotenv()
 
 def evaluate_policy(policy, env_handler, device, episodes=10):
     policy.eval()
@@ -52,9 +54,9 @@ def main(seed):
     algo_name = "REINFORCE_WITH_BASELINE"
     opt = "Adam"
     setting_global_seed(seed)
-
+    wandb_entity = os.getenv("WANDB_ENTITY")
     wandb.init(
-        entity="michael_dohmen-",
+        entity=wandb_entity,
         project="Educational_Benchmarks",
         group=algo_name,
         name=f"{algo_name}-seed-{seed}",

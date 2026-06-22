@@ -1,20 +1,15 @@
+import os
+
 import wandb
 import numpy as np
+from dotenv import load_dotenv
 
 api = wandb.Api()
-entity = "michael_dohmen-"
+load_dotenv()
 project = "my-dqn-benchmarks"
-
-runs = api.runs(f"{entity}/{project}", filters={"display_name": {"$regex": "DQN_BreakoutNoFrameskip-v4_seed*"}})
-
-final_rewards = [20.6,21,21]
-mean_val = np.mean(final_rewards)
-std_val = np.std(final_rewards, ddof=1)
-print(f"Statistics for {len(final_rewards)} seeds:")
-print(f"Mean:    {mean_val:.2f}")
-print(f"Std Dev: {std_val:.2f}")
-
-
+wandb_entity = os.getenv("WANDB_ENTITY")
+runs = api.runs(f"{wandb_entity}/{project}", filters={"display_name": {"$regex": "DQN_BreakoutNoFrameskip-v4_seed*"}})
+final_rewards = []
 for run in runs:
     if "charts/eval_avg_score" in run.summary:
         final_rewards.append(run.summary["charts/eval_avg_score"])

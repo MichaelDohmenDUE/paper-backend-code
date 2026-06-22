@@ -1,8 +1,10 @@
+import os
 import time
 from copy import deepcopy
 
 import torch
 import wandb
+from dotenv import load_dotenv
 
 from backend.DeterministicPolicy.DDPG.src.Policy import Policy
 from backend.ActionValue.DDQN.src.TrainProcessor import TrainProcessor
@@ -16,13 +18,10 @@ from backend.Utils.src.SyncProcessor import SyncProcessor
 from backend.Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+load_dotenv()
 
 
 def evaluate_policy(policy, env_handler, episodes=5, device="cpu"):
-    """
-    Generated with GEemini
-    """
     policy.eval()
     total_reward = 0.0
 
@@ -69,9 +68,9 @@ def main(seed):
     lr = 1e-4
     warmup_steps = min(batch_size,500)
     setting_global_seed(seed)
-
+    wandb_entity = os.getenv("WANDB_ENTITY")
     wandb.init(
-        entity="michael_dohmen-",
+        entity=wandb_entity,
         project="my-ddqn-benchmarks",
         name=f"DDQN_{env_name}_seed{seed}",
         tags=["benchmarking", "DQDN"],
