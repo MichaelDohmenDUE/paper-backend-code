@@ -57,11 +57,13 @@ class EnvironmentHandler:
 
 
 class VecEnvironmentHandler:
-    def __init__(self, factory: EnvFactory, seed: int, num_envs: int = 8, reward_scale: float = 1.0):
+    def __init__(self, factory: EnvFactory, seed: int, num_envs: int = 8, reward_scale: float = 1.0, **factory_kwargs):
         self.num_envs = num_envs
         self.reward_scale = reward_scale
         self.seed = seed
-        self.envs = gym.vector.SyncVectorEnv([lambda: factory.create() for _ in range(num_envs)])
+        self.envs = gym.vector.SyncVectorEnv([
+            lambda: factory.create(**factory_kwargs) for _ in range(num_envs)
+        ])
         seeds = [seed + i for i in range(num_envs)]
         self.envs.reset(seed=seeds)
         obs_space = self.envs.single_observation_space

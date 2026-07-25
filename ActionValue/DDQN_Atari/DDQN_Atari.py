@@ -73,8 +73,8 @@ def main(seed, env_name):
 
     gym_factory = AtariEnvFactory(env_name)
 
-    env = VecEnvironmentHandler(gym_factory, seed, num_envs=1)
-    eval_env = VecEnvironmentHandler(gym_factory, seed + offset, num_envs=1)
+    env = VecEnvironmentHandler(gym_factory, seed, num_envs=1, is_eval=False)
+    eval_env = VecEnvironmentHandler(gym_factory, seed + offset, num_envs=1, is_eval=True)
     obs_size, action_size, _ = env.get_env_specs()
 
     behavior_net = BehaviourAtariDDQN(action_size).to(device)

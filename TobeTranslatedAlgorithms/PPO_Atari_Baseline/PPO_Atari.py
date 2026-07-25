@@ -84,8 +84,9 @@ def main(seed):
     replay_spec = TransitionSpec(["state", "action", "logp", "advantage", "return"])
     transition_factory = TransitionFactory(spec)
     factory = AtariEnvFactory(env_name)
-    env_handler = VecEnvironmentHandler(factory, seed, num_envs)
-    eval_env_handler = VecEnvironmentHandler(factory, seed + offset, 1)
+
+    env_handler = VecEnvironmentHandler(factory, seed, num_envs, is_eval=False)
+    eval_env_handler = VecEnvironmentHandler(factory, seed + offset, 1, is_eval=True)
     state_dim, action_dim, _ = env_handler.get_env_specs()
     channels = state_dim[0]
     agent = AtariPPOAgent(action_dim, channels).to(device)
