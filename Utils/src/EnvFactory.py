@@ -18,7 +18,7 @@ class GymEnvFactory(EnvFactory):
 
 from abc import ABC, abstractmethod
 import gymnasium as gym
-from gymnasium.wrappers import AtariPreprocessing, FrameStack
+from gymnasium.wrappers import AtariPreprocessing, FrameStack, RecordEpisodeStatistics
 
 
 class FireResetEnv(gym.Wrapper):
@@ -43,14 +43,17 @@ class AtariEnvFactory(EnvFactory):
         self.env_name = env_name
         self.frames = frames
 
-    def create(self, render_mode=None):
+    def create(self, render_mode=None, is_eval=False):
         env = gym.make(self.env_name, frameskip=1, render_mode=render_mode)
+
+        env = RecordEpisodeStatistics(env)
+
         env = AtariPreprocessing(
             env,
             grayscale_obs=True,
             scale_obs=False,
             screen_size=84,
-            terminal_on_life_loss=True,
+            terminal_on_life_loss=not is_eval,
             noop_max=30,
             frame_skip=4
         )
