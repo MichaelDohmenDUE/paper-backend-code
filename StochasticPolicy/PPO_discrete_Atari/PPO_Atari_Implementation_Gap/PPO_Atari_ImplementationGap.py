@@ -36,6 +36,7 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
                 action = dist.probs.argmax(dim=-1).cpu().numpy()
             next_state, reward, done, _ = env_handler.step(action)
             avg_reward += reward[0]
+            done = done[0]
             state = next_state
     avg_reward /= eval_episodes
     print(f"Average Reward over {eval_episodes} episodes: {avg_reward:.3f}")
@@ -107,7 +108,7 @@ def main(seed, env_name):
     data_collector = DataCollectionProcessor(env_handler, transition_factory, rollout_buffer, rollout_size,
                                              agent, device)
 
-    eval_step = 0
+    eval_step = eval_freq
     while gl_counter.get() < max_steps:
         metrics = {}
         metrics_ep = data_collector.run()
