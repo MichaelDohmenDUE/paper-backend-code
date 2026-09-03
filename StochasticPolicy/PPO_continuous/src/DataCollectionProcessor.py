@@ -1,7 +1,7 @@
 import numpy as np
 
 from StochasticPolicy.PPO_discrete_Mujoco.src.DataCollectorGraphMujoco import merge_final_observations
-from TobeTranslatedAlgorithms.PPO_Atari_Baseline.src.DataCollectorAtari import EpisodicMetricsNode
+from StochasticPolicy.PPO_discrete_Atari.PPO_Atari_Baseline.src import EpisodicMetricsNode
 from backend.Utils.src.NodeLib.Node import Node, Graph
 from backend.Utils.src.NodeLib.Node import PropsNode
 from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode

@@ -1,11 +1,13 @@
+import os
 import time
 
 import torch
 import wandb
 from torch import optim
-
-from TobeTranslatedAlgorithms.PPO_Atari_Baseline.src.DataCollectorAtari import DataCollectionProcessor
-from TobeTranslatedAlgorithms.PPO_Atari_Baseline.src.PPOTrainerAtari import PPOTrainerProcessor
+from dotenv import load_dotenv
+load_dotenv()
+from StochasticPolicy.PPO_discrete_Atari.PPO_Atari_Baseline.src.DataCollectorAtari import DataCollectionProcessor
+from StochasticPolicy.PPO_discrete_Atari.PPO_Atari_Baseline.src.PPOTrainerAtari import PPOTrainerProcessor
 from backend.StochasticPolicy.PPO_discrete_Mujoco.src.DiscreteActorPPO import AtariPPOAgent
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
@@ -56,13 +58,14 @@ def main(seed):
     offset = 100
     setting_global_seed(seed)
 
+    wandb_entity = os.getenv("WANDB_ENTITY")
     wandb.init(
+        entity=wandb_entity,
         project="my-ppo-benchmarks",
         group=algo_name,
         name=f"{algo_name}-{env_name}-seed-{seed}",
         tags=[env_name, "benching", algo_name],
         reinit=True,
-        entity="michael_dohmen-",
         config={
             "env_id": env_name,
             "exp_name": f"PPO_{env_name}_seed-{seed}",
