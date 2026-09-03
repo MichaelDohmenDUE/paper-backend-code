@@ -5,9 +5,10 @@ import torch
 import wandb
 from torch import optim
 from dotenv import load_dotenv
+
 load_dotenv()
-from StochasticPolicy.PPO_discrete_Atari.PPO_Atari_Baseline.src.DataCollectorAtari import DataCollectionProcessor
-from StochasticPolicy.PPO_discrete_Atari.PPO_Atari_Baseline.src.PPOTrainerAtari import PPOTrainerProcessor
+from backend.StochasticPolicy.PPO_discrete_Atari.PPO_Atari_Baseline.src.DataCollectorAtari import DataCollectionProcessor
+from backend.StochasticPolicy.PPO_discrete_Atari.PPO_Atari_Baseline.src.PPOTrainerAtari import PPOTrainerProcessor
 from backend.StochasticPolicy.PPO_discrete_Mujoco.src.DiscreteActorPPO import AtariPPOAgent
 from backend.Utils.src.BatchTransitioner import TransitionFactory
 from backend.Utils.src.BatchTransitioner import TransitionSpec
@@ -40,9 +41,9 @@ def eval_trainer(trainer, env_handler, eval_episodes=5):
     return avg_reward
 
 
-def main(seed):
+def main(seed, env_name):
     start_time = time.time()
-    env_name = "BreakoutNoFrameskip-v4"
+    env_name = env_name
     seed = seed
     rollout_size = 1024
     batch_size = 128
@@ -136,5 +137,6 @@ def main(seed):
 
 if __name__ == "__main__":
     seeds = [2, 1, 0]
+    env_name = "BreakoutNoFrameskip-v4"
     for seed in seeds:
-        main(seed)
+        main(seed, env_name)
