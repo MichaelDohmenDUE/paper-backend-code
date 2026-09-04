@@ -1,0 +1,10 @@
+Metadata-Version: 2.4
+Name: SignalFlowRL
+Version: 1.0.0
+Requires-Dist: torch
+Requires-Dist: numpy
+Requires-Dist: wandb
+Requires-Dist: gymnasium[accept-rom-license,atari,mujoco]==0.29.1
+Requires-Dist: opencv-python
+Requires-Dist: shimmy>=0.2.1
+Requires-Dist: python-dotenv

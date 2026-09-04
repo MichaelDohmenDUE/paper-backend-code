@@ -4,13 +4,15 @@ The codebase is ordered by algorithm types:
 
 * `ActionValue/`: Implementations of DQN, DDQN and Dueling DQN
 * `DeterministicPolicy/`: Deterministic policy gradient methods (DDPG, TD3).
-* `StochasticPolicy/`: REINFORCE, REINFORCE_BASELINE, custom Advantage Actor Critic, PPO
+* `StochasticPolicy/`: REINFORCE, REINFORCE_BASELINE, custom Advantage Actor Critic, PPO Baseline, PPO ImplemnetationGap
 * `Utils/`: buffers, environment wrappers, and Node Library
 * `TobeTranslatedALgorithms/`: Algorithms that could not be converted to a signal flow graph yet, not relevant for the Thesis but it is important for Fatih later so it won't get deleterd
 
 The structure is inspired by CleanRL, which means that each algorithm has its own main script and a `src/` Folder that contains the  
 contains den Agent Networks, the Training Processor and the Data Coellction Proccessor at the very least.
-The main script is named after the algorithm.
+The main script is named after the algorithm. 
+
+Each Subfolder also contains the drawn graphs.
 ## Requirements
 This project uses [`uv`] for fast, deterministic package management.
 
@@ -35,7 +37,7 @@ PYTHONPATH=.. uv run ActionValue/DQN/DQN.py
 ```
 This is necessary, as the backend is part of the bigger DEEPRLWebPLayGround. The scripts support GPU usage.
 Using your GPU will speed up Training somewhat but the scripts are very CPU heavy. I would also advide to be careful with the Atari scripts for the Action-Value Variants.
-They currently use a lot of memory, so you might beed to adapt the Hyperparamters on a weaker machine. 32 GB of Ram is recommended to run the scripts comfortably.
+They currently use a lot of memory, so you might need to adapt the Hyperparamters on a weaker machine. 32 GB of Ram is recommended to run the scripts comfortably.
 
 Wandb can be run in an offline or online modus. By default the online modus will be tunred on and local runs will be 
 saved to a wandb folder within the algorithm folder. You can turn on offline modus with

@@ -1,0 +1,7 @@
+torch
+numpy
+wandb
+gymnasium[accept-rom-license,atari,mujoco]==0.29.1
+opencv-python
+shimmy>=0.2.1
+python-dotenv
