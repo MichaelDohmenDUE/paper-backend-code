@@ -9,7 +9,7 @@ The codebase is ordered by algorithm types:
 * `TobeTranslatedALgorithms/`: Algorithms that could not be converted to a signal flow graph yet, not relevant for the Thesis but it is important for Fatih later so it won't get deleterd
 
 The structure is inspired by CleanRL, which means that each algorithm has its own main script and a `src/` Folder that contains the  
-contains den Agent Networks, the Training Processor and the Data Coellction Proccessor at the very least.
+Agent Networks, the Training Processor and the Data Coellction Proccessor at the very least.
 The main script is named after the algorithm. 
 
 Each Subfolder also contains the drawn graphs.
