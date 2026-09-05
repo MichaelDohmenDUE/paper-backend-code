@@ -1,13 +1,13 @@
-## DDQN
+## Dueling DDQN
 
 ## Data Collection
-![DQN Atari Graph](DrawnGraphs/DuelingDDQN_DC.png)
-[View DQN Atari Graph PDF](DrawnGraphs/DuelingDDQN_DC.pdf)
+![DuelingDQN Atari Graph](DrawnGraphs/DuelingDDQN_DC.png)
+[View Dueling DQN Atari Graph PDF](DrawnGraphs/DuelingDDQN_DC.pdf)
 ## Training
-![DQN Atari Graph](DrawnGraphs/DuelingDDQN_T.png)
-[View DQN Atari Graph PDF](DrawnGraphs/DuelingDDQN_T.pdf)
+![Dueling DQN Atari Graph](DrawnGraphs/DuelingDDQN_T.png)
+[View Dueling DQN Atari Graph PDF](DrawnGraphs/DuelingDDQN_T.pdf)
 ## Sync
-![DQN Atari Graph](DrawnGraphs/DuelingDDQN_S.png)
-[View DQN Atari Graph PDF](DrawnGraphs/DuelingDDQN_S.pdf)
+![DuelingAtari Graph](DrawnGraphs/DuelingDDQN_S.png)
+[View Dueling Atari Graph PDF](DrawnGraphs/DuelingDDQN_S.pdf)
 
 

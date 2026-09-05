@@ -1,13 +1,13 @@
 ## DDPG
 
 ## Data Collection
-![DQN Atari Graph](DrawnGraphs/DDPG_DC.png)
-[View DQN Atari Graph PDF](DrawnGraphs/DDPG_DC.pdf)
+![DDPG Atari Graph](DrawnGraphs/DDPG_DC.png)
+[View DDPGAtari Graph PDF](DrawnGraphs/DDPG_DC.pdf)
 ## Training
-![DQN Atari Graph](DrawnGraphs/DDPG_T.png)
-[View DQN Atari Graph PDF](DrawnGraphs/DDPG_T.pdf)
+![DDPG Atari Graph](DrawnGraphs/DDPG_T.png)
+[View DDPG Atari Graph PDF](DrawnGraphs/DDPG_T.pdf)
 ## Sync
-![DQN Atari Graph](DrawnGraphs/DDPG_S.png)
-[View DQN Atari Graph PDF](DrawnGraphs/DDPG_S.pdf)
+![DDPG Atari Graph](DrawnGraphs/DDPG_S.png)
+[View DDPG Atari Graph PDF](DrawnGraphs/DDPG_S.pdf)
 
 
