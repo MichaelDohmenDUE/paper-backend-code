@@ -1,9 +1,9 @@
 ## AAC
 
 ## Data Collection
-![DQN Atari Graph](DrawnGraphs/AAC_DC.png)
-[View DQN Atari Graph PDF](DrawnGraphs/AAC_DC.pdf)
+![AACGraph](DrawnGraphs/AAC_DC.png)
+[View AAC Graph PDF](DrawnGraphs/AAC_DC.pdf)
 ## Training
-![DQN Atari Graph](DrawnGraphs/AAC_T.png)
-[View DQN Atari Graph PDF](DrawnGraphs/AAC_T.pdf)
+![AAC Graph](DrawnGraphs/AAC_T.png)
+[View AAC Graph PDF](DrawnGraphs/AAC_T.pdf)
 
