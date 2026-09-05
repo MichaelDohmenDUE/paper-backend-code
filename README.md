@@ -31,7 +31,7 @@ It is currently mandatory for logging.
 
 Copy the ".env.example" to a ".env" file and insert your WandB username.
 
-Then you can then start the Training Scripts with
+Then you can start the Training Scripts with
 ```
 PYTHONPATH=.. uv run ActionValue/DQN/DQN.py
 ```
