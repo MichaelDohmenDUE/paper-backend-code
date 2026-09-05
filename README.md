@@ -36,15 +36,15 @@ Then you can start the Training Scripts with
 uv run ActionValue/DQN/DQN.py
 ```
 This is necessary, as the backend is part of the bigger DEEPRLWebPLayGround. The scripts support GPU usage.
-Using your GPU will speed up Training somewhat but the scripts are very CPU heavy. I would also advide to be careful with the Atari scripts for the Action-Value Variants.
-They currently use a lot of memory, so you might need to adapt the Hyperparamters on a weaker machine. 32 GB of Ram is recommended to run the scripts comfortably.
+Using your GPU will speed up Training somewhat but the scripts are very CPU heavy. Be careful with the Atari scripts for the Action-Value Variants!
+They currently use a lot of memory, so you might need to adapt the hyperparamters on a weaker machine. 32 GB of Ram is recommended to run the scripts comfortably.
 
-Wandb can be run in an offline or online modus. By default the online modus will be tunred on and local runs will be 
+Wandb can be run in an offline or online modus. By default the online modus will be turned on and local runs will be 
 saved to a wandb folder within the algorithm folder. You can turn on offline modus with
 ```
 wandb offline
 ```
 
-Each Training Script has its own set Hyperparameters that can be adapted in order to customize your Training.
+Each Training Script has its own set hyperparameters that can be adapted in order to customize your Training.
 
 
