@@ -9,17 +9,17 @@ from dotenv import load_dotenv
 
 from torch import optim
 
-from backend.DeterministicPolicy.TD3.src.Actor import Actor
-from backend.DeterministicPolicy.TD3.src.Critic import Critic
-from backend.DeterministicPolicy.TD3.src.DataCollectionProcessor import DataCollectionProcessor
-from backend.DeterministicPolicy.TD3.src.TD3TrainerProcessor import TrainProcessor
-from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
-from backend.Utils.src.EnvFactory import GymEnvFactory
-from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
-from backend.Utils.src.GlobalCounter import GlobalCounter
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
-from backend.Utils.src.SyncProcessor import SyncProcessor
-from backend.Utils.src.utils import setting_global_seed
+from DeterministicPolicy.TD3.src.Actor import Actor
+from DeterministicPolicy.TD3.src.Critic import Critic
+from DeterministicPolicy.TD3.src.DataCollectionProcessor import DataCollectionProcessor
+from DeterministicPolicy.TD3.src.TD3TrainerProcessor import TrainProcessor
+from Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
+from Utils.src.EnvFactory import GymEnvFactory
+from Utils.src.EnviromentHandler import VecEnvironmentHandler
+from Utils.src.GlobalCounter import GlobalCounter
+from Utils.src.ReplayBuffer import ReplayBuffer
+from Utils.src.SyncProcessor import SyncProcessor
+from Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

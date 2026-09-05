@@ -5,7 +5,7 @@ from typing import Any, Iterable
 import numpy as np
 import torch
 
-from backend.Utils.src.BatchTransitioner import TransitionBatch, TransitionSpec
+from Utils.src.BatchTransitioner import TransitionBatch, TransitionSpec
 
 
 class RolloutBuffer:

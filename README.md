@@ -33,7 +33,7 @@ Copy the ".env.example" to a ".env" file and insert your WandB username.
 
 Then you can start the Training Scripts with
 ```
-PYTHONPATH=.. uv run ActionValue/DQN/DQN.py
+uv run ActionValue/DQN/DQN.py
 ```
 This is necessary, as the backend is part of the bigger DEEPRLWebPLayGround. The scripts support GPU usage.
 Using your GPU will speed up Training somewhat but the scripts are very CPU heavy. I would also advide to be careful with the Atari scripts for the Action-Value Variants.

@@ -2,12 +2,12 @@ import numpy as np
 import torch
 from torch import nn
 
-from backend.ActionValue.DQN.src.EpsilonGreedy import EpsilonGreedyPolicy
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
-from backend.Utils.src.BatchTransitioner import TransitionFactory
-from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
-from backend.Utils.src.NodeLib.Node import Graph, PropsNode
-from backend.Utils.src.NodeLib.NodeLibrary import to_tensor, to_numpy_array, TransitionNode, BufferAppendingNode
+from ActionValue.DQN.src.EpsilonGreedy import EpsilonGreedyPolicy
+from Utils.src.ReplayBuffer import ReplayBuffer
+from Utils.src.BatchTransitioner import TransitionFactory
+from Utils.src.EnviromentHandler import VecEnvironmentHandler
+from Utils.src.NodeLib.Node import Graph, PropsNode
+from Utils.src.NodeLib.NodeLibrary import to_tensor, to_numpy_array, TransitionNode, BufferAppendingNode
 
 class DataCollectionProcessor:
     def __init__(self, behaviour_net: nn.Module, env: VecEnvironmentHandler, buffer: ReplayBuffer,

@@ -4,12 +4,12 @@ from typing import Any, Iterable
 
 import torch
 
-from backend.Utils.src.BatchTransitioner import TransitionBatch, TransitionSpec
+from Utils.src.BatchTransitioner import TransitionBatch, TransitionSpec
 
 import numpy as np
 import torch
 from typing import Any, Iterable
-from backend.Utils.src.BatchTransitioner import TransitionSpec
+from Utils.src.BatchTransitioner import TransitionSpec
 
 
 class ReplayBuffer:

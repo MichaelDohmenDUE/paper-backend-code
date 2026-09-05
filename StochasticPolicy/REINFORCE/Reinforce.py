@@ -5,17 +5,17 @@ import numpy as np
 import wandb
 from dotenv import load_dotenv
 
-from backend.Utils.src import RolloutBuffer
-from backend.Utils.src.BatchTransitioner import TransitionFactory, TransitionSpec
-from backend.Utils.src.EnvFactory import GymEnvFactory
-from backend.Utils.src.RolloutBuffer import RolloutBuffer
+from Utils.src import RolloutBuffer
+from Utils.src.BatchTransitioner import TransitionFactory, TransitionSpec
+from Utils.src.EnvFactory import GymEnvFactory
+from Utils.src.RolloutBuffer import RolloutBuffer
 import torch
 
 from StochasticPolicy.REINFORCE.src.Policy_Reinforce import PolicyVPG
-from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
+from Utils.src.EnviromentHandler import VecEnvironmentHandler
 from StochasticPolicy.REINFORCE.src.DataCollector import DataCollectionProcessor
 from StochasticPolicy.REINFORCE.src.ReinforceTrainer import REINFORCETrainer
-from backend.Utils.src.utils import setting_global_seed
+from Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 load_dotenv()

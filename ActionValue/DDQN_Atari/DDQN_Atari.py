@@ -5,17 +5,17 @@ from dotenv import load_dotenv
 import torch
 import wandb
 
-from backend.ActionValue.DDQN_Atari.src.DataCollectionProcessorAtari import DataCollectionProcessor
-from backend.ActionValue.DDQN_Atari.src.TrainProcessorAtari import TrainProcessor
-from backend.ActionValue.DDQN.DDQN import evaluate_policy
-from backend.ActionValue.DDQN.src.EpsilonGreedy import EpsilonGreedyPolicy
-from backend.ActionValue.DDQN_Atari.src.BehaviourAtariDDQN import BehaviourAtariDDQN
-from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
-from backend.Utils.src.EnvFactory import AtariEnvFactory
-from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
-from backend.Utils.src.SyncProcessor import SyncProcessor
-from backend.Utils.src.utils import setting_global_seed
+from ActionValue.DDQN_Atari.src.DataCollectionProcessorAtari import DataCollectionProcessor
+from ActionValue.DDQN_Atari.src.TrainProcessorAtari import TrainProcessor
+from ActionValue.DDQN.DDQN import evaluate_policy
+from ActionValue.DDQN.src.EpsilonGreedy import EpsilonGreedyPolicy
+from ActionValue.DDQN_Atari.src.BehaviourAtariDDQN import BehaviourAtariDDQN
+from Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
+from Utils.src.EnvFactory import AtariEnvFactory
+from Utils.src.EnviromentHandler import VecEnvironmentHandler
+from Utils.src.ReplayBuffer import ReplayBuffer
+from Utils.src.SyncProcessor import SyncProcessor
+from Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

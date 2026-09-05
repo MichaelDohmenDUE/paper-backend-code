@@ -1,7 +1,7 @@
 import gymnasium as gym
 import numpy as np
 
-from backend.Utils.src.EnvFactory import EnvFactory
+from Utils.src.EnvFactory import EnvFactory
 
 
 class EnvironmentHandler:

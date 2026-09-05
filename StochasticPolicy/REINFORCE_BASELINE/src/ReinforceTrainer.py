@@ -2,10 +2,10 @@ import torch
 
 from StochasticPolicy.REINFORCE_BASELINE.src.Policy_Reinforce_Baseline import PolicyReinforceBaseline
 from Utils.src.NodeLib.Node import PropsNode, Graph, Signal
-from backend.Utils.src import RolloutBuffer
-from backend.Utils.src.NodeLib.NodeLibrary import detransition, optimizer_update, policy_loss, mean_squared_error, \
+from Utils.src import RolloutBuffer
+from Utils.src.NodeLib.NodeLibrary import detransition, optimizer_update, policy_loss, mean_squared_error, \
     combined_loss
-from backend.Utils.src.utils import discounted_cumulative_reward
+from Utils.src.utils import discounted_cumulative_reward
 
 
 class REINFORCETrainer:

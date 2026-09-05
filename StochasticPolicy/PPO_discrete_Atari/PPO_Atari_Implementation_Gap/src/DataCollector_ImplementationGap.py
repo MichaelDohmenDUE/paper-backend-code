@@ -1,7 +1,7 @@
 import numpy as np
-from backend.Utils.src.NodeLib.Node import Node, Graph, PropsNode
-from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, to_numpy_array, to_tensor
-from backend.Utils.src.RolloutBuffer import RolloutBuffer
+from Utils.src.NodeLib.Node import Node, Graph, PropsNode
+from Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, to_numpy_array, to_tensor
+from Utils.src.RolloutBuffer import RolloutBuffer
 
 def merge_final_observations(next_state_raw, episode_done, info):
     true_next = np.array(next_state_raw).copy()

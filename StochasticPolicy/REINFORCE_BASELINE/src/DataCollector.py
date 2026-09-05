@@ -3,10 +3,10 @@ import torch
 from torch import nn
 
 from Utils.src.NodeLib.Node import Graph, PropsNode
-from backend.Utils.src import RolloutBuffer
-from backend.Utils.src.BatchTransitioner import TransitionFactory
-from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
-from backend.Utils.src.NodeLib.NodeLibrary import categorical_distribution, sample_distribution, \
+from Utils.src import RolloutBuffer
+from Utils.src.BatchTransitioner import TransitionFactory
+from Utils.src.EnviromentHandler import VecEnvironmentHandler
+from Utils.src.NodeLib.NodeLibrary import categorical_distribution, sample_distribution, \
     to_numpy_array, TransitionNode, BufferAppendingNode, to_tensor
 
 

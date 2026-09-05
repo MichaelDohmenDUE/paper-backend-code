@@ -7,17 +7,17 @@ import wandb
 from dotenv import load_dotenv
 from torch import optim
 
-from backend.Utils.src.RolloutBuffer import RolloutBuffer
-from backend.StochasticPolicy.PPO_continuous.src.ActorPPO import ActorPPO
-from backend.StochasticPolicy.PPO_continuous.src.CriticPPO import CriticPPO
-from backend.StochasticPolicy.PPO_continuous.src.DataCollectionProcessor import DataCollectionProcessor
-from backend.StochasticPolicy.PPO_continuous.src.PPOTrainerProcessor import PPOTrainerProcessor
-from backend.Utils.src.BatchTransitioner import TransitionFactory
-from backend.Utils.src.BatchTransitioner import TransitionSpec
-from backend.Utils.src.EnvFactory import GymEnvFactory
-from backend.Utils.src.EnviromentHandler import EnvironmentHandler, VecEnvironmentHandler
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
-from backend.Utils.src.utils import setting_global_seed
+from Utils.src.RolloutBuffer import RolloutBuffer
+from StochasticPolicy.PPO_continuous.src.ActorPPO import ActorPPO
+from StochasticPolicy.PPO_continuous.src.CriticPPO import CriticPPO
+from StochasticPolicy.PPO_continuous.src.DataCollectionProcessor import DataCollectionProcessor
+from StochasticPolicy.PPO_continuous.src.PPOTrainerProcessor import PPOTrainerProcessor
+from Utils.src.BatchTransitioner import TransitionFactory
+from Utils.src.BatchTransitioner import TransitionSpec
+from Utils.src.EnvFactory import GymEnvFactory
+from Utils.src.EnviromentHandler import EnvironmentHandler, VecEnvironmentHandler
+from Utils.src.ReplayBuffer import ReplayBuffer
+from Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 load_dotenv()

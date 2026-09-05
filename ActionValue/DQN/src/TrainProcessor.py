@@ -1,10 +1,10 @@
 import torch
-from backend.Utils.src.NodeLib.Node import Graph, PropsNode, Signal
+from Utils.src.NodeLib.Node import Graph, PropsNode, Signal
 from torch import nn
 
-from backend.Utils.src.NodeLib.NodeLibrary import bellman, mean_squared_error, detransition
-from backend.Utils.src.NodeLib.NodeLibrary import indexing, nl_max, optimizer_normalized
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
+from Utils.src.NodeLib.NodeLibrary import bellman, mean_squared_error, detransition
+from Utils.src.NodeLib.NodeLibrary import indexing, nl_max, optimizer_normalized
+from Utils.src.ReplayBuffer import ReplayBuffer
 
 
 class TrainProcessor:

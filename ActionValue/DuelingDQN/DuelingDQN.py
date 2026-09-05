@@ -6,17 +6,17 @@ import torch
 import wandb
 from dotenv import load_dotenv
 
-from backend.ActionValue.DQN.DQN import evaluate_policy
-from backend.ActionValue.DuelingDQN.src.DuellingDQN import DuellingDQN
-from backend.ActionValue.DuelingDQN.src.EpsilonGreedy import EpsilonGreedyPolicy
-from backend.ActionValue.DuelingDQN.src.DataCollectionProcessor import DataCollectionProcessor
-from backend.ActionValue.DuelingDQN.src.TrainProcessor import TrainProcessor
-from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
-from backend.Utils.src.EnvFactory import GymEnvFactory
-from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
-from backend.Utils.src.SyncProcessor import SyncProcessor
-from backend.Utils.src.utils import setting_global_seed
+from ActionValue.DQN.DQN import evaluate_policy
+from ActionValue.DuelingDQN.src.DuellingDQN import DuellingDQN
+from ActionValue.DuelingDQN.src.EpsilonGreedy import EpsilonGreedyPolicy
+from ActionValue.DuelingDQN.src.DataCollectionProcessor import DataCollectionProcessor
+from ActionValue.DuelingDQN.src.TrainProcessor import TrainProcessor
+from Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
+from Utils.src.EnvFactory import GymEnvFactory
+from Utils.src.EnviromentHandler import VecEnvironmentHandler
+from Utils.src.ReplayBuffer import ReplayBuffer
+from Utils.src.SyncProcessor import SyncProcessor
+from Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 load_dotenv()

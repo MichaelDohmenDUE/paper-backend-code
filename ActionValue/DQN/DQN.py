@@ -7,14 +7,14 @@ import wandb
 from dotenv import load_dotenv
 from torch import nn
 
-from backend.ActionValue.DQN.src.DataCollectionProcessor import DataCollectionProcessor
-from backend.ActionValue.DQN.src.EpsilonGreedy import EpsilonGreedyPolicy
-from backend.ActionValue.DQN.src.TrainProcessor import TrainProcessor
-from backend.Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
-from backend.Utils.src.EnvFactory import GymEnvFactory
-from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
-from backend.Utils.src.SyncProcessor import SyncProcessor
+from ActionValue.DQN.src.DataCollectionProcessor import DataCollectionProcessor
+from ActionValue.DQN.src.EpsilonGreedy import EpsilonGreedyPolicy
+from ActionValue.DQN.src.TrainProcessor import TrainProcessor
+from Utils.src.BatchTransitioner import TransitionSpec, TransitionFactory
+from Utils.src.EnvFactory import GymEnvFactory
+from Utils.src.EnviromentHandler import VecEnvironmentHandler
+from Utils.src.ReplayBuffer import ReplayBuffer
+from Utils.src.SyncProcessor import SyncProcessor
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

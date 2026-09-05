@@ -4,7 +4,7 @@ from copy import deepcopy
 import torch
 import torch.nn as nn
 
-from backend.Utils.src.utils import synchronize
+from Utils.src.utils import synchronize
 
 
 class DummyNet(nn.Module):

@@ -4,8 +4,8 @@ from typing import Any, Iterable
 
 import torch
 
-from backend.Utils.src.BatchTransitioner import TransitionBatch, TransitionSpec
-from backend.Utils.src.SumSegmentTree import SumSegmentTree, MinSegmentTree
+from Utils.src.BatchTransitioner import TransitionBatch, TransitionSpec
+from Utils.src.SumSegmentTree import SumSegmentTree, MinSegmentTree
 
 
 class PrioReplayBuffer:

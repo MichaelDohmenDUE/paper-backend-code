@@ -2,11 +2,11 @@ import numpy as np
 
 from StochasticPolicy.PPO_discrete_Mujoco.src.DataCollectorGraphMujoco import merge_final_observations
 from StochasticPolicy.PPO_discrete_Atari.PPO_Atari_Baseline.src import EpisodicMetricsNode
-from backend.Utils.src.NodeLib.Node import Node, Graph
-from backend.Utils.src.NodeLib.Node import PropsNode
-from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode
-from backend.Utils.src.NodeLib.NodeLibrary import to_tensor, to_numpy_array
-from backend.Utils.src.RolloutBuffer import RolloutBuffer
+from Utils.src.NodeLib.Node import Node, Graph
+from Utils.src.NodeLib.Node import PropsNode
+from Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode
+from Utils.src.NodeLib.NodeLibrary import to_tensor, to_numpy_array
+from Utils.src.RolloutBuffer import RolloutBuffer
 
 
 class DataCollectionProcessor:

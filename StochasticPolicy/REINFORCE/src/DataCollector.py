@@ -1,7 +1,7 @@
 import numpy as np
 
-from backend.Utils.src.NodeLib.Node import Graph, PropsNode
-from backend.Utils.src.NodeLib.NodeLibrary import categorical_distribution, sample_distribution, \
+from Utils.src.NodeLib.Node import Graph, PropsNode
+from Utils.src.NodeLib.NodeLibrary import categorical_distribution, sample_distribution, \
     to_tensor, TransitionNode, BufferAppendingNode, to_numpy_array
 
 

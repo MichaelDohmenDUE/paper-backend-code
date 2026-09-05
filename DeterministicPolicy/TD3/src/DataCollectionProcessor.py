@@ -1,14 +1,14 @@
 import numpy as np
 import torch
 
-from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
-from backend.Utils.src.GlobalCounter import GlobalCounter
-from backend.Utils.src.NodeLib.Node import PropsNode, Graph
-from backend.Utils.src.BatchTransitioner import TransitionFactory
-from backend.Utils.src.NodeLib.NodeLibrary import BufferAppendingNode, TransitionNode, ConditionNode
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
+from Utils.src.EnviromentHandler import VecEnvironmentHandler
+from Utils.src.GlobalCounter import GlobalCounter
+from Utils.src.NodeLib.Node import PropsNode, Graph
+from Utils.src.BatchTransitioner import TransitionFactory
+from Utils.src.NodeLib.NodeLibrary import BufferAppendingNode, TransitionNode, ConditionNode
+from Utils.src.ReplayBuffer import ReplayBuffer
 
-from backend.StochasticPolicy.PPO_discrete_Mujoco.src.DataCollectorGraphMujoco import merge_final_observations
+from StochasticPolicy.PPO_discrete_Mujoco.src.DataCollectorGraphMujoco import merge_final_observations
 
 
 def random_action(env, behaviour, state, expl_noise, max_action, action_size, device):

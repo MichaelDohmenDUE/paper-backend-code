@@ -6,19 +6,19 @@ import wandb
 from dotenv import load_dotenv
 from torch import optim
 
-from backend.StochasticPolicy.PPO_discrete_Atari.PPO_Atari_Implementation_Gap.src.DataCollector_ImplementationGap import \
+from StochasticPolicy.PPO_discrete_Atari.PPO_Atari_Implementation_Gap.src.DataCollector_ImplementationGap import \
     DataCollectionProcessor
-from backend.StochasticPolicy.PPO_discrete_Atari.PPO_Atari_Implementation_Gap.src.PPOTrainer_ImplementationGap import \
+from StochasticPolicy.PPO_discrete_Atari.PPO_Atari_Implementation_Gap.src.PPOTrainer_ImplementationGap import \
     PPOTrainerProcessor
-from backend.StochasticPolicy.PPO_discrete_Mujoco.src.DiscreteActorPPO import AtariPPOAgent
-from backend.Utils.src.BatchTransitioner import TransitionFactory
-from backend.Utils.src.BatchTransitioner import TransitionSpec
-from backend.Utils.src.EnvFactory import AtariEnvFactory
-from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
-from backend.Utils.src.GlobalCounter import GlobalCounter
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
-from backend.Utils.src.RolloutBuffer import RolloutBuffer
-from backend.Utils.src.utils import setting_global_seed
+from StochasticPolicy.PPO_discrete_Mujoco.src.DiscreteActorPPO import AtariPPOAgent
+from Utils.src.BatchTransitioner import TransitionFactory
+from Utils.src.BatchTransitioner import TransitionSpec
+from Utils.src.EnvFactory import AtariEnvFactory
+from Utils.src.EnviromentHandler import VecEnvironmentHandler
+from Utils.src.GlobalCounter import GlobalCounter
+from Utils.src.ReplayBuffer import ReplayBuffer
+from Utils.src.RolloutBuffer import RolloutBuffer
+from Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 load_dotenv()

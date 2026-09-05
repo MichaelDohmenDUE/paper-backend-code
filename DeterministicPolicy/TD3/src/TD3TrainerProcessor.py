@@ -1,9 +1,9 @@
-from backend.Utils.src.GlobalCounter import GlobalCounter
-from backend.Utils.src.NodeLib.Node import Graph, PropsNode, Signal
-from backend.Utils.src.NodeLib.NodeLibrary import *
-from backend.Utils.src.NodeLib.NodeLibrary import TimerNode, detransition, action_with_gaussian_noise, clipper, bellman, \
+from Utils.src.GlobalCounter import GlobalCounter
+from Utils.src.NodeLib.Node import Graph, PropsNode, Signal
+from Utils.src.NodeLib.NodeLibrary import *
+from Utils.src.NodeLib.NodeLibrary import TimerNode, detransition, action_with_gaussian_noise, clipper, bellman, \
     mean_squared_error, optimizer_update, deterministic_policy_gradient
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
+from Utils.src.ReplayBuffer import ReplayBuffer
 
 
 class TrainProcessor:

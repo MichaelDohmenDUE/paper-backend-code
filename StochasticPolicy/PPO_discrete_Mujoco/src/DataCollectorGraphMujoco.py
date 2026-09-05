@@ -1,9 +1,9 @@
 import numpy as np
 
-from backend.Utils.src.NodeLib.Node import Node, Graph, PropsNode
-from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode
-from backend.Utils.src.NodeLib.NodeLibrary import to_tensor, to_numpy_array
-from backend.Utils.src.RolloutBuffer import RolloutBuffer
+from Utils.src.NodeLib.Node import Node, Graph, PropsNode
+from Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode
+from Utils.src.NodeLib.NodeLibrary import to_tensor, to_numpy_array
+from Utils.src.RolloutBuffer import RolloutBuffer
 
 
 def merge_final_observations(next_state_raw, episode_done, info):

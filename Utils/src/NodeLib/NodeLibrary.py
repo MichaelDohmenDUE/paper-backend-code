@@ -4,9 +4,9 @@ import torch.nn.functional as F
 from torch import nn
 from torch.distributions import Categorical
 
-from backend.Utils.src.NodeLib.Node import PropsNode, Signal
-from backend.Utils.src.NodeLib.Node import Node
-from backend.Utils.src.RolloutBuffer import RolloutBuffer
+from Utils.src.NodeLib.Node import PropsNode, Signal
+from Utils.src.NodeLib.Node import Node
+from Utils.src.RolloutBuffer import RolloutBuffer
 
 
 def record_metrics(history, p_loss, v_loss, entropy):

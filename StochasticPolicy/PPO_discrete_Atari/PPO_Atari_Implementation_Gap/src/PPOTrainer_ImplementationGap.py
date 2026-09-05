@@ -2,15 +2,15 @@ import numpy as np
 import torch
 from torch import nn
 
-from backend.Utils.src.NodeLib.NodeLibrary import detransition, normalize, clipped_surrogate_objective, \
+from Utils.src.NodeLib.NodeLibrary import detransition, normalize, clipped_surrogate_objective, \
     optimizer_normalized, td_residual, compute_returns, record_metrics, RepeatNode, compute_raw_gae
-from backend.Utils.src.NodeLib.NodeLibrary import linearly_annealed_lr_alpha, clipped_value_loss
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
-from backend.Utils.src.RolloutBuffer import RolloutBuffer
+from Utils.src.NodeLib.NodeLibrary import linearly_annealed_lr_alpha, clipped_value_loss
+from Utils.src.ReplayBuffer import ReplayBuffer
+from Utils.src.RolloutBuffer import RolloutBuffer
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-from backend.Utils.src.NodeLib.Node import Node, Graph, Signal, PropsNode
+from Utils.src.NodeLib.Node import Node, Graph, Signal, PropsNode
 
 
 def create_ppo_minibatch_graph():

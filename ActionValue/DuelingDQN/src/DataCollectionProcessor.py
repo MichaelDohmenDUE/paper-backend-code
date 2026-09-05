@@ -1,13 +1,13 @@
 import numpy as np
 import torch
-from backend.Utils.src.NodeLib.Node import PropsNode, Graph
+from Utils.src.NodeLib.Node import PropsNode, Graph
 from torch import nn
 
-from backend.ActionValue.DuelingDQN.src.EpsilonGreedy import EpsilonGreedyPolicy
-from backend.Utils.src.BatchTransitioner import TransitionFactory
-from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
-from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, to_numpy_array, to_tensor
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
+from ActionValue.DuelingDQN.src.EpsilonGreedy import EpsilonGreedyPolicy
+from Utils.src.BatchTransitioner import TransitionFactory
+from Utils.src.EnviromentHandler import VecEnvironmentHandler
+from Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, to_numpy_array, to_tensor
+from Utils.src.ReplayBuffer import ReplayBuffer
 
 
 class DataCollectionProcessor:

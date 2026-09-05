@@ -1,10 +1,10 @@
 import torch
 from torch import nn
 
-from backend.Utils.src.NodeLib.Node import PropsNode, Graph
-from backend.Utils.src.NodeLib.NodeLibrary import bellman, optimizer_update, detransition, mean_squared_error, \
+from Utils.src.NodeLib.Node import PropsNode, Graph
+from Utils.src.NodeLib.NodeLibrary import bellman, optimizer_update, detransition, mean_squared_error, \
     deterministic_policy_gradient
-from backend.Utils.src.ReplayBuffer import ReplayBuffer
+from Utils.src.ReplayBuffer import ReplayBuffer
 
 
 class TrainProcess:

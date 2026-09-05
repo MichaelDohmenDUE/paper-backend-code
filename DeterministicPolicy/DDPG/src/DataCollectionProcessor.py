@@ -1,12 +1,12 @@
 import numpy as np
 import torch
 
-from backend.Utils.src import ReplayBuffer, GlobalCounter
-from backend.Utils.src.BatchTransitioner import TransitionFactory
-from backend.Utils.src.EnviromentHandler import EnvironmentHandler
-from backend.Utils.src.NodeLib.Node import Graph, PropsNode
-from backend.Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, to_numpy_array
-from backend.Utils.src.NodeLib.NodeLibrary import noise_handler, action_with_noise
+from Utils.src import ReplayBuffer, GlobalCounter
+from Utils.src.BatchTransitioner import TransitionFactory
+from Utils.src.EnviromentHandler import EnvironmentHandler
+from Utils.src.NodeLib.Node import Graph, PropsNode
+from Utils.src.NodeLib.NodeLibrary import TransitionNode, BufferAppendingNode, to_numpy_array
+from Utils.src.NodeLib.NodeLibrary import noise_handler, action_with_noise
 
 
 class DataCollectionProcessor:

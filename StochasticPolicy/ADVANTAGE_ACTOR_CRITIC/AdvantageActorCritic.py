@@ -6,15 +6,15 @@ import wandb
 import torch
 from dotenv import load_dotenv
 
-from backend.Utils.src.BatchTransitioner import TransitionFactory, TransitionSpec
-from backend.Utils.src.EnvFactory import GymEnvFactory
-from backend.Utils.src.RolloutBuffer import KStepRolloutBuffer
+from Utils.src.BatchTransitioner import TransitionFactory, TransitionSpec
+from Utils.src.EnvFactory import GymEnvFactory
+from Utils.src.RolloutBuffer import KStepRolloutBuffer
 
 from StochasticPolicy.REINFORCE_BASELINE.src.Policy_Reinforce_Baseline import PolicyReinforceBaseline
-from backend.Utils.src.EnviromentHandler import VecEnvironmentHandler
+from Utils.src.EnviromentHandler import VecEnvironmentHandler
 from StochasticPolicy.ADVANTAGE_ACTOR_CRITIC.src.DataCollector import DataCollectionProcessor
 from StochasticPolicy.ADVANTAGE_ACTOR_CRITIC.src.Trainer import Trainer
-from backend.Utils.src.utils import setting_global_seed
+from Utils.src.utils import setting_global_seed
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 load_dotenv()

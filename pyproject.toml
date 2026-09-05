@@ -11,9 +11,9 @@ dependencies = [
     "python-dotenv",
 ]
 
-[tool.setuptools]
-packages = ["NodeLib"]
-package-dir = {"NodeLib" = "Utils/src/NodeLib" }
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ActionValue*", "Utils*", "DeterministicPolicy*", "StochasticPolicy"]
 
 [build-system]
 requires = ["setuptools>=61.0"]

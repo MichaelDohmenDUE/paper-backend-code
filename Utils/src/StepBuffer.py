@@ -1,7 +1,7 @@
 from collections import deque
 from typing import List
 
-from backend.Utils.src.BatchTransitioner import TransitionFactory, TransitionSpec
+from Utils.src.BatchTransitioner import TransitionFactory, TransitionSpec
 
 
 class StepBuffer(object):

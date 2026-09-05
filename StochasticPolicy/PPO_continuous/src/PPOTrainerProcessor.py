@@ -5,12 +5,12 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 import torch
 
-from backend.Utils.src.NodeLib.NodeLibrary import detransition, normalize, clipped_surrogate_objective, td_residual, \
+from Utils.src.NodeLib.NodeLibrary import detransition, normalize, clipped_surrogate_objective, td_residual, \
     compute_raw_gae, compute_returns, record_metrics, RepeatNode
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-from backend.Utils.src.NodeLib.Node import Node, Graph, Signal, PropsNode
+from Utils.src.NodeLib.Node import Node, Graph, Signal, PropsNode
 
 
 def dual_optimizer_step(actor, critic, optimizer, loss, max_norm):
